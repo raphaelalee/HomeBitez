@@ -1,48 +1,60 @@
 const express = require('express');
-require("dotenv").config();   // Load environment variables
+const session = require('express-session');
+const flash = require('connect-flash');
 const path = require('path');
+const UsersController = require('./Controllers/usersController');
+const db = require('./db');
 
 const app = express();
 
-// Import DB connection
-const db = require("./db");
-
-// View engine + middleware
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+/* -------------------- MIDDLEWARE -------------------- */
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(session({
+    secret: 'supersecretkey123',
+    resave: false,
+    saveUninitialized: false
+}));
+
+app.use(flash());
+
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+/* -------------------- ROUTES -------------------- */
+
+// Home
+app.get('/', (req, res) => {
+    res.render('index');
+});
+
+// Auth routes
+app.get('/login', UsersController.showLogin);
+app.post('/login', UsersController.login);
+app.get('/register', UsersController.showRegister);
+app.post('/register', UsersController.register);
+
+// Menu page after login
+app.get('/menu', (req, res) => {
+    // require login
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    res.render('menu');
+});
+
+// Logout
+app.get('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/login');
+    });
+});
 
 
-
-// Test DB connection
-db.query("SELECT 1")
-  .then(() => console.log("✅ Database connected successfully"))
-  .catch(err => console.log("❌ Database connection error:", err));
-
-
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-//hello jeffery jeffery
-
-//hi 
-
-//marcus 
-
-//marcus 1
-
-//bye
-
-//hello raphaela 
-//hello marla
-// test push from Raphaela
-
-//test push from Marla
-
-// another test push from Marla
-// test try wk
-// test try wk 2.0
-// test try wk 3.0
+/* -------------------- SERVER -------------------- */
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
