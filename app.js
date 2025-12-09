@@ -1,5 +1,15 @@
 const express = require('express');
+require("dotenv").config();   // Load environment variables
+
 const app = express();
+
+// Import DB connection
+const db = require("./db");
+
+// Test DB connection
+db.query("SELECT 1")
+  .then(() => console.log("✅ Database connected successfully"))
+  .catch(err => console.log("❌ Database connection error:", err));
 
 app.get('/', (req, res) => {
    res.send("Hello World!")
