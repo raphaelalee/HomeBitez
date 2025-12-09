@@ -3,37 +3,41 @@ const mysql = require('mysql2');
 const path = require('path');
 const dotenv = require('dotenv');
 
-// Force dotenv to load .env from the current directory
-dotenv.config({ path: path.join(__dirname, '.env'), debug: true });
+// Load environment variables and override any existing ones
+dotenv.config({ path: path.join(__dirname, '.env'), override: true });
 
-// Log environment variables to verify they are loaded
-console.log('DB_HOST:', process.env.DB_HOST);
-console.log('DB_PORT:', process.env.DB_PORT);
-console.log('DB_USER:', process.env.DB_USER);
-console.log('DB_DATABASE:', process.env.DB_DATABASE);
+// Extract and trim environment variables
+const DB_HOST = process.env.DB_HOST?.trim();
+const DB_USER = process.env.DB_USER?.trim();
+const DB_PASSWORD = process.env.DB_PASSWORD?.trim();
+const DB_DATABASE = process.env.DB_DATABASE?.trim();
+const DB_PORT = process.env.DB_PORT ? Number(process.env.DB_PORT.trim()) : 3306;
 
-// Create MySQL connection pool
+// Create a MySQL connection pool (promise version)
 const pool = mysql.createPool({
-    host: process.env.DB_HOST?.trim(),
-    user: process.env.DB_USER?.trim(),
-    password: process.env.DB_PASSWORD?.trim(),
-    database: process.env.DB_DATABASE?.trim(),
-    port: Number(process.env.DB_PORT?.trim()) || 3306,
+    host: DB_HOST,
+    user: DB_USER,
+    password: DB_PASSWORD,
+    database: DB_DATABASE,
+    port: DB_PORT,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
-});
+}).promise();
 
-// Test the connection immediately
-pool.getConnection()
-    .then(conn => {
+// Test connection immediately
+(async () => {
+    try {
+        const conn = await pool.getConnection();
         console.log('✅ Database connected successfully!');
         conn.release();
-    })
-    .catch(err => {
+    } catch (err) {
         console.error('❌ Database connection error:', err);
-    });
+    }
+})();
 
-module.exports = pool.promise();
+module.exports = pool;
+
+
 
 
