@@ -54,6 +54,10 @@ app.get('/logout', (req, res) => {
     });
 });
 
+// Cart page
+const cartRoutes = require('./Routes/cartRoutes');
+app.use('/cart', cartRoutes);
+
 
 /* -------------------- SERVER -------------------- */
 const PORT = 3000;
