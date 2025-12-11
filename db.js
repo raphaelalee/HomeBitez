@@ -3,7 +3,7 @@ const mysql = require('mysql2');
 const path = require('path');
 const dotenv = require('dotenv');
 
-// Load environment variables and override any existing ones
+// Load environment variables
 dotenv.config({ path: path.join(__dirname, '.env'), override: true });
 
 // Extract and trim environment variables
@@ -13,7 +13,7 @@ const DB_PASSWORD = process.env.DB_PASSWORD?.trim();
 const DB_DATABASE = process.env.DB_DATABASE?.trim();
 const DB_PORT = process.env.DB_PORT ? Number(process.env.DB_PORT.trim()) : 3306;
 
-// Create a MySQL connection pool (promise version)
+// Create MySQL pool with SHA2-compatible authentication handling
 const pool = mysql.createPool({
     host: DB_HOST,
     user: DB_USER,
@@ -22,7 +22,13 @@ const pool = mysql.createPool({
     port: DB_PORT,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+
+    // 🔥 FIX: Handle caching_sha2_password authentication
+    authSwitchHandler: (data, callback) => {
+        // Always return password for SHA2 authentication
+        return callback(null, DB_PASSWORD);
+    }
 }).promise();
 
 // Test connection immediately
@@ -37,7 +43,3 @@ const pool = mysql.createPool({
 })();
 
 module.exports = pool;
-
-
-
-
