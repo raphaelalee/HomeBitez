@@ -1,19 +1,17 @@
 // db.js
-const mysql = require('mysql2');
+const mysql = require('mysql2/promise');
 const path = require('path');
 const dotenv = require('dotenv');
 
-// Load environment variables and override any existing ones
+// Load environment variables
 dotenv.config({ path: path.join(__dirname, '.env'), override: true });
 
-// Extract and trim environment variables
-const DB_HOST = process.env.DB_HOST?.trim();
-const DB_USER = process.env.DB_USER?.trim();
-const DB_PASSWORD = process.env.DB_PASSWORD?.trim();
-const DB_DATABASE = process.env.DB_DATABASE?.trim();
-const DB_PORT = process.env.DB_PORT ? Number(process.env.DB_PORT.trim()) : 3306;
+const DB_HOST = process.env.DB_HOST;
+const DB_USER = process.env.DB_USER;
+const DB_PASSWORD = process.env.DB_PASSWORD;
+const DB_DATABASE = process.env.DB_DATABASE;
+const DB_PORT = parseInt(process.env.DB_PORT);
 
-// Create a MySQL connection pool (promise version)
 const pool = mysql.createPool({
     host: DB_HOST,
     user: DB_USER,
@@ -22,10 +20,9 @@ const pool = mysql.createPool({
     port: DB_PORT,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
-}).promise();
+});
 
-// Test connection immediately
+// Test connection
 (async () => {
     try {
         const conn = await pool.getConnection();
@@ -37,7 +34,3 @@ const pool = mysql.createPool({
 })();
 
 module.exports = pool;
-
-
-
-
