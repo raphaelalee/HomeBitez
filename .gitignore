@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 # Ignore local environment variables
 .env
 
 # Ignore node modules (standard for Node.js projects)
 node_modules/
+=======
+.env
+node_modules/
+>>>>>>> 0a20797d269182adfd980e0dd3438f7df93210d7
