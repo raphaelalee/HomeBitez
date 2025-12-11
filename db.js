@@ -24,12 +24,12 @@ const pool = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0,
 
-    // 🔥 FIX: Handle caching_sha2_password authentication
-    authSwitchHandler: (data, callback) => {
-        // Always return password for SHA2 authentication
-        return callback(null, DB_PASSWORD);
+    // NEW correct authentication plugin support
+    authPlugins: {
+        caching_sha2_password: () => Buffer.from(DB_PASSWORD)
     }
 }).promise();
+
 
 // Test connection immediately
 (async () => {
