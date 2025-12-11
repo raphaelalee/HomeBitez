@@ -2,15 +2,21 @@ const express = require('express');
 const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
+
+// Controllers
 const UsersController = require('./Controllers/usersController');
+
+// DB
 const db = require('./db');
 
+// Initialize app FIRST (important)
 const app = express();
 
 /* -------------------- MIDDLEWARE -------------------- */
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+// Serve static files (correct position)
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(session({
@@ -21,8 +27,26 @@ app.use(session({
 
 app.use(flash());
 
+// EJS setup
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+/* -------------------- MULTER (Image Uploads) -------------------- */
+const multer = require("multer");
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, "public/images");
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + "-" + file.originalname);
+    }
+});
+
+const upload = multer({ storage });
+
+// Export upload so other routes can use it
+module.exports.upload = upload;
 
 /* -------------------- ROUTES -------------------- */
 
@@ -37,9 +61,8 @@ app.post('/login', UsersController.login);
 app.get('/register', UsersController.showRegister);
 app.post('/register', UsersController.register);
 
-// Menu page after login
+// Menu (requires login)
 app.get('/menu', (req, res) => {
-    // require login
     if (!req.session.user) {
         req.flash('error', 'Please login first.');
         return res.redirect('/login');
@@ -54,10 +77,13 @@ app.get('/logout', (req, res) => {
     });
 });
 
-// Cart page
+// Cart routes
 const cartRoutes = require('./Routes/cartRoutes');
 app.use('/cart', cartRoutes);
 
+// Business Owner routes
+const ownerRoutes = require("./Routes/bizownerRoutes");
+app.use("/owner", ownerRoutes);
 
 /* -------------------- SERVER -------------------- */
 const PORT = 3000;

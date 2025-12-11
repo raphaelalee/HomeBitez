@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Business Owner Dashboard</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Poppins", Arial, sans-serif;
+            background: #faf7f2;
+        }
+
+        /* NAVBAR */
+        .navbar {
+            background: white;
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #f4b400;
+        }
+
+        .nav-links a {
+            margin: 0 15px;
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .profile img {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        /* PAGE TITLE */
+        .page-title {
+            margin: 30px 40px 10px;
+            font-size: 20px;
+            color: #777;
+            font-weight: 500;
+        }
+
+        /* STAT CARDS */
+        .stats-container {
+            display: flex;
+            gap: 25px;
+            padding: 0 40px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.06);
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #777;
+        }
+
+        /* SECTION CARDS */
+        .section-container {
+            display: flex;
+            gap: 25px;
+            padding: 0 40px;
+            margin-top: 10px;
+        }
+
+        .section-card {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.06);
+            position: relative;
+        }
+
+        .section-card h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .section-card p {
+            margin-top: 8px;
+            color: #777;
+            font-size: 14px;
+        }
+
+        .arrow {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 18px;
+            color: #999;
+        }
+
+        /* BUTTONS */
+        .yellow-btn {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #f4b400;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .yellow-btn:hover {
+            background: #d99a00;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <!-- NAVIGATION BAR -->
+    <div class="navbar">
+        <div class="logo">HomeBitez</div>
+        <div class="nav-links">
+            <a href="#">Home</a>
+            <a href="#">Menu</a>
+            <a href="#">Contact us</a>
+        </div>
+        <div class="profile">
+            <img src="/images/default-profile.jpg" alt="profile">
+            Desi Delights
+        </div>
+    </div>
+
+    <!-- PAGE TITLE -->
+    <div class="page-title">Business Owner Dashboard</div>
+
+    <!-- STAT CARDS -->
+    <div class="stats-container">
+
+    <div class="stat-card">
+        <div class="stat-number"><%= totalProducts %></div>
+        <div class="stat-label">Total Products</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-number">$<%= totalRevenue.toFixed(2) %></div>
+        <div class="stat-label">Total Revenue</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-number"><%= totalStocks %></div>
+        <div class="stat-label">Total Stocks</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-number"><%= newMessages %></div>
+        <div class="stat-label">New Messages</div>
+    </div>
+
+</div>
+
+
+    <!-- SECTION CARDS -->
+    <div class="section-container">
+
+        <!-- BUSINESS PROFILE -->
+        <div class="section-card">
+            <h3>Business Profile</h3>
+            <div class="arrow">→</div>
+            <p>Edit your business information and image</p>
+            <a href="/owner/profile" class="yellow-btn">Edit Profile</a>
+        </div>
+
+        <!-- CUSTOMER MESSAGES -->
+        <div class="section-card">
+            <h3>Customer Messages</h3>
+            <div class="arrow">→</div>
+            <p>Read and respond to customer inquiries</p>
+            <a href="/owner/messages" class="yellow-btn">View Messages</a>
+        </div>
+
+    </div>
+
+    <!-- INVENTORY MANAGEMENT -->
+    <div class="section-container" style="margin-top: 25px;">
+        <div class="section-card" style="flex: 1;">
+            <h3>Inventory Management</h3>
+            <div class="arrow">→</div>
+            <p>Add, edit and manage your product inventory</p>
+            <a href="/owner/inventory" class="yellow-btn">Manage Inventory</a>
+        </div>
+    </div>
+
+</body>
+
+</html>
