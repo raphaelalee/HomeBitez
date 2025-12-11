@@ -1,0 +1,5 @@
+# Ignore local environment variables
+.env
+
+# Ignore node modules (standard for Node.js projects)
+node_modules/
