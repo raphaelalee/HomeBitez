@@ -2,15 +2,22 @@ const db = require('../db');
 
 module.exports = {
 
-    async findByEmail(email) {
-        const query = `SELECT * FROM users WHERE email = ?`;
-        const [rows] = await db.execute(query, [email]);
+    async findByEmailOrUsername(identifier) {
+        const query = `
+            SELECT * FROM users
+            WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)
+            LIMIT 1
+        `;
+        const [rows] = await db.execute(query, [identifier, identifier]);
         return rows[0];
     },
 
-    async create({ email, password }) {
-        const query = `INSERT INTO users (email, password) VALUES (?, ?)`;
-        await db.execute(query, [email, password]);
+    async create({ username, email, contact, password, address = '', role = 'user' }) {
+        const query = `
+            INSERT INTO users (username, email, password, contact, address, role)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        await db.execute(query, [username, email, password, contact, address, role]);
         return true;
     }
 };

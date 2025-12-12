@@ -5,6 +5,7 @@ const path = require('path');
 
 // Controllers
 const UsersController = require('./Controllers/usersController');
+const ReportModel = require('./models/ReportModel');
 
 // DB
 const db = require('./db');
@@ -55,11 +56,56 @@ app.get('/', (req, res) => {
     res.render('index');
 });
 
+// Report Issue page (requires login for auto-filled email)
+app.get('/report', (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please log in to submit a report.');
+        return res.redirect('/login');
+    }
+
+    res.render('report', {
+        success: req.flash('success'),
+        error: req.flash('error'),
+        userEmail: req.session.user.email || ''
+    });
+});
+
+app.post('/report', (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please log in to submit a report.');
+        return res.redirect('/login');
+    }
+
+    const { name, subject, description } = req.body;
+    const email = req.session.user.email || '';
+
+    if (!name || !email || !subject || !description) {
+        req.flash('error', 'Please fill out all fields before submitting.');
+        return res.redirect('/report');
+    }
+
+    ReportModel.create({
+        userId: req.session.user.id || null,
+        name,
+        email,
+        subject,
+        description
+    }).then(() => {
+        req.flash('success', 'Thanks for letting us know. We will review your report shortly.');
+        return res.redirect('/report');
+    }).catch((err) => {
+        console.error('Error saving report:', err);
+        req.flash('error', 'Could not save your report right now. Please try again.');
+        return res.redirect('/report');
+    });
+});
+
 // Auth routes
 app.get('/login', UsersController.showLogin);
 app.post('/login', UsersController.login);
 app.get('/register', UsersController.showRegister);
 app.post('/register', UsersController.register);
+app.post('/signup', UsersController.register);
 
 // Menu (requires login)
 app.get('/menu', (req, res) => {
