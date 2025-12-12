@@ -2,17 +2,100 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Index</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeBitez - Home</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      text-align: center;
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 2.5em;
+    }
+    
+    .tagline {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 1.1em;
+    }
+    
+    .product {
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .product-name {
+      font-size: 1.3em;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    .product-price {
+      font-size: 1.5em;
+      color: #27ae60;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+    
+    button {
+      background: #27ae60;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background 0.3s;
+    }
+    
+    button:hover {
+      background: #229954;
+    }
+    
+    form {
+      display: inline-block;
+    }
+  </style>
 </head>
-<body style="background: white; display: flex; justify-content: center; align-items: center; height: 100vh;">
-  <h1>Homepage</h1>
+<body>
+  <div class="container">
+    <h1>HomeBitez</h1>
+    <p class="tagline">Delicious food delivered to your doorstep</p>
+    
+    <div class="product">
+      <div class="product-name">Shrimp Fried Rice</div>
+      <div class="product-price">$5.00</div>
+      <form action="/cart/add" method="POST">
+        <input type="hidden" name="id" value="1">
+        <input type="hidden" name="name" value="Shrimp Fried Rice">
+        <input type="hidden" name="price" value="5">
+        <button type="submit">Add to Cart</button>
+      </form>
+    </div>
+  </div>
 </body>
 </html>
-
-
-<form action="/cart/add" method="POST">
-    <input type="hidden" name="id" value="1">
-    <input type="hidden" name="name" value="Shrimp Fried Rice">
-    <input type="hidden" name="price" value="5">
-    <button>Add to cart</button>
-</form>
