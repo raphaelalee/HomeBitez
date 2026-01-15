@@ -76,12 +76,13 @@ module.exports = {
     req.session.user = {
       id: user.id || user.user_id,
       email: user.email,
+      username: user.username,
       role: user.role
     };
 
     // Role-based redirect
     if (user.role === 'biz_owner') return res.redirect('/bizowner');
-    if (user.role === 'admin') return res.redirect('/admin'); // only if you have admin routes
+    if (user.role === 'admin') return res.redirect('/admin'); 
     return res.redirect('/menu');
   },
 
