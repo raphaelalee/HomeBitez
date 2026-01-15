@@ -10,14 +10,14 @@ const ReportModel = require('./models/ReportModel');
 // DB
 const db = require('./db');
 
-// Initialize app FIRST (important)
+// Initialize app
 const app = express();
 
 /* -------------------- MIDDLEWARE -------------------- */
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Serve static files (correct position)
+// Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(session({
@@ -46,7 +46,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Export upload so other routes can use it
+// Export upload for other routes
 module.exports.upload = upload;
 
 /* -------------------- ROUTES -------------------- */
@@ -56,7 +56,7 @@ app.get('/', (req, res) => {
     res.render('index');
 });
 
-// Report Issue page (requires login for auto-filled email)
+// Report Issue page
 app.get('/report', (req, res) => {
     if (!req.session.user) {
         req.flash('error', 'Please log in to submit a report.');
@@ -131,8 +131,28 @@ app.use('/cart', cartRoutes);
 const ownerRoutes = require("./Routes/bizownerRoutes");
 app.use("/owner", ownerRoutes);
 
+/* -------------------- DIGITAL WALLET ROUTE -------------------- */
+app.get('/digitalwallet', (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login to view your digital wallet.');
+        return res.redirect('/login');
+    }
+
+    // Dummy data for now
+    const balance = 120.50;
+    const transactions = [
+        { date: '2026-01-10', description: 'Top-up', amount: 50, type: 'Credit' },
+        { date: '2026-01-12', description: 'Purchase: Chicken Curry', amount: 8.60, type: 'Debit' },
+        { date: '2026-01-14', description: 'Top-up', amount: 100, type: 'Credit' },
+        { date: '2026-01-15', description: 'Purchase: Naan', amount: 2.50, type: 'Debit' }
+    ];
+
+    res.render('digitalwallet', { balance, transactions });
+});
+
 /* -------------------- SERVER -------------------- */
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
