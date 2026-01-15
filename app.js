@@ -129,7 +129,7 @@ app.use('/cart', cartRoutes);
 
 // Business Owner routes
 const ownerRoutes = require("./Routes/bizownerRoutes");
-app.use("/owner", ownerRoutes);
+app.use("/bizowner", ownerRoutes);
 
 /* -------------------- DIGITAL WALLET ROUTE -------------------- */
 app.get('/digitalwallet', (req, res) => {
