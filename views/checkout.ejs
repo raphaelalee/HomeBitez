@@ -1,0 +1,54 @@
+<%- include('partials/head', { title: 'Checkout - HomeBitez' }) %>
+<%- include('partials/navbar') %>
+
+<style>
+  body { background:#f6efe6; color:#2a241e; }
+  .wrap { width: 92%; margin: 30px auto; }
+  .card {
+    background:#fffaf3;
+    border:1px solid #eadac6;
+    border-radius:18px;
+    padding:22px;
+    box-shadow: 0 10px 26px rgba(42,36,30,0.08);
+  }
+  h1 { margin:0 0 12px; font-size: 22px; font-weight: 800; }
+  .muted { color:#6f6256; }
+  .row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eadac6; }
+  .row:last-child { border-bottom:none; }
+  .total { font-weight: 900; font-size: 18px; }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <h1>Checkout</h1>
+
+    <% if (!items || items.length === 0) { %>
+      <p class="muted">Your cart is empty.</p>
+    <% } else { %>
+
+      <% items.forEach(i => { %>
+        <div class="row">
+          <div>
+            <div><%= i.name %></div>
+            <div class="muted" style="font-size:13px;">
+              $<%= Number(i.price).toFixed(2) %> × <%= i.qty %>
+            </div>
+          </div>
+          <div>$<%= Number(i.subtotal).toFixed(2) %></div>
+        </div>
+      <% }) %>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="total">Total</div>
+        <div class="total">$<%= Number(total).toFixed(2) %></div>
+      </div>
+
+      <p class="muted" style="margin-top:12px;">
+        Payment options (PayPal / NETS) coming next.
+      </p>
+
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/foot') %>
