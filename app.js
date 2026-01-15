@@ -121,6 +121,76 @@ app.get('/menu', (req, res) => {
     res.render('menu');
 });
 
+// Admin dashboard
+app.get('/admin', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let totalCustomers = 0;
+    let totalOrders = 0;
+    let totalProducts = 0;
+    let totalIssues = 0;
+
+    try {
+        const [productRows] = await db.query("SELECT COUNT(*) AS total FROM products");
+        totalProducts = productRows[0]?.total || 0;
+    } catch (err) {
+        console.error("Admin stats: products count failed", err);
+    }
+
+    try {
+        const [orderRows] = await db.query("SELECT COUNT(*) AS total FROM orders");
+        totalOrders = orderRows[0]?.total || 0;
+    } catch (err) {
+        console.error("Admin stats: orders count failed", err);
+    }
+
+    try {
+        const [customerRows] = await db.query(
+            "SELECT COUNT(*) AS total FROM users WHERE role = ?",
+            ["user"]
+        );
+        totalCustomers = customerRows[0]?.total || 0;
+    } catch (err) {
+        console.error("Admin stats: customers count failed", err);
+    }
+
+    try {
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS report_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NULL,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(150) NOT NULL,
+                subject VARCHAR(200) NOT NULL,
+                description TEXT NOT NULL,
+                status ENUM('new','in_progress','resolved') DEFAULT 'new',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        const [issueRows] = await db.query("SELECT COUNT(*) AS total FROM report_messages");
+        totalIssues = issueRows[0]?.total || 0;
+    } catch (err) {
+        console.error("Admin stats: issues count failed", err);
+    }
+
+    res.render('admin', {
+        stats: {
+            totalCustomers,
+            totalOrders,
+            totalProducts,
+            totalIssues
+        },
+        adminName: 'Admin'
+    });
+});
+
 // Logout
 app.get('/logout', (req, res) => {
     req.session.destroy(() => {
