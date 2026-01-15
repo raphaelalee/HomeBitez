@@ -1,0 +1,104 @@
+<!-- views/partials/navbar.ejs -->
+<link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
+
+<style>
+  .navbar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background: #fdeeda;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      font-family: Arial, sans-serif;
+  }
+
+  .navbar-logo {
+      font-family: 'Sniglet', cursive;
+      font-size: 32px;
+      font-weight: 900;
+      color: #ff9c07;
+      text-decoration: none;
+  }
+
+  .navbar-links a {
+      margin: 0 15px;
+      text-decoration: none;
+      color: black;
+      font-size: 14px;
+      transition: color 0.3s;
+  }
+
+  .navbar-links a:hover {
+      color: #dd9b00;
+  }
+
+  .navbar-icons {
+      display: flex;
+      align-items: center;
+  }
+
+  .navbar-icons a {
+      margin-left: 18px;
+      font-size: 20px;
+      text-decoration: none;
+      color: black;
+      cursor: pointer;
+      transition: color 0.3s;
+      display: flex;
+      align-items: center;
+  }
+
+  /* Force emoji font so 👤 shows properly */
+  .navbar-icons a span {
+      font-family: 'Segoe UI Emoji', 'Arial', sans-serif;
+      font-size: 20px;
+      display: inline-block;
+      line-height: 1;
+  }
+
+  .navbar-icons a:hover {
+      color: #dd9b00;
+  }
+
+  @media(max-width:768px){
+      .navbar {
+          flex-direction: column;
+          align-items: flex-start;
+      }
+      .navbar-links {
+          margin-top: 10px;
+      }
+      .navbar-links a {
+          margin: 5px 10px;
+      }
+      .navbar-icons {
+          margin-top: 10px;
+      }
+  }
+</style>
+
+<div class="navbar">
+  <!-- Logo -->
+  <a href="/" class="navbar-logo">HomeBitez</a>
+
+  <!-- Links -->
+  <div class="navbar-links">
+      <a href="/">Home</a>
+      <a href="/menu">Menu</a>
+      <a href="/profile">Profile</a>
+      <a href="/about">About Us</a>
+      <a href="/contact">Contact Us</a>
+      <a href="/report">Report Issue</a>
+      <a href="/login">Login</a>
+  </div>
+
+  <!-- Icons -->
+  <div class="navbar-icons">
+      <a href="/cart" title="Cart"><span>🛒</span></a>
+      <a href="/profile" title="Profile"><span>👤</span></a>
+  </div>
+</div>

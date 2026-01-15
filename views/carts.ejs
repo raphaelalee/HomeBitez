@@ -16,14 +16,6 @@
             font-family: Arial, sans-serif;
         }
 
-        /* Navbar */
-        .navbar-logo {
-            font-family: 'Sniglet', cursive;
-            font-size: 32px;
-            font-weight: 900;
-            color: #ff9c07;
-        }
-
         /* Cart Item */
         .cart-item {
             display: flex;
@@ -89,17 +81,8 @@
 
 <body>
 
-<!-- NAVBAR -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="navbar-logo">HomeBitez</div>
-
-    <div>
-        <a href="/" class="mx-2">Home</a>
-        <a href="/menu" class="mx-2">Menu</a>
-        <a href="#" class="mx-2">Contact us</a>
-        <a href="/report" class="mx-2">Report Issue</a>
-    </div>
-</div>
+<!-- INCLUDE NAVBAR -->
+<%- include('partials/navbar') %>
 
 <h5 class="text-muted mb-4">Cart Page</h5>
 
@@ -228,4 +211,5 @@
 
 </body>
 </html>
+
 
