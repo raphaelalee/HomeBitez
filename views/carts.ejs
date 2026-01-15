@@ -108,6 +108,23 @@ body{
     <h5>Subtotal: $<%= subtotal.toFixed(2) %></h5>
 </div>
 
+<!-- CUTLERY -->
+<div class="mt-4">
+    <h6>Cutlery</h6>
+    <label class="form-check form-switch mt-2">
+        <input id="cutlerySwitch" class="form-check-input" type="checkbox">
+    </label>
+</div>
+
+<!-- PICKUP DATE & TIME -->
+<div class="mt-4">
+    <h6>Pickup Date & Time</h6>
+    <div class="mt-2">
+        <input type="date" id="pickupDate" class="pill">
+        <input type="time" id="pickupTime" class="pill">
+    </div>
+</div>
+
 <div class="mt-4 d-flex gap-3">
     <a href="/menu" class="btn-back">Back to Menu</a>
     <a href="/checkout" class="btn-checkout">Checkout 🛒</a>
