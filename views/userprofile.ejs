@@ -20,10 +20,9 @@
   .profile-info h2 { margin:0; font-size:20px; }
   .profile-info p { margin:4px 0; font-size:14px; color:#6f6256; }
 
-  .profile-header { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; position: relative; /* For wallet button positioning */ }
-  .wallet-btn { margin-left: auto; /* Push button to the far right */}
+  .profile-header { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; position: relative; }
+  .wallet-btn { margin-left: auto; }
   .wallet-btn .btn { padding: 10px 22px; font-size: 16px; text-decoration: none; }
-
 
   /* Tabs */
   .tabs { display:flex; gap:10px; border-bottom:1px solid #ddd; margin-bottom:20px; }
@@ -40,13 +39,18 @@
   .grid { display:grid; grid-template-columns: 1fr 1fr; gap:18px; margin-top:10px; }
   .field { display:flex; flex-direction:column; gap:8px; }
   label { font-weight:700; font-size:13px; color:#2a241e; }
-  input[type=text], input[type=email] { background:#fff; border:1px solid #eadac6; border-radius:14px; padding:12px 14px; font-size:14px; outline:none; transition:0.15s ease; }
-  input[type=text]:focus, input[type=email]:focus { border-color: rgba(213,155,45,0.7); box-shadow:0 0 0 4px rgba(213,155,45,0.16); }
+  input[type=text], input[type=email], input[type=password] { background:#fff; border:1px solid #eadac6; border-radius:14px; padding:12px 14px; font-size:14px; outline:none; transition:0.15s ease; }
+  input[type=text]:focus, input[type=email]:focus, input[type=password]:focus { border-color: rgba(213,155,45,0.7); box-shadow:0 0 0 4px rgba(213,155,45,0.16); }
 
   .actions { margin-top:18px; display:flex; justify-content:flex-end; gap:12px; flex-wrap:wrap; }
   .btn { border:none; border-radius:999px; padding:11px 18px; font-weight:700; cursor:pointer; font-size:14px; transition:0.15s ease; }
   .btn-primary { background:#d59b2d; color:#fff; box-shadow:0 10px 24px rgba(213,155,45,0.22); }
   .btn-primary:hover { background:#b97d18; transform:translateY(-1px); }
+
+  /* Flash messages */
+  .alert { padding:12px 18px; border-radius:12px; margin-bottom:20px; font-weight:600; }
+  .alert-success { background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
+  .alert-danger { background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }
 
   @media (max-width:760px){ 
     .grid{ grid-template-columns: 1fr; } 
@@ -82,6 +86,14 @@
         <a href="/digitalwallet" class="btn btn-primary">Digital Wallet</a>
     </div>
   </div>
+
+  <!-- Flash Messages -->
+  <% if (success && success.length > 0) { %>
+    <div class="alert alert-success"><%= success %></div>
+  <% } %>
+  <% if (error && error.length > 0) { %>
+    <div class="alert alert-danger"><%= error %></div>
+  <% } %>
 
   <!-- Tabs -->
   <div class="tabs">
@@ -177,36 +189,36 @@
     <% } %>
   </div>
 
-     <!-- Settings Tab -->
-    <div class="card tab-content" id="settings" style="display:none;">
+  <!-- Settings Tab -->
+  <div class="card tab-content" id="settings" style="display:none;">
     <h3>Account Settings</h3>
 
     <!-- Change Password -->
     <form action="/user/change-password" method="POST">
         <h5>Change Password</h5>
         <div class="grid">
-        <div class="field">
-            <label>Current Password</label>
-            <input type="password" name="currentPassword" required>
-        </div>
-        <div class="field">
-            <label>New Password</label>
-            <input type="password" name="newPassword" required>
-        </div>
-        <div class="field">
-            <label>Confirm New Password</label>
-            <input type="password" name="confirmPassword" required>
-        </div>
+          <div class="field">
+              <label>Current Password</label>
+              <input type="password" name="currentPassword" required>
+          </div>
+          <div class="field">
+              <label>New Password</label>
+              <input type="password" name="newPassword" required>
+          </div>
+          <div class="field">
+              <label>Confirm New Password</label>
+              <input type="password" name="confirmPassword" required>
+          </div>
         </div>
         <div class="actions">
-        <button class="btn btn-primary" type="submit">Update Password</button>
+          <button class="btn btn-primary" type="submit">Update Password</button>
         </div>
     </form>
 
     <hr style="margin:30px 0; border-color:#eadac6;">
+  </div>
 
 </div>
-
 
 <script>
   // Tab switching
@@ -230,11 +242,9 @@
 
     const reader = new FileReader();
     reader.onload = function(e) {
-      // Update profile header
       const profileImg = document.querySelector('.profile-header img');
       if(profileImg) profileImg.src = e.target.result;
 
-      // Update navbar avatar
       const navbarImg = document.getElementById('navbar-avatar');
       if(navbarImg) navbarImg.src = e.target.result;
     };
@@ -243,6 +253,7 @@
 </script>
 
 <%- include('partials/foot') %>
+
 
 
 

@@ -312,9 +312,9 @@
             <div id="paypal-status" class="hb-note"></div>
 
             <script>
-              const checkoutSubtotal = <%= Number(subtotal || 0).toFixed(2) %>;
-              const checkoutDeliveryFee = <%= Number(defaultDeliveryFee || 0).toFixed(2) %>;
-              const checkoutItems = <%- JSON.stringify(items || []) %>;
+              const checkoutSubtotal = "<%= Number(subtotal || 0).toFixed(2) %>";
+              const checkoutDeliveryFee = "<%= Number(defaultDeliveryFee || 0).toFixed(2) %>";
+              const checkoutItems = "<%- JSON.stringify(items || []) %>";
 
               function getShippingName() {
                 const el = document.getElementById("shippingName");

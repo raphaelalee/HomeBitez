@@ -193,21 +193,28 @@ app.get('/logout', (req, res) => {
 });
 
 // GET user profile
-app.get('/user/profile', (req, res) => {
-  // Make sure req.session.user exists
-  const user = req.session.user || {};
+app.get('/user/profile', async (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
 
-  // Pass orders as an empty array if you don't have real order data yet
-  const orders = [];  
+  const userId = req.session.user.id;
+  let user = req.session.user;
 
-  res.render('userprofile', { user, orders });
+  // Optional: fetch extra data like points history from DB
+  const orders = []; // replace with real orders if you have
+
+  res.render('userprofile', { 
+      user, 
+      orders,
+      success: req.flash('success'),
+      error: req.flash('error')
+  });
 });
 
 
-const fs = require("fs"); // optional, if you want to delete old avatars
-
-
+// POST update profile
 app.post('/user/profile', upload.single('avatar'), async (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
+
   try {
     const { username, email, address, contact } = req.body;
     let avatarPath = req.session.user.avatar || '/images/default-avatar.png';
@@ -216,22 +223,23 @@ app.post('/user/profile', upload.single('avatar'), async (req, res) => {
       avatarPath = '/images/' + req.file.filename;
     }
 
-    // Update user in the database
+    // Update user in DB
     await db.query(
       'UPDATE users SET username=?, email=?, address=?, contact=?, avatar=? WHERE id=?',
       [username, email, address, contact, avatarPath, req.session.user.id]
     );
 
-    // Update session so navbar/profile show new info immediately
+    // Update session
     req.session.user = { ...req.session.user, username, email, address, contact, avatar: avatarPath };
 
+    req.flash('success', 'Profile updated successfully.');
     res.redirect('/user/profile');
   } catch (err) {
     console.error('Profile update error:', err);
-    res.send('Error updating profile');
+    req.flash('error', 'Failed to update profile.');
+    res.redirect('/user/profile');
   }
 });
-
 
 // GET Contact Us page
 app.get('/contact', (req, res) => {
@@ -298,48 +306,52 @@ app.get('/bizowner/messages', async (req, res) => {
 });
 
 
+// POST change password
 app.post('/user/change-password', async (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
+
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+  const userId = req.session.user.id;
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    req.flash('error', 'Please fill in all password fields.');
+    return res.redirect('/user/profile');
+  }
+
+  if (newPassword !== confirmPassword) {
+    req.flash('error', 'New passwords do not match.');
+    return res.redirect('/user/profile');
+  }
+
   try {
-    const { currentPassword, newPassword, confirmPassword } = req.body;
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      return res.send('Please fill in all password fields.');
-    }
-
-    if (newPassword !== confirmPassword) {
-      return res.send('New passwords do not match.');
-    }
-
-    const userId = req.session.user?.id;
-    if (!userId) return res.send('User not logged in.');
-
-    // Get user from DB
+    // Fetch user from DB
     const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (rows.length === 0) {
+      req.flash('error', 'User not found.');
+      return res.redirect('/user/profile');
+    }
+
     const user = rows[0];
-    if (!user) return res.send('User not found.');
 
-    if (!user.password) return res.send('User has no password set.');
-
-    // Compare current password with hash in DB
+    // Compare password with bcrypt
     const match = await bcrypt.compare(currentPassword, user.password);
-    if (!match) return res.send('Current password is incorrect.');
+    if (!match) {
+      req.flash('error', 'Current password is incorrect.');
+      return res.redirect('/user/profile');
+    }
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE users SET password=? WHERE id=?', [hashedPassword, userId]);
 
-    // Update password in DB
-    await db.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
-
-    // Optional: update session object with new password hash (not required but safe)
-    req.session.user.password = hashedPassword;
-
-    res.send('Password updated successfully!');
+    req.flash('success', 'Password updated successfully!');
+    res.redirect('/user/profile');
   } catch (err) {
-    console.error('Change password error:', err);
-    res.send('An error occurred while changing password.');
+    console.error(err);
+    req.flash('error', 'Error changing password.');
+    res.redirect('/user/profile');
   }
 });
-
 
 
 
