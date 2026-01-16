@@ -1,5 +1,6 @@
 const ProductModel = require("../Models/ProductModel");
 const db = require("../db");
+const OrdersModel = require("../Models/OrdersModel");
 
 // -----------------------------
 // Helpers
@@ -252,6 +253,45 @@ exports.messagesPage = async (req, res) => {
   } catch (err) {
     console.error("Messages page error:", err);
     return res.status(500).send("Server error");
+  }
+};
+
+// ------------------------------------
+// ORDERS LIST
+// ------------------------------------
+exports.ordersPage = async (req, res) => {
+  console.log('bizowner/orders requested - session.user=', req.session ? req.session.user : null);
+  const guard = requireBizOwner(req, res);
+  if (!guard.ok) return;
+
+  try {
+    const orders = await OrdersModel.list(200);
+    return res.render("bizowner/orders", { orders });
+  } catch (err) {
+    console.error("Orders page error:", err);
+    // Return stack for debugging locally
+    return res.status(500).send(`<pre>${(err && err.stack) ? err.stack : String(err)}</pre>`);
+  }
+};
+
+// ------------------------------------
+// ORDER DETAILS
+// ------------------------------------
+exports.orderDetailsPage = async (req, res) => {
+  const guard = requireBizOwner(req, res);
+  if (!guard.ok) return;
+
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.redirect("/bizowner/orders");
+
+    const order = await OrdersModel.getById(id);
+    if (!order) return res.redirect("/bizowner/orders");
+
+    return res.render("bizowner/orderDetails", { order });
+  } catch (err) {
+    console.error("Order details error:", err);
+    return res.status(500).send(`<pre>${(err && err.stack) ? err.stack : String(err)}</pre>`);
   }
 };
 

@@ -489,6 +489,8 @@ app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
 const ownerRoutes = require("./Routes/bizownerRoutes");
 app.use("/bizowner", ownerRoutes);
 
+// Debug routes were removed per request
+
 /* -------------------- DIGITAL WALLET -------------------- */
 app.get('/digitalwallet', (req, res) => {
     if (!req.session.user) {

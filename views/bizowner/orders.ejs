@@ -1,0 +1,52 @@
+<%- include('../partials/head', { title: 'Orders' }) %>
+<%- include('../partials/navbar-bizowner') %>
+
+<style>
+  body { background: #f6efe6; color:#2a241e; }
+  .page-title { margin:22px 40px; font-size:18px; color:#6f6256; }
+  .card-wrap { padding: 0 40px 40px; }
+  .orders-card { background:#fffaf3; border:1px solid #eadac6; border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(42,36,30,0.06); }
+  table { width:100%; border-collapse:collapse; margin-top:10px; }
+  th, td { padding:12px 10px; text-align:left; }
+  thead th { font-weight:700; color:#6f6256; border-bottom:1px solid #eadac6; }
+  tbody tr { background:white; border-bottom:1px solid #f1e9df; }
+  .btn-view { background:#d59b2d; color:white; padding:8px 12px; border-radius:999px; text-decoration:none; }
+</style>
+
+<div class="page-title">Orders</div>
+<div class="card-wrap">
+  <div class="orders-card">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Order (PayPal)</th>
+          <th>Payer</th>
+          <th>Items</th>
+          <th class="text-end">Total</th>
+          <th class="text-end">Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!orders || (orders && orders.length === 0)) { %>
+          <tr>
+            <td colspan="7" class="text-center" style="padding:36px 12px; color:#6f6256;">No orders found yet. Once customers checkout, orders will appear here.</td>
+          </tr>
+        <% } else { %>
+          <% (orders || []).forEach(o => { %>
+            <tr>
+              <td><%= o.id %></td>
+              <td><%= o.paypal_order_id || '-' %></td>
+              <td><%= o.payer_email || '-' %></td>
+              <td><%= (o.items || []).length %></td>
+              <td class="text-end">$<%= Number(o.total||0).toFixed(2) %></td>
+              <td class="text-end"><%= new Date(o.created_at).toLocaleString() %></td>
+              <td class="text-end"><a class="btn-view" href="/bizowner/orders/<%= o.id %>">View</a></td>
+            </tr>
+          <% }) %>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>

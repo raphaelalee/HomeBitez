@@ -1,0 +1,65 @@
+<%- include('../partials/head', { title: 'Order Details' }) %>
+<%- include('../partials/navbar-bizowner') %>
+
+<style>
+  body { background:#f6efe6; color:#2a241e; }
+  .page-title { margin:22px 40px; font-size:18px; color:#6f6256; }
+  .card-wrap { padding: 0 40px 40px; }
+  .detail-card { background:#fffaf3; border:1px solid #eadac6; border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(42,36,30,0.06); }
+  table { width:100%; }
+  .meta { display:flex; justify-content:space-between; gap:12px; }
+  .items-table thead th { border-bottom:1px solid #eadac6; font-weight:700; }
+  .items-table td { padding:10px; }
+  .btn-back { background:#d59b2d; color:white; padding:8px 12px; border-radius:999px; text-decoration:none; }
+</style>
+
+<div class="page-title">Order Details</div>
+<div class="card-wrap">
+  <div class="detail-card">
+    <div class="meta">
+      <div>
+        <div><strong>Order #</strong> <%= order.id %></div>
+        <div><strong>PayPal Order</strong> <%= order.paypal_order_id || '-' %></div>
+        <div><strong>Capture ID</strong> <%= order.paypal_capture_id || '-' %></div>
+      </div>
+      <div style="text-align:right;">
+        <div><strong>Payer</strong></div>
+        <div><%= order.payer_email || '-' %></div>
+        <div style="margin-top:8px;"><strong>Total</strong> $<%= Number(order.total||0).toFixed(2) %></div>
+      </div>
+    </div>
+
+    <hr />
+
+    <div>
+      <h4>Items</h4>
+      <div class="table-responsive">
+        <table class="table items-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="text-end">Price</th>
+              <th class="text-end">Qty</th>
+              <th class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% (order.items || []).forEach(i => { %>
+              <tr>
+                <td><%= i.name %></td>
+                <td class="text-end">$<%= Number(i.price||0).toFixed(2) %></td>
+                <td class="text-end"><%= Number(i.qty||0) %></td>
+                <td class="text-end">$<%= Number((i.price||0)*(i.qty||0)).toFixed(2) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:12px;">
+      <a class="btn-back" href="/bizowner/orders">← Back</a>
+      <a class="btn-back" href="/bizowner">Dashboard</a>
+    </div>
+  </div>
+</div>

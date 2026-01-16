@@ -7,6 +7,9 @@ const checkoutController = require("../controllers/checkoutController");
 // Checkout page
 router.get("/checkout", checkoutController.renderCheckout);
 
+// Receipt page
+router.get("/receipt", checkoutController.renderReceipt);
+
 // PayPal
 router.post("/paypal/create-order", checkoutController.createPaypalOrder);
 router.post("/paypal/capture-order", checkoutController.capturePaypalOrder);

@@ -312,9 +312,10 @@
             <div id="paypal-status" class="hb-note"></div>
 
             <script>
-              const checkoutSubtotal = "<%= Number(subtotal || 0).toFixed(2) %>";
-              const checkoutDeliveryFee = "<%= Number(defaultDeliveryFee || 0).toFixed(2) %>";
-              const checkoutItems = "<%- JSON.stringify(items || []) %>";
+            const checkoutSubtotal = <%= Number(subtotal || 0).toFixed(2) %>;
+            const checkoutDeliveryFee = <%= Number(defaultDeliveryFee || 0).toFixed(2) %>;
+            const checkoutItems = <%- JSON.stringify(items || []) %>;
+
 
               function getShippingName() {
                 const el = document.getElementById("shippingName");
@@ -352,7 +353,9 @@
                   if (!res.ok || !result.ok) throw new Error(result.error || "Payment capture failed");
 
                   document.getElementById("paypal-status").innerText =
-                    "Payment completed. Order captured successfully.";
+                    "Payment completed. Redirecting to receipt...";
+                  // Go to receipt page which will render a simple receipt using session data
+                  window.location.href = '/receipt';
                 },
 
                 onError: (err) => {

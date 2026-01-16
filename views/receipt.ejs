@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= brand || "HomeBitez" %> Receipt</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    :root{ --accent:#dd9b00; --bg:#faefe5; }
+    body{ background:var(--bg); font-family: Arial, sans-serif; color:#222; }
+    .receipt-wrap{ max-width:980px; margin:28px auto; padding:20px; }
+    .receipt-card{ background:white; border-radius:12px; padding:22px; box-shadow:0 6px 18px rgba(0,0,0,0.06); border:1px solid #eee; }
+    .receipt-header{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .brand{ display:flex; align-items:center; gap:12px; }
+    .brand-logo{ width:56px; height:56px; border-radius:50%; background:var(--accent); display:inline-flex; align-items:center; justify-content:center; color:white; font-weight:900; font-family:'Sniglet', Arial, sans-serif; }
+    .brand-title{ font-size:20px; font-weight:900; }
+    .meta{ text-align:right; color:#444; font-size:13px; }
+    .meta strong{ color:#111; }
+    .payer{ margin-top:14px; font-size:14px; }
+    .items-table thead th{ border-bottom:1px solid #eee; font-weight:700; }
+    .items-table td{ border-top: none; }
+    .totals{ min-width:260px; }
+    .totals .line{ display:flex; justify-content:space-between; margin:6px 0; color:#444; }
+    .totals .total-amount{ font-size:20px; font-weight:900; color:var(--accent); }
+    .actions{ margin-top:18px; display:flex; gap:10px; }
+
+    /* Print styles */
+    @media print{
+      body{ background:white; }
+      .actions, .navbar, .no-print{ display:none !important; }
+      .receipt-wrap{ margin:0; padding:0; }
+      .receipt-card{ box-shadow:none; border:none; border-radius:0; padding:0; }
+      @page{ size: auto; margin: 12mm; }
+    }
+  </style>
+</head>
+<body>
+
+  <%- include('partials/navbar-user') %>
+
+  <div class="receipt-wrap">
+    <div class="receipt-card">
+      <div class="receipt-header">
+        <div class="brand">
+          <div class="brand-logo">HB</div>
+          <div>
+            <div class="brand-title">HomeBitez</div>
+            <div class="text-muted">Payment Receipt</div>
+          </div>
+        </div>
+
+        <div class="meta">
+          <div>Order ID: <strong><%= paypalPending.orderId %></strong></div>
+          <div>Capture ID: <strong><%= paypalCapture.captureId %></strong></div>
+          <% if (latestOrderDbId) { %>
+            <div>Record ID: <strong><%= latestOrderDbId %></strong></div>
+          <% } %>
+          <div class="text-muted" style="margin-top:6px; font-size:12px;">Date: <%= new Date().toLocaleString() %></div>
+        </div>
+      </div>
+
+      <div class="payer">
+        <strong>Payer:</strong> <%= paypalCapture.payerEmail || 'N/A' %>
+        <% if (paypalPending.shippingName) { %>
+          &nbsp;|&nbsp; <strong>Name:</strong> <%= paypalPending.shippingName %>
+        <% } %>
+      </div>
+
+      <div class="row mt-3">
+        <div class="col-md-8">
+          <div class="table-responsive">
+            <table class="table items-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th class="text-end">Price</th>
+                  <th class="text-end">Qty</th>
+                  <th class="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% items.forEach(i => { %>
+                  <tr>
+                    <td style="width:55%;"><%= i.name %></td>
+                    <td class="text-end">$<%= Number(i.price||0).toFixed(2) %></td>
+                    <td class="text-end" style="width:80px;"><%= Number(i.qty||0) %></td>
+                    <td class="text-end">$<%= Number(i.subtotal||0).toFixed(2) %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="col-md-4 d-flex justify-content-end">
+          <div class="totals">
+            <div class="line"><span class="text-muted">Subtotal</span><span>$<%= Number(subtotal||0).toFixed(2) %></span></div>
+            <div class="line"><span class="text-muted">Delivery</span><span>$<%= Number(deliveryFee||0).toFixed(2) %></span></div>
+            <hr />
+            <div class="line"><span class="text-muted">Total</span><span class="total-amount">$<%= Number(total||0).toFixed(2) %></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions no-print">
+        <button class="btn btn-outline-secondary" onclick="window.location.href='/menu'">← Back to Menu</button>
+        <button class="btn btn-primary" onclick="window.location.href='/'">Home</button>
+        <button class="btn btn-success ms-auto" id="printBtn"><i class="bi bi-printer"></i> Print Receipt</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('printBtn')?.addEventListener('click', function(){
+      window.print();
+    });
+  </script>
+</body>
+</html>
