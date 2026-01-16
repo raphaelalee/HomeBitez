@@ -360,6 +360,12 @@ app.post('/user/change-password', async (req, res) => {
 const cartRoutes = require("./Routes/cartRoutes");
 app.use("/cart", cartRoutes);
 
+/* -------------------- About Us -------------------- */
+app.get("/about", (req, res) => {
+  res.render("about");
+});
+
+
 /* -------------------- CHECKOUT ROUTES -------------------- */
 const checkoutRoutes = require("./Routes/checkoutRoutes");
 app.use(checkoutRoutes);

@@ -9,12 +9,19 @@ module.exports = {
             subtotal += item.price * item.quantity;
         });
 
-        res.render('carts', { cart, subtotal });
+        // Preferences stored in session
+        const prefs = req.session.cartPrefs || {
+            cutlery: false,
+            pickupDate: "",
+            pickupTime: ""
+        };
+
+        res.render('carts', { cart, subtotal, prefs });
     },
 
     // POST /cart/add  (called by fetch)
     addToCart(req, res) {
-        const { name, price, qty } = req.body;
+        const { name, price, qty, image } = req.body;
 
         if (!name || !price) {
             return res.status(400).json({ ok: false, error: "Missing item data" });
@@ -34,25 +41,50 @@ module.exports = {
             cart.push({
                 name,
                 price: parseFloat(price),
-                quantity: Number(qty || 1)
+                quantity: Number(qty || 1),
+                image: image || ""   // optional
             });
         }
 
         req.session.cart = cart;
 
-        // IMPORTANT: return JSON, not redirect
         return res.json({ ok: true, cartCount: cart.length });
     },
 
     // POST /cart/update
+    // Supports:
+    //  A) { name, quantity }
+    //  B) { name, action: "increase" | "decrease" }
     updateItem(req, res) {
-        const { name, quantity } = req.body;
+        const { name, quantity, action } = req.body;
 
         if (!req.session.cart) req.session.cart = [];
 
+        // If action mode
+        if (name && action) {
+            req.session.cart = req.session.cart.map(item => {
+                if (item.name === name) {
+                    if (action === "increase") item.quantity += 1;
+                    if (action === "decrease") item.quantity -= 1;
+                    if (item.quantity < 1) item.quantity = 1;
+                }
+                return item;
+            });
+
+            return res.json({ ok: true });
+        }
+
+        // If quantity mode
+        if (!name || quantity === undefined || quantity === null) {
+            return res.status(400).json({ ok: false, error: "Missing name/quantity" });
+        }
+
+        let q = parseInt(quantity);
+        if (isNaN(q) || q < 1) q = 1;
+
         req.session.cart = req.session.cart.map(item => {
             if (item.name === name) {
-                item.quantity = parseInt(quantity);
+                item.quantity = q;
             }
             return item;
         });
@@ -67,6 +99,21 @@ module.exports = {
         if (!req.session.cart) req.session.cart = [];
 
         req.session.cart = req.session.cart.filter(item => item.name !== name);
+
+        return res.json({ ok: true });
+    },
+
+    // POST /cart/preferences
+    savePreferences(req, res) {
+        const { cutlery, pickupDate, pickupTime } = req.body;
+
+        if (!req.session.cartPrefs) {
+            req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "" };
+        }
+
+        req.session.cartPrefs.cutlery = !!cutlery;
+        req.session.cartPrefs.pickupDate = pickupDate || "";
+        req.session.cartPrefs.pickupTime = pickupTime || "";
 
         return res.json({ ok: true });
     }
