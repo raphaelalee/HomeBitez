@@ -2,6 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 require("dotenv").config();
 
 // Controllers
@@ -35,6 +36,7 @@ app.use(session({
 
 // Make user available in views
 app.use((req, res, next) => {
+    res.locals.user = req.session.user || null;
     res.locals.currentUser = req.session.user || null;
     next();
 });
@@ -66,6 +68,17 @@ module.exports.upload = upload;
 app.get('/', (req, res) => {
     res.render('index');
 });
+
+// Logout
+app.get('/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      return res.redirect('/user');
+    }
+    res.redirect('/login');
+  });
+});
+
 
 // Report Issue page
 app.get('/report', (req, res) => {
@@ -121,13 +134,13 @@ app.post('/register', UsersController.register);
 app.post('/signup', UsersController.register);
 
 // Menu (requires login)
+// routes/menu.js or wherever your route is
 app.get('/menu', (req, res) => {
-    if (!req.session.user) {
-        req.flash('error', 'Please login first.');
-        return res.redirect('/login');
-    }
-    res.render('menu');
+    res.render('menu', {
+        user: req.session.user || null // or however you store logged-in user
+    });
 });
+
 
 // Admin dashboard
 app.get('/admin', async (req, res) => {
@@ -178,6 +191,158 @@ app.get('/logout', (req, res) => {
         res.redirect('/login');
     });
 });
+
+// GET user profile
+app.get('/user/profile', (req, res) => {
+  // Make sure req.session.user exists
+  const user = req.session.user || {};
+
+  // Pass orders as an empty array if you don't have real order data yet
+  const orders = [];  
+
+  res.render('userprofile', { user, orders });
+});
+
+
+const fs = require("fs"); // optional, if you want to delete old avatars
+
+
+app.post('/user/profile', upload.single('avatar'), async (req, res) => {
+  try {
+    const { username, email, address, contact } = req.body;
+    let avatarPath = req.session.user.avatar || '/images/default-avatar.png';
+
+    if (req.file) {
+      avatarPath = '/images/' + req.file.filename;
+    }
+
+    // Update user in the database
+    await db.query(
+      'UPDATE users SET username=?, email=?, address=?, contact=?, avatar=? WHERE id=?',
+      [username, email, address, contact, avatarPath, req.session.user.id]
+    );
+
+    // Update session so navbar/profile show new info immediately
+    req.session.user = { ...req.session.user, username, email, address, contact, avatar: avatarPath };
+
+    res.redirect('/user/profile');
+  } catch (err) {
+    console.error('Profile update error:', err);
+    res.send('Error updating profile');
+  }
+});
+
+
+// GET Contact Us page
+app.get('/contact', (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please log in to send a message.');
+        return res.redirect('/login');
+    }
+
+    res.render('contact', {
+        error: req.flash('error'),
+        success: req.flash('success'),
+        userEmail: req.session.user.email || ''
+    });
+});
+
+// POST Contact Us form
+app.post('/contact', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please log in to send a message.');
+        return res.redirect('/login');
+    }
+
+    const { name, email, message } = req.body;
+
+    if (!name || !email || !message) {
+        req.flash('error', 'Please fill in all fields.');
+        return res.redirect('/contact');
+    }
+
+    try {
+        await db.query(
+            'INSERT INTO messages (senderId, message, isRead, created_at) VALUES (?, ?, 0, NOW())',
+            [req.session.user.id, message]
+        );
+
+        req.flash('success', 'Your message has been sent!');
+        res.redirect('/contact');
+    } catch (err) {
+        console.error('Error inserting message:', err);
+        req.flash('error', 'Failed to send message.');
+        res.redirect('/contact');
+    }
+});
+
+app.get('/bizowner/messages', async (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'biz_owner') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/login');
+    }
+
+    try {
+        const [messages] = await db.query(
+            `SELECT m.*, u.username AS senderName
+             FROM messages m
+             JOIN users u ON m.senderId = u.id
+             ORDER BY m.created_at DESC`
+        );
+
+        res.render('bizowner/messages', { messages });
+    } catch (err) {
+        console.error('Error fetching messages:', err);
+        res.render('bizowner/messages', { messages: [] });
+    }
+});
+
+
+app.post('/user/change-password', async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.send('Please fill in all password fields.');
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.send('New passwords do not match.');
+    }
+
+    const userId = req.session.user?.id;
+    if (!userId) return res.send('User not logged in.');
+
+    // Get user from DB
+    const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
+    const user = rows[0];
+    if (!user) return res.send('User not found.');
+
+    if (!user.password) return res.send('User has no password set.');
+
+    // Compare current password with hash in DB
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if (!match) return res.send('Current password is incorrect.');
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password in DB
+    await db.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
+
+    // Optional: update session object with new password hash (not required but safe)
+    req.session.user.password = hashedPassword;
+
+    res.send('Password updated successfully!');
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.send('An error occurred while changing password.');
+  }
+});
+
+
+
+
 
 /* -------------------- CART ROUTES -------------------- */
 const cartRoutes = require("./Routes/cartRoutes");

@@ -77,7 +77,10 @@ module.exports = {
       id: user.id || user.user_id,
       email: user.email,
       username: user.username,
-      role: user.role
+      role: user.role,
+      avatar: user.avatar || '/images/default-avatar.png', // add this line
+      address: user.address || '', // optional
+      contact: user.contact || ''  // optional
     };
 
     // Role-based redirect
