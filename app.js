@@ -2,6 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
+require("dotenv").config();
 
 // Controllers
 const UsersController = require('./Controllers/usersController');
@@ -14,21 +15,25 @@ const db = require('./db');
 const app = express();
 
 /* -------------------- MIDDLEWARE -------------------- */
+
+// Parse request bodies
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Sessions (IMPORTANT for cart)
 app.use(session({
     secret: 'supersecretkey123',
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: true   // important for cart + fetch
 }));
 
+// Make user available in views
 app.use((req, res, next) => {
-  res.locals.currentUser = req.session.user || null;
-  next();
+    res.locals.currentUser = req.session.user || null;
+    next();
 });
 
 app.use(flash());
@@ -50,8 +55,6 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-
-// Export upload for other routes
 module.exports.upload = upload;
 
 /* -------------------- ROUTES -------------------- */
@@ -75,7 +78,7 @@ app.get('/report', (req, res) => {
     });
 });
 
-app.post('/report', (req, res) => {
+app.post('/report', async (req, res) => {
     if (!req.session.user) {
         req.flash('error', 'Please log in to submit a report.');
         return res.redirect('/login');
@@ -85,27 +88,29 @@ app.post('/report', (req, res) => {
     const email = req.session.user.email || '';
 
     if (!name || !email || !subject || !description) {
-        req.flash('error', 'Please fill out all fields before submitting.');
+        req.flash('error', 'Please fill out all fields.');
         return res.redirect('/report');
     }
 
-    ReportModel.create({
-        userId: req.session.user.id || null,
-        name,
-        email,
-        subject,
-        description
-    }).then(() => {
-        req.flash('success', 'Thanks for letting us know. We will review your report shortly.');
-        return res.redirect('/report');
-    }).catch((err) => {
-        console.error('Error saving report:', err);
-        req.flash('error', 'Could not save your report right now. Please try again.');
-        return res.redirect('/report');
-    });
+    try {
+        await ReportModel.create({
+            userId: req.session.user.id || null,
+            name,
+            email,
+            subject,
+            description
+        });
+
+        req.flash('success', 'Report submitted successfully.');
+        res.redirect('/report');
+    } catch (err) {
+        console.error(err);
+        req.flash('error', 'Failed to submit report.');
+        res.redirect('/report');
+    }
 });
 
-// Auth routes
+// Auth
 app.get('/login', UsersController.showLogin);
 app.post('/login', UsersController.login);
 app.get('/register', UsersController.showRegister);
@@ -138,46 +143,19 @@ app.get('/admin', async (req, res) => {
     let totalIssues = 0;
 
     try {
-        const [productRows] = await db.query("SELECT COUNT(*) AS total FROM products");
-        totalProducts = productRows[0]?.total || 0;
-    } catch (err) {
-        console.error("Admin stats: products count failed", err);
-    }
+        const [p] = await db.query("SELECT COUNT(*) AS total FROM products");
+        totalProducts = p[0]?.total || 0;
 
-    try {
-        const [orderRows] = await db.query("SELECT COUNT(*) AS total FROM orders");
-        totalOrders = orderRows[0]?.total || 0;
-    } catch (err) {
-        console.error("Admin stats: orders count failed", err);
-    }
+        const [o] = await db.query("SELECT COUNT(*) AS total FROM orders");
+        totalOrders = o[0]?.total || 0;
 
-    try {
-        const [customerRows] = await db.query(
-            "SELECT COUNT(*) AS total FROM users WHERE role = ?",
-            ["user"]
-        );
-        totalCustomers = customerRows[0]?.total || 0;
-    } catch (err) {
-        console.error("Admin stats: customers count failed", err);
-    }
+        const [c] = await db.query("SELECT COUNT(*) AS total FROM users WHERE role = 'user'");
+        totalCustomers = c[0]?.total || 0;
 
-    try {
-        await db.execute(`
-            CREATE TABLE IF NOT EXISTS report_messages (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NULL,
-                name VARCHAR(100) NOT NULL,
-                email VARCHAR(150) NOT NULL,
-                subject VARCHAR(200) NOT NULL,
-                description TEXT NOT NULL,
-                status ENUM('new','in_progress','resolved') DEFAULT 'new',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        const [issueRows] = await db.query("SELECT COUNT(*) AS total FROM report_messages");
-        totalIssues = issueRows[0]?.total || 0;
+        const [i] = await db.query("SELECT COUNT(*) AS total FROM report_messages");
+        totalIssues = i[0]?.total || 0;
     } catch (err) {
-        console.error("Admin stats: issues count failed", err);
+        console.error("Admin stats error:", err);
     }
 
     res.render('admin', {
@@ -198,28 +176,29 @@ app.get('/logout', (req, res) => {
     });
 });
 
-// Cart routes
-const cartRoutes = require('./Routes/cartRoutes');
-app.use('/cart', cartRoutes);
+/* -------------------- CART ROUTES -------------------- */
+const cartRoutes = require("./Routes/cartRoutes");
+app.use("/cart", cartRoutes);
 
-// Business Owner routes
+/* -------------------- CHECKOUT ROUTES -------------------- */
+const checkoutRoutes = require("./Routes/checkoutRoutes");
+app.use(checkoutRoutes);
+
+/* -------------------- BUSINESS OWNER ROUTES -------------------- */
 const ownerRoutes = require("./Routes/bizownerRoutes");
 app.use("/bizowner", ownerRoutes);
 
-/* -------------------- DIGITAL WALLET ROUTE -------------------- */
+/* -------------------- DIGITAL WALLET -------------------- */
 app.get('/digitalwallet', (req, res) => {
     if (!req.session.user) {
         req.flash('error', 'Please login to view your digital wallet.');
         return res.redirect('/login');
     }
 
-    // Dummy data for now
     const balance = 120.50;
     const transactions = [
         { date: '2026-01-10', description: 'Top-up', amount: 50, type: 'Credit' },
-        { date: '2026-01-12', description: 'Purchase: Chicken Curry', amount: 8.60, type: 'Debit' },
-        { date: '2026-01-14', description: 'Top-up', amount: 100, type: 'Credit' },
-        { date: '2026-01-15', description: 'Purchase: Naan', amount: 2.50, type: 'Debit' }
+        { date: '2026-01-12', description: 'Purchase: Chicken Curry', amount: 8.60, type: 'Debit' }
     ];
 
     res.render('digitalwallet', { balance, transactions });
@@ -230,4 +209,3 @@ const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-

@@ -151,6 +151,9 @@ function showProducts(category){
                     <p><strong>Allergies:</strong> ${p.allergies}</p>
                     <p class="price"><strong>Price:</strong> $${p.price.toFixed(2)}</p>
                     <button class="btn">View Product</button>
+                    <button class="btn" onclick="addToCart('${p.name.replace(/'/g, "\\'")}', ${p.price})">
+                        Add to Cart
+                    </button>
                 </div>
             `;
         });
@@ -165,10 +168,32 @@ document.querySelectorAll(".tab").forEach(tab=>{
         showProducts(tab.dataset.category);
     });
 });
+
+// ADD TO CART FUNCTION
+function addToCart(name, price) {
+    fetch("/cart/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name: name,
+            price: price,
+            qty: 1
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.ok) {
+            alert("Added to cart");
+        } else {
+            alert(data.error || "Failed to add to cart");
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Error adding to cart");
+    });
+}
 </script>
 
 </body>
 </html>
-
-
-
