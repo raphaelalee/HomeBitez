@@ -1,17 +1,18 @@
-// controllers/CheckoutController.js
-// HomeBitez - Session-based checkout (no DB dependency required for PayPal render)
+// controllers/checkoutController.js
+// HomeBitez - Session-based checkout (PayPal + NETS QR)
 
 const paypal = require("../services/paypal");
+const nets = require("../services/nets");
+
+// IMPORTANT: use the sandbox txn_id NETS gave you (the one you used before)
+const NETS_TXN_ID = "sandbox_nets|m|8ff8e5b6-d43e-4786-8ac5-7accf8c5bd9b";
 
 /**
  * GET /checkout
- * Renders checkout page using server-side cart snapshot (res.locals.cartDetailed).
  */
 exports.renderCheckout = (req, res) => {
-  // session cart from your cartController: { name, price, quantity }
   const cart = req.session.cart || [];
 
-  // convert to the shape checkout expects: { name, price, qty, subtotal }
   const items = cart.map((i) => {
     const price = Number(i.price || 0);
     const qty = Number(i.quantity || i.qty || 0);
@@ -24,7 +25,6 @@ exports.renderCheckout = (req, res) => {
   });
 
   const subtotal = items.reduce((sum, i) => sum + (Number(i.subtotal) || 0), 0);
-
   const defaultDeliveryFee = 2.5;
 
   res.render("checkout", {
@@ -39,20 +39,23 @@ exports.renderCheckout = (req, res) => {
   });
 };
 
-
 /**
  * POST /paypal/create-order
- * Creates PayPal order using server-calculated total (subtotal + delivery fee).
- * Accepts fallback items/subtotal from client (when cookies/sessions act funny).
  */
 exports.createPaypalOrder = async (req, res) => {
   try {
-    let items = res.locals.cartDetailed || [];
-
-    // fallback: accept items from client if session cart is not available
-    if ((!items || items.length === 0) && Array.isArray(req.body.items) && req.body.items.length > 0) {
-      items = req.body.items;
-    }
+    // build items from session cart (same logic as renderCheckout)
+    const cart = req.session.cart || [];
+    const items = cart.map((i) => {
+      const price = Number(i.price || 0);
+      const qty = Number(i.quantity || i.qty || 0);
+      return {
+        name: i.name,
+        price,
+        qty,
+        subtotal: Number((price * qty).toFixed(2)),
+      };
+    });
 
     if (!items || items.length === 0) {
       return res.status(400).json({ error: "Cart is empty" });
@@ -63,9 +66,10 @@ exports.createPaypalOrder = async (req, res) => {
       return res.status(400).json({ error: "Invalid delivery fee" });
     }
 
-    const subtotal = (typeof req.body.subtotal === "number" || typeof req.body.subtotal === "string")
-      ? (parseFloat(req.body.subtotal) || 0)
-      : items.reduce((s, i) => s + (Number(i.subtotal) || (Number(i.price || 0) * Number(i.qty || 0))), 0);
+    const subtotal = items.reduce(
+      (s, i) => s + (Number(i.subtotal) || (Number(i.price || 0) * Number(i.qty || 0))),
+      0
+    );
 
     if (!Number.isFinite(subtotal) || subtotal <= 0) {
       return res.status(400).json({ error: "Invalid subtotal" });
@@ -80,7 +84,6 @@ exports.createPaypalOrder = async (req, res) => {
 
     const order = await paypal.createOrder(total, { shippingName });
 
-    // store pending proof for later steps (even if you're not doing order save yet)
     if (req.session) {
       req.session.paypalPending = {
         orderId: order.id,
@@ -99,7 +102,6 @@ exports.createPaypalOrder = async (req, res) => {
 
 /**
  * POST /paypal/capture-order
- * Captures PayPal order and stores proof in session.
  */
 exports.capturePaypalOrder = async (req, res) => {
   try {
@@ -124,10 +126,62 @@ exports.capturePaypalOrder = async (req, res) => {
       };
     }
 
-    // checkout-only response
     return res.json({ ok: true, capture });
   } catch (err) {
     console.error("HomeBitez capturePaypalOrder error:", err);
     return res.status(500).json({ error: "Failed to capture PayPal order" });
+  }
+};
+
+/**
+ * POST /nets-qr/request
+ * This MUST be a normal form POST (not fetch) so we can render netsQr.ejs
+ */
+exports.requestNetsQr = async (req, res) => {
+  try {
+    const cartTotal = Number(req.body.cartTotal);
+
+    if (!Number.isFinite(cartTotal) || cartTotal <= 0) {
+      return res.render("netsQrFail", {
+        title: "Error",
+        responseCode: "N.A.",
+        instructions: "",
+        errorMsg: "Invalid amount. Cart total is missing/zero.",
+      });
+    }
+
+    const qrData = await nets.requestNetsQr(cartTotal, NETS_TXN_ID);
+    console.log("NETS qrData:", qrData);
+
+    if (nets.isQrSuccess(qrData)) {
+      // store pending reference
+      req.session.netsPending = {
+        txnRetrievalRef: qrData.txn_retrieval_ref,
+        amount: cartTotal,
+        createdAt: Date.now(),
+      };
+
+      return res.render("netsQR", {
+        qrCodeUrl: `data:image/png;base64,${qrData.qr_code}`,
+        txnRetrievalRef: qrData.txn_retrieval_ref,
+        amount: cartTotal,
+      });
+    }
+
+    // Not success -> show real error info (so you can debug)
+    return res.render("netsQrFail", {
+      title: "Error",
+      responseCode: qrData.response_code || "N.A.",
+      instructions: qrData.instruction || "",
+      errorMsg: qrData.error_message || "NETS failed to generate QR. Check API key / project id / txn_id.",
+    });
+  } catch (err) {
+    console.error("NETS requestNetsQr error:", err?.response?.data || err.message || err);
+    return res.render("netsQrFail", {
+      title: "Error",
+      responseCode: "N.A.",
+      instructions: "",
+      errorMsg: "NETS payment failed (server error). Check console for details.",
+    });
   }
 };

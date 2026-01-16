@@ -11,6 +11,9 @@ const ReportModel = require('./models/ReportModel');
 // DB
 const db = require('./db');
 
+// NETS service (for QR)
+const nets = require("./services/nets");
+
 // Initialize app
 const app = express();
 
@@ -183,6 +186,127 @@ app.use("/cart", cartRoutes);
 /* -------------------- CHECKOUT ROUTES -------------------- */
 const checkoutRoutes = require("./Routes/checkoutRoutes");
 app.use(checkoutRoutes);
+
+/* -------------------- NETS (NO ROUTE FILE, DIRECT HERE) -------------------- */
+/**
+ * POST /nets/create
+ * Called by checkout.ejs when user clicks "Pay with NETS"
+ * Creates NETS QR and stores pending reference in session.
+ */
+app.post("/nets/create", async (req, res) => {
+    try {
+        const total = parseFloat(req.body.total);
+
+        if (!Number.isFinite(total) || total <= 0) {
+            return res.status(400).json({ error: "Invalid amount" });
+        }
+
+        const txnRef = `HBZ-${Date.now()}`;
+
+        // You need your nets.js to return something like:
+        // { qrCodeUrl, txnRetrievalRef }
+        const response = await nets.createNetsPayment(total, txnRef);
+
+        // Store pending so /nets-qr can render it
+        req.session.netsPending = {
+            txnRef,
+            amount: total,
+            qrCodeUrl: response.qrCodeUrl || response.qrCode || null,
+            txnRetrievalRef: response.txnRetrievalRef || response.txnRef || txnRef,
+            createdAt: Date.now()
+        };
+
+        return res.json({
+            txnRef,
+            txnRetrievalRef: req.session.netsPending.txnRetrievalRef
+        });
+    } catch (err) {
+        console.error("NETS create error:", err);
+        return res.status(500).json({ error: "NETS payment failed" });
+    }
+});
+
+/**
+ * GET /nets-qr
+ * Renders your netsQR.ejs
+ * expects query ?txnRef=...
+ */
+app.get("/nets-qr", (req, res) => {
+    const txnRef = req.query.txnRef;
+    const pending = req.session.netsPending;
+
+    if (!pending || !txnRef || pending.txnRef !== txnRef) {
+        return res.redirect("/checkout");
+    }
+
+    // Your netsQR.ejs expects:
+    // qrCodeUrl, txnRetrievalRef, amount, timeRemaining (optional)
+    res.render("netsQR", {
+        qrCodeUrl: pending.qrCodeUrl || "",
+        txnRetrievalRef: pending.txnRetrievalRef || pending.txnRef,
+        amount: pending.amount,
+        timeRemaining: "5:00"
+    });
+});
+
+/**
+ * GET /nets-qr/success
+ */
+app.get("/nets-qr/success", (req, res) => {
+    res.send("NETS payment success (replace with your success page)");
+});
+
+/**
+ * GET /nets-qr/fail
+ */
+app.get("/nets-qr/fail", (req, res) => {
+    res.send("NETS payment failed (replace with your fail page)");
+});
+
+/**
+ * SSE: /sse/payment-status/:txnRetrievalRef
+ * netsQR.ejs listens here every few seconds.
+ * For sandbox you can keep it simple and return SUCCESS after a short time,
+ * or call nets service to check actual status if you implemented it.
+ */
+app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    const txnRetrievalRef = req.params.txnRetrievalRef;
+
+    const interval = setInterval(async () => {
+        try {
+            // If you have real check function:
+            // const status = await nets.checkStatus(txnRetrievalRef);
+
+            // Sandbox placeholder:
+            const status = "PENDING";
+
+            if (status === "SUCCESS") {
+                res.write(`data: ${JSON.stringify({ success: true })}\n\n`);
+                clearInterval(interval);
+                return res.end();
+            }
+
+            if (status === "FAIL") {
+                res.write(`data: ${JSON.stringify({ fail: true, message: "Payment failed" })}\n\n`);
+                clearInterval(interval);
+                return res.end();
+            }
+
+            // still pending -> keep connection alive
+            res.write(`data: ${JSON.stringify({ pending: true })}\n\n`);
+        } catch (e) {
+            res.write(`data: ${JSON.stringify({ pending: true })}\n\n`);
+        }
+    }, 5000);
+
+    req.on("close", () => {
+        clearInterval(interval);
+    });
+});
 
 /* -------------------- BUSINESS OWNER ROUTES -------------------- */
 const ownerRoutes = require("./Routes/bizownerRoutes");

@@ -179,7 +179,6 @@
       border: 1px solid #dd9b00;
     }
 
-    /* PayPal container nicer spacing */
     #paypal-button-container{
       margin-top: 10px;
     }
@@ -298,73 +297,109 @@
 
         </div>
 
-        <!-- RIGHT: PayPal -->
-        <div class="hb-card">
-          <div class="hb-card-title">
-            <i class="bi bi-paypal"></i>
-            Pay with PayPal
-            <span class="hb-pill"><i class="bi bi-shield-check"></i> secure</span>
+        <!-- RIGHT: PayPal + NETS (same column) -->
+        <div style="display:flex; flex-direction:column; gap:24px;">
+
+          <!-- PayPal -->
+          <div class="hb-card">
+            <div class="hb-card-title">
+              <i class="bi bi-paypal"></i>
+              Pay with PayPal
+              <span class="hb-pill"><i class="bi bi-shield-check"></i> secure</span>
+            </div>
+
+            <div id="paypal-button-container"></div>
+            <div id="paypal-status" class="hb-note"></div>
+
+            <script>
+              const checkoutSubtotal = <%= Number(subtotal || 0).toFixed(2) %>;
+              const checkoutDeliveryFee = <%= Number(defaultDeliveryFee || 0).toFixed(2) %>;
+              const checkoutItems = <%- JSON.stringify(items || []) %>;
+
+              function getShippingName() {
+                const el = document.getElementById("shippingName");
+                return el ? (el.value || "").trim() : "";
+              }
+
+              paypal.Buttons({
+                createOrder: async () => {
+                  const payload = {
+                    items: checkoutItems,
+                    subtotal: checkoutSubtotal,
+                    deliveryFee: checkoutDeliveryFee,
+                    shippingName: getShippingName()
+                  };
+
+                  const res = await fetch("/paypal/create-order", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                  });
+
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error || "Failed to create PayPal order");
+                  return data.id;
+                },
+
+                onApprove: async (data) => {
+                  const res = await fetch("/paypal/capture-order", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ orderId: data.orderID })
+                  });
+
+                  const result = await res.json();
+                  if (!res.ok || !result.ok) throw new Error(result.error || "Payment capture failed");
+
+                  document.getElementById("paypal-status").innerText =
+                    "Payment completed. Order captured successfully.";
+                },
+
+                onError: (err) => {
+                  console.error(err);
+                  document.getElementById("paypal-status").innerText =
+                    "PayPal error: " + (err && err.message ? err.message : "Unknown error");
+                }
+              }).render("#paypal-button-container");
+            </script>
           </div>
 
-          <div id="paypal-button-container"></div>
-          <div id="paypal-status" class="hb-note"></div>
+          <!-- NETS (FIXED: no fetch, use form POST so server can render netsQR.ejs) -->
+          <div class="hb-card">
+            <div class="hb-card-title">
+              <i class="bi bi-qr-code-scan"></i>
+              Pay with NETS
+              <span class="hb-pill"><i class="bi bi-lightning-charge"></i> QR</span>
+            </div>
 
-          <script>
-            // Data from server-rendered view
-            const checkoutSubtotal = <%= Number(subtotal || 0).toFixed(2) %>;
-            const checkoutDeliveryFee = <%= Number(defaultDeliveryFee || 0).toFixed(2) %>;
-            const checkoutItems = <%- JSON.stringify(items || []) %>;
+            <div id="nets-status" class="hb-note">
+              Generate a NETS QR code and scan using the simulator app.
+            </div>
 
-            function getShippingName() {
-              const el = document.getElementById("shippingName");
-              return el ? (el.value || "").trim() : "";
-            }
+            <form action="/nets-qr/request" method="POST">
+              <input type="hidden" name="cartTotal" value="<%= Number(total || 0).toFixed(2) %>">
+              <button id="netsBtn" type="submit" class="hb-btn w-100">
+                <i class="bi bi-qr-code"></i> Pay with NETS
+              </button>
+            </form>
 
-            paypal.Buttons({
-              createOrder: async () => {
-                const payload = {
-                  items: checkoutItems,
-                  subtotal: checkoutSubtotal,
-                  deliveryFee: checkoutDeliveryFee,
-                  shippingName: getShippingName()
-                };
+            <script>
+              // purely UI feedback (no API calls here)
+              document.addEventListener("DOMContentLoaded", () => {
+                const form = document.querySelector('form[action="/nets-qr/request"]');
+                const btn = document.getElementById("netsBtn");
+                const status = document.getElementById("nets-status");
+                if (!form || !btn) return;
 
-                const res = await fetch("/paypal/create-order", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(payload)
+                form.addEventListener("submit", () => {
+                  btn.disabled = true;
+                  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generating NETS QR...';
+                  if (status) status.textContent = "Generating NETS QR...";
                 });
+              });
+            </script>
 
-                const data = await res.json();
-                if (!res.ok) {
-                  throw new Error(data.error || "Failed to create PayPal order");
-                }
-                return data.id;
-              },
-
-              onApprove: async (data) => {
-                const res = await fetch("/paypal/capture-order", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ orderId: data.orderID })
-                });
-
-                const result = await res.json();
-                if (!res.ok || !result.ok) {
-                  throw new Error(result.error || "Payment capture failed");
-                }
-
-                document.getElementById("paypal-status").innerText =
-                  "Payment completed. Order captured successfully.";
-              },
-
-              onError: (err) => {
-                console.error(err);
-                document.getElementById("paypal-status").innerText =
-                  "PayPal error: " + (err && err.message ? err.message : "Unknown error");
-              }
-            }).render("#paypal-button-container");
-          </script>
+          </div>
 
         </div>
 
