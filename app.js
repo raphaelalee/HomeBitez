@@ -464,8 +464,8 @@ app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
             // If you have real check function:
             // const status = await nets.checkStatus(txnRetrievalRef);
 
-            // Sandbox placeholder:
-            const status = "PENDING";
+            // Sandbox placeholder. Use in-memory override for testing without simulator app
+            const status = netsStatusOverrides[txnRetrievalRef] || "PENDING";
 
             if (status === "SUCCESS") {
                 res.write(`data: ${JSON.stringify({ success: true })}\n\n`);
@@ -489,6 +489,64 @@ app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
     req.on("close", () => {
         clearInterval(interval);
     });
+});
+
+// In-memory overrides for testing without simulator app
+const netsStatusOverrides = {};
+
+/**
+ * POST /nets/simulate-success/:txnRetrievalRef
+ * Dev helper: mark a txnRetrievalRef as SUCCESS so SSE will report success.
+ */
+app.post('/nets/simulate-success/:txnRetrievalRef', (req, res) => {
+    try {
+        const ref = req.params.txnRetrievalRef;
+        if (!ref) return res.status(400).json({ error: 'Missing ref' });
+        netsStatusOverrides[ref] = 'SUCCESS';
+        console.log('Simulated NETS success for', ref);
+        return res.json({ ok: true, ref });
+    } catch (err) {
+        console.error('simulate-success error:', err);
+        return res.status(500).json({ error: 'simulate failed' });
+    }
+});
+
+/**
+ * POST /nets/complete
+ * Called by client when NETS reports SUCCESS so we can set session data
+ * that the existing /receipt page expects (paypalPending/paypalCapture).
+ */
+app.post('/nets/complete', async (req, res) => {
+    try {
+        const pending = req.session ? req.session.netsPending : null;
+        if (!pending) return res.status(400).json({ error: 'No pending NETS payment' });
+
+        // Map NETS pending into the paypalPending/paypalCapture shape used by receipt
+        if (req.session) {
+            req.session.paypalPending = {
+                total: Number(pending.amount) || 0,
+                shippingName: null,
+                createdAt: Date.now(),
+            };
+
+            req.session.paypalCapture = {
+                orderId: pending.txnRef || null,
+                status: 'COMPLETED',
+                captureId: pending.txnRetrievalRef || null,
+                payerEmail: null,
+                payerId: null,
+                capturedAt: Date.now(),
+            };
+        }
+
+        // Optionally clear netsPending so it won't be reused
+        if (req.session) req.session.netsPending = null;
+
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error('nets/complete error:', err);
+        return res.status(500).json({ error: 'Failed to finalize NETS payment' });
+    }
 });
 
 /* -------------------- BUSINESS OWNER ROUTES -------------------- */
