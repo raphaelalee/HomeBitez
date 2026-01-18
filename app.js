@@ -459,6 +459,9 @@ app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
 
     const txnRetrievalRef = req.params.txnRetrievalRef;
 
+    // register active SSE connection so external notify can push immediately
+    try { activeSseConnections[txnRetrievalRef] = res; } catch (e) {}
+
     const interval = setInterval(async () => {
         try {
             // If you have real check function:
@@ -468,18 +471,21 @@ app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
             const status = netsStatusOverrides[txnRetrievalRef] || "PENDING";
 
             if (status === "SUCCESS") {
+                console.log('SSE: reporting SUCCESS for', txnRetrievalRef);
                 res.write(`data: ${JSON.stringify({ success: true })}\n\n`);
                 clearInterval(interval);
                 return res.end();
             }
 
             if (status === "FAIL") {
+                console.log('SSE: reporting FAIL for', txnRetrievalRef);
                 res.write(`data: ${JSON.stringify({ fail: true, message: "Payment failed" })}\n\n`);
                 clearInterval(interval);
                 return res.end();
             }
 
             // still pending -> keep connection alive
+            // console.log('SSE: pending for', txnRetrievalRef);
             res.write(`data: ${JSON.stringify({ pending: true })}\n\n`);
         } catch (e) {
             res.write(`data: ${JSON.stringify({ pending: true })}\n\n`);
@@ -488,11 +494,14 @@ app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
 
     req.on("close", () => {
         clearInterval(interval);
+        try { delete activeSseConnections[txnRetrievalRef]; } catch (e) {}
     });
 });
 
 // In-memory overrides for testing without simulator app
 const netsStatusOverrides = {};
+// Active SSE response objects keyed by txnRetrievalRef so external notify can push immediately
+const activeSseConnections = {};
 
 /**
  * POST /nets/simulate-success/:txnRetrievalRef
@@ -512,6 +521,89 @@ app.post('/nets/simulate-success/:txnRetrievalRef', (req, res) => {
 });
 
 /**
+ * POST /nets/simulate-fail/:txnRetrievalRef
+ * Dev helper: mark a txnRetrievalRef as FAIL so SSE will report failure.
+ */
+app.post('/nets/simulate-fail/:txnRetrievalRef', (req, res) => {
+    try {
+        const ref = req.params.txnRetrievalRef;
+        if (!ref) return res.status(400).json({ error: 'Missing ref' });
+        netsStatusOverrides[ref] = 'FAIL';
+        console.log('Simulated NETS fail for', ref);
+        return res.json({ ok: true, ref });
+    } catch (err) {
+        console.error('simulate-fail error:', err);
+        return res.status(500).json({ error: 'simulate failed' });
+    }
+});
+
+/**
+ * POST /nets/notify/:txnRetrievalRef
+ * External webhook (simulator app) can call this to notify server of success.
+ */
+app.post('/nets/notify/:txnRetrievalRef', (req, res) => {
+    try {
+        const ref = req.params.txnRetrievalRef;
+        if (!ref) return res.status(400).json({ error: 'Missing ref' });
+
+        // set override so polling will return success
+        netsStatusOverrides[ref] = 'SUCCESS';
+
+        // if an SSE connection exists, push immediately
+        const s = activeSseConnections[ref];
+        if (s && !s.writableEnded) {
+            console.log('notify: pushing SUCCESS to active SSE for', ref);
+            try {
+                s.write(`data: ${JSON.stringify({ success: true })}\n\n`);
+                s.end();
+            } catch (e) { console.error('notify push error', e); }
+            try { delete activeSseConnections[ref]; } catch(e){}
+        }
+
+        console.log('External notify set SUCCESS for', ref);
+        return res.json({ ok: true, ref });
+    } catch (err) {
+        console.error('nets/notify error:', err);
+        return res.status(500).json({ error: 'notify failed' });
+    }
+});
+
+/**
+ * GET /debug/session
+ * Dev helper: return limited session contents for debugging.
+ */
+app.get('/debug/session', (req, res) => {
+    try {
+        const sess = req.session || {};
+        const out = {
+            netsPending: sess.netsPending || null,
+            paypalPending: sess.paypalPending || null,
+            paypalCapture: sess.paypalCapture || null,
+            latestOrderDbId: sess.latestOrderDbId || null,
+            user: sess.user ? { id: sess.user.id, username: sess.user.username || sess.user.name } : null,
+        };
+        return res.json({ ok: true, session: out });
+    } catch (err) {
+        console.error('debug/session error', err);
+        return res.status(500).json({ ok: false, error: 'debug failed' });
+    }
+});
+
+/**
+ * POST /nets/complete-fail
+ * Called by client when NETS reports FAIL to clear pending session data.
+ */
+app.post('/nets/complete-fail', (req, res) => {
+    try {
+        if (req.session) req.session.netsPending = null;
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error('nets/complete-fail error:', err);
+        return res.status(500).json({ error: 'Failed to finalize NETS fail' });
+    }
+});
+
+/**
  * POST /nets/complete
  * Called by client when NETS reports SUCCESS so we can set session data
  * that the existing /receipt page expects (paypalPending/paypalCapture).
@@ -519,7 +611,10 @@ app.post('/nets/simulate-success/:txnRetrievalRef', (req, res) => {
 app.post('/nets/complete', async (req, res) => {
     try {
         const pending = req.session ? req.session.netsPending : null;
-        if (!pending) return res.status(400).json({ error: 'No pending NETS payment' });
+        if (!pending) {
+            console.log('nets/complete called but no pending in session');
+            return res.status(400).json({ error: 'No pending NETS payment' });
+        }
 
         // Map NETS pending into the paypalPending/paypalCapture shape used by receipt
         if (req.session) {
@@ -539,6 +634,7 @@ app.post('/nets/complete', async (req, res) => {
             };
         }
 
+        console.log('Finalizing NETS payment in session, pending=', pending);
         // Optionally clear netsPending so it won't be reused
         if (req.session) req.session.netsPending = null;
 
