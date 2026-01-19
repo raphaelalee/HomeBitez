@@ -1,0 +1,130 @@
+:root {
+  /* Beige palette (matches your menu page vibe) */
+  --bg: #f6efe6;          /* page background */
+  --surface: #fffaf3;     /* cards/panels */
+  --surface-2: #f3e7d9;   /* soft beige sections */
+  --border: #eadac6;
+
+  --text: #2a241e;
+  --muted: #6f6256;
+
+  --brand: #d59b2d;       /* warm gold accent (keep brand) */
+  --brand-2: #b97d18;     /* darker for hover */
+  --link: #2a241e;
+
+  --shadow: 0 10px 30px rgba(42, 36, 30, 0.10);
+  --radius: 18px;
+}
+
+/* Base */
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Top nav */
+.navbar, header, nav {
+  background: rgba(246, 239, 230, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.navbar a, nav a {
+  color: var(--link);
+  font-weight: 600;
+  opacity: 0.9;
+}
+.navbar a:hover, nav a:hover {
+  opacity: 1;
+}
+
+/* Main hero section: reduce the intense yellow */
+.hero, .hero-section, .banner, .biz-hero {
+  background: linear-gradient(180deg, #f1dfc7 0%, #f6efe6 75%);
+  border-bottom-left-radius: 32px;
+  border-bottom-right-radius: 32px;
+}
+
+/* Headings */
+h1, h2, h3 {
+  letter-spacing: -0.02em;
+}
+
+/* Cards / panels */
+.card, .panel, .content-box, .container-white, .manage-listings, .inventory-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+}
+
+/* Little stat cards */
+.stat, .stat-card, .summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 22px rgba(42, 36, 30, 0.08);
+}
+
+/* Buttons */
+button, .btn {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 700;
+}
+
+.btn-primary, .primary, .btn-main {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(213, 155, 45, 0.25);
+}
+.btn-primary:hover, .primary:hover, .btn-main:hover {
+  background: var(--brand-2);
+}
+
+.btn-outline, .secondary, .btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.btn-outline:hover, .secondary:hover, .btn-secondary:hover {
+  background: var(--surface-2);
+}
+
+/* Inputs */
+input, select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 14px;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: rgba(213, 155, 45, 0.6);
+  box-shadow: 0 0 0 4px rgba(213, 155, 45, 0.15);
+}
+
+/* Product cards */
+.product-card, .listing-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: 0 10px 26px rgba(42, 36, 30, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.product-card:hover, .listing-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(42, 36, 30, 0.12);
+}
+
+/* Icon buttons (edit/delete circles) */
+.icon-btn, .round-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+/* Reduce that huge yellow background block if it's a container */
+.yellow-bg, .bg-yellow, .inventory-hero-bg {
+  background: #f1dfc7 !important;
+}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Report an Issue - HomeBitez</title>
+<title>Contact Us - HomeBitez</title>
 
 <!-- Google Font -->
 <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
@@ -42,8 +42,8 @@ body {
 <%- include('partials/navbar-user') %>
 
 <div class="form-card">
-    <h3 class="mb-3">Report an Issue</h3>
-    <p class="text-muted">Tell us what went wrong so we can fix it quickly.</p>
+    <h3 class="mb-3">Contact Us</h3>
+    <p class="text-muted">Send us a message and we will get back to you as soon as possible.</p>
 
     <% if (error && error.length) { %>
         <div class="alert alert-danger"><%= error %></div>
@@ -52,7 +52,7 @@ body {
         <div class="alert alert-success"><%= success %></div>
     <% } %>
 
-    <form action="/report" method="POST" class="row g-3">
+    <form action="/contact" method="POST" class="row g-3">
         <div class="col-md-6">
             <label class="form-label">Name</label>
             <input type="text" name="name" class="form-control" required>
@@ -62,15 +62,11 @@ body {
             <input type="email" name="email" class="form-control" value="<%= userEmail || '' %>" readonly>
         </div>
         <div class="col-12">
-            <label class="form-label">Subject</label>
-            <input type="text" name="subject" class="form-control" required>
-        </div>
-        <div class="col-12">
-            <label class="form-label">Description</label>
-            <textarea name="description" rows="5" class="form-control" placeholder="Describe the issue in detail..." required></textarea>
+            <label class="form-label">Message</label>
+            <textarea name="message" rows="5" class="form-control" placeholder="Write your message..." required></textarea>
         </div>
         <div class="col-12 text-end">
-            <button type="submit" class="btn btn-submit px-4">Submit Report</button>
+            <button type="submit" class="btn btn-submit px-4">Send Message</button>
         </div>
     </form>
 </div>

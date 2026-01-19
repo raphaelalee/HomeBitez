@@ -1,231 +1,380 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Cart - HomeBitez</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cart - HomeBitez</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- Sniglet Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  body{
+      margin:0;
+      font-family:Arial, sans-serif;
+      background:#faefe5;
+  }
 
-    <style>
-        body {
-            background: #fdeeda;
-            padding: 30px 80px;
-            font-family: Arial, sans-serif;
-        }
+  .cart-wrap{
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 26px 20px 40px;
+  }
 
-        /* Navbar */
-        .navbar-logo {
-            font-family: 'Sniglet', cursive;
-            font-size: 32px;
-            font-weight: 900;
-            color: #ff9c07;
-        }
+  .cart-panel{
+      background: #fdeeda;
+      border-radius: 14px;
+      padding: 26px 32px 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
 
-        /* Cart Item */
-        .cart-item {
-            display: flex;
-            align-items: center;
-            padding: 18px 0;
-            border-bottom: 1px solid #ccc;
-        }
+  .cart-row{
+      display: grid;
+      grid-template-columns: 90px 1fr 120px 80px;
+      gap: 14px;
+      align-items: center;
+      padding: 18px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.18);
+  }
 
-        .cart-item img {
-            width: 85px;
-            height: 85px;
-            border-radius: 10px;
-            object-fit: cover;
-            margin-right: 20px;
-        }
+  .cart-row:last-child{
+      border-bottom: none;
+  }
 
-        .edit-link {
-            color: #0066cc;
-            margin-left: 10px;
-            cursor: pointer;
-        }
+  .item-img{
+      width: 70px;
+      height: 70px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #fff;
+      border: 1px solid rgba(0,0,0,0.08);
+  }
 
-        .qty-box {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+  .item-name{
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1.2;
+  }
 
-        .qty-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: none;
-            background: #ffcc7b;
-            font-weight: bold;
-        }
+  .item-sub{
+      font-size: 13px;
+      margin: 6px 0 0;
+      color: #333;
+  }
 
-        .pill {
-            padding: 6px 14px;
-            border-radius: 20px;
-            background: white;
-            border: 1px solid #ccc;
-            margin-right: 8px;
-            font-size: 13px;
-        }
+  .edit-link{
+      font-size: 12px;
+      margin-left: 10px;
+      text-decoration: none;
+      color: #1e73ff;
+      cursor: pointer;
+  }
+  .edit-link:hover{ text-decoration: underline; }
 
-        .btn-checkout {
-            padding: 12px 35px;
-            background: #d9a521;
-            color: white;
-            border-radius: 8px;
-            border: none;
-        }
+  .price-col{
+      text-align: left;
+      font-weight: 700;
+  }
 
-        .btn-back {
-            padding: 12px 35px;
-            border: 1px solid #d1b26f;
-            background: #fff7ea;
-            border-radius: 8px;
-        }
-    </style>
+  .qty-col{
+      text-align: right;
+      font-weight: 700;
+  }
+
+  .section-row{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 18px 0 0;
+  }
+
+  .label{
+      font-size: 14px;
+      font-weight: 700;
+      color:#222;
+  }
+
+  .subtotal{
+      text-align: right;
+      font-size: 14px;
+      font-weight: 700;
+  }
+
+  .pill-input{
+      background:#f7f0e7;
+      border: 1px solid rgba(0,0,0,0.10);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      outline: none;
+  }
+
+  .btn-back{
+      padding: 12px 28px;
+      border: 1px solid #d1b26f;
+      background:#fff7ea;
+      border-radius: 8px;
+      font-weight: 700;
+      text-decoration: none;
+      color: #222;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+  }
+
+  .btn-checkout{
+      padding: 12px 28px;
+      background:#dd9b00;
+      color:white;
+      border-radius:8px;
+      border:none;
+      font-weight:700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+  }
+
+  .btn-area{
+      display:flex;
+      justify-content:flex-end;
+      gap: 14px;
+      padding-top: 24px;
+  }
+
+  .empty{
+      padding: 40px 0 10px;
+      text-align:center;
+      color:#333;
+  }
+
+  /* Switch align like reference */
+  .switch-wrap{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+  }
+</style>
 </head>
 
 <body>
 
-<!-- NAVBAR -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="navbar-logo">HomeBitez</div>
+<%- include('partials/navbar-user') %>
 
-    <div>
-        <a href="/" class="mx-2">Home</a>
-        <a href="/menu" class="mx-2">Menu</a>
-        <a href="#" class="mx-2">Contact us</a>
-        <a href="/report" class="mx-2">Report Issue</a>
-    </div>
+<div class="cart-wrap">
+  <div class="cart-panel">
+
+    <% if (!cart || cart.length === 0) { %>
+      <div class="empty">
+        <h5 style="margin-bottom:10px; font-weight:800;">Your cart is empty</h5>
+        <p style="margin:0;">Go to the menu and add some items 🍽️</p>
+
+        <div class="btn-area" style="justify-content:center;">
+          <a href="/menu" class="btn-back">Back to Menu</a>
+        </div>
+      </div>
+    <% } else { %>
+
+      <% cart.forEach((item, i) => { %>
+        <div class="cart-row">
+          <div>
+            <img class="item-img"
+                 src="<%= (item.image && item.image.trim() !== '') ? item.image : '/images/flatlay-iron-skillet-with-meat-and-other-food.jpg' %>"
+                 alt="<%= item.name %>">
+          </div>
+
+          <div>
+            <p class="item-name">
+              <%= (i + 1) %>. <%= item.name %>
+              <a class="edit-link"
+                 data-bs-toggle="modal"
+                 data-bs-target="#editModal"
+                 data-name="<%= item.name %>"
+                 data-qty="<%= item.quantity %>">
+                 Edit
+              </a>
+            </p>
+
+            <!-- Optional: if you later store notes, this will show -->
+            <% if (item.notes) { %>
+              <p class="item-sub">• <%= item.notes %></p>
+            <% } %>
+          </div>
+
+          <div class="price-col">
+            $<%= Number(item.price).toFixed(2) %>
+          </div>
+
+          <div class="qty-col">
+            x<%= item.quantity %>
+          </div>
+        </div>
+      <% }) %>
+
+      <!-- Subtotal -->
+      <div class="section-row">
+        <div class="label">Subtotal</div>
+        <div class="subtotal">$<%= Number(subtotal).toFixed(2) %></div>
+      </div>
+
+      <!-- Cutlery -->
+      <div class="section-row">
+        <div class="label">Cutlery</div>
+        <div class="switch-wrap">
+          <div class="form-check form-switch" style="margin:0;">
+            <input id="cutlerySwitch" class="form-check-input" type="checkbox" <%= prefs?.cutlery ? 'checked' : '' %>>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pickup Date & Time -->
+      <div class="section-row" style="align-items:center;">
+        <div class="label">Pickup Date &amp; Time</div>
+        <div style="text-align:right;">
+          <input type="date" id="pickupDate" class="pill-input" value="<%= prefs?.pickupDate || '' %>">
+          <input type="time" id="pickupTime" class="pill-input" value="<%= prefs?.pickupTime || '' %>">
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="btn-area">
+        <a href="/menu" class="btn-back">Back to Menu</a>
+        <a href="/checkout" class="btn-checkout">Checkout <span aria-hidden="true">🛒</span></a>
+      </div>
+
+    <% } %>
+
+  </div>
 </div>
 
-<h5 class="text-muted mb-4">Cart Page</h5>
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:14px;">
+      <div class="modal-header">
+        <h5 class="modal-title" style="font-weight:800;">Edit Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
 
-<!-- CART LIST -->
-<% cart.forEach((item, i) => { %>
-    <div class="cart-item">
-        <img src="/images/flatlay-iron-skillet-with-meat-and-other-food.jpg">
-
-        <div>
-            <strong><%= i+1 %>. <%= item.name %></strong>
-            <span class="edit-link" data-id="<%= item.id %>" data-name="<%= item.name %>" data-options="<%= item.options %>">Edit</span>
+      <div class="modal-body">
+        <div style="font-size:14px; margin-bottom:10px;">
+          <strong id="modalItemName"></strong>
         </div>
 
-        <div class="ms-auto text-end">
-            <div>$<%= item.price.toFixed(2) %></div>
-
-            <!-- QUANTITY BUTTONS -->
-            <div class="qty-box mt-2">
-                <button class="qty-btn decrease" data-id="<%= item.id %>">−</button>
-                <span class="fw-bold"><%= item.quantity %></span>
-                <button class="qty-btn increase" data-id="<%= item.id %>">+</button>
-            </div>
+        <div class="d-flex align-items-center gap-3">
+          <button type="button" class="btn btn-outline-secondary" id="modalMinus">-</button>
+          <input type="number" min="1" class="form-control" id="modalQty" style="max-width:110px;" />
+          <button type="button" class="btn btn-outline-secondary" id="modalPlus">+</button>
         </div>
-    </div>
-<% }) %>
 
-<!-- SUBTOTAL -->
-<div class="mt-5">
-    <h5>Subtotal: $<%= subtotal.toFixed(2) %></h5>
-</div>
-
-<!-- CUTLERY -->
-<div class="mt-4">
-    <h6>Cutlery</h6>
-    <label class="form-check form-switch mt-2">
-        <input id="cutlerySwitch" class="form-check-input" type="checkbox">
-    </label>
-</div>
-
-<!-- PICKUP DATE & TIME -->
-<div class="mt-4">
-    <h6>Pickup Date & Time</h6>
-    <div class="mt-2">
-        <input type="date" id="pickupDate" class="pill">
-        <input type="time" id="pickupTime" class="pill">
-    </div>
-</div>
-
-<!-- BUTTONS -->
-<div class="mt-5 d-flex gap-3">
-    <a href="/menu" class="btn-back">Back to Menu</a>
-    <a href="/checkout" class="btn-checkout">Checkout 🛒</a>
-</div>
-
-<!-- EDIT POPUP (BOOTSTRAP MODAL) -->
-<div class="modal fade" id="editModal">
-    <div class="modal-dialog">
-        <div class="modal-content p-3">
-
-            <h5>Edit Item</h5>
-
-            <form id="editForm" method="POST" action="/cart/update">
-                <input type="hidden" name="id" id="editItemId">
-
-                <label class="mt-3">Special Request</label>
-                <input type="text" class="form-control" name="options" id="editOptions">
-
-                <button class="btn btn-warning mt-3">Save</button>
-            </form>
+        <div class="mt-3">
+          <button type="button" class="btn btn-outline-danger w-100" id="modalRemove">
+            Remove Item
+          </button>
         </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn" style="background:#dd9b00; color:#fff; font-weight:800;" id="modalSave">
+          Save
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // OPEN EDIT MODAL
-    document.querySelectorAll('.edit-link').forEach(link => {
-        link.addEventListener('click', function () {
-            document.getElementById('editItemId').value = this.dataset.id;
-            document.getElementById('editOptions').value = this.dataset.options || "";
+  // Modal state
+  let currentItemName = "";
 
-            new bootstrap.Modal(document.getElementById('editModal')).show();
-        });
-    });
+  const editModal = document.getElementById("editModal");
+  const modalItemName = document.getElementById("modalItemName");
+  const modalQty = document.getElementById("modalQty");
+  const modalMinus = document.getElementById("modalMinus");
+  const modalPlus = document.getElementById("modalPlus");
+  const modalSave = document.getElementById("modalSave");
+  const modalRemove = document.getElementById("modalRemove");
 
-    // QUANTITY + / -
-    document.querySelectorAll('.increase, .decrease').forEach(btn => {
-        btn.addEventListener('click', function () {
-            let id = this.dataset.id;
-            let action = this.classList.contains('increase') ? 'increase' : 'decrease';
+  editModal.addEventListener("show.bs.modal", function (event) {
+    const trigger = event.relatedTarget;
+    currentItemName = trigger.getAttribute("data-name");
+    const qty = parseInt(trigger.getAttribute("data-qty")) || 1;
 
-            fetch('/cart/update', {
-                method: 'POST',
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id, action })
-            }).then(() => location.reload());
-        });
-    });
+    modalItemName.textContent = currentItemName;
+    modalQty.value = qty;
+  });
 
-    // CUTLERY toggle
-    document.getElementById("cutlerySwitch").addEventListener("change", (e) => {
-        fetch('/cart/cutlery', {
-            method: 'POST',
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ enabled: e.target.checked })
-        });
-    });
+  modalMinus.addEventListener("click", function(){
+    let q = parseInt(modalQty.value) || 1;
+    q -= 1;
+    if (q < 1) q = 1;
+    modalQty.value = q;
+  });
 
-    // DATE & TIME
-    document.getElementById("pickupDate").addEventListener("change", saveDatetime);
-    document.getElementById("pickupTime").addEventListener("change", saveDatetime);
+  modalPlus.addEventListener("click", function(){
+    let q = parseInt(modalQty.value) || 1;
+    q += 1;
+    modalQty.value = q;
+  });
 
-    function saveDatetime() {
-        fetch('/cart/pickup', {
-            method: 'POST',
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                date: document.getElementById("pickupDate").value,
-                time: document.getElementById("pickupTime").value
-            })
-        });
-    }
+  modalSave.addEventListener("click", function(){
+    const q = parseInt(modalQty.value) || 1;
+
+    fetch("/cart/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: currentItemName, quantity: q })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.ok) location.reload();
+      else alert(data.error || "Failed to update item");
+    })
+    .catch(() => alert("Error updating item"));
+  });
+
+  modalRemove.addEventListener("click", function(){
+    fetch("/cart/remove", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: currentItemName })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.ok) location.reload();
+      else alert(data.error || "Failed to remove item");
+    })
+    .catch(() => alert("Error removing item"));
+  });
+
+  // Save preferences (cutlery + pickup)
+  const cutlerySwitch = document.getElementById("cutlerySwitch");
+  const pickupDate = document.getElementById("pickupDate");
+  const pickupTime = document.getElementById("pickupTime");
+
+  function savePrefs(){
+    const payload = {
+      cutlery: cutlerySwitch ? cutlerySwitch.checked : false,
+      pickupDate: pickupDate ? pickupDate.value : "",
+      pickupTime: pickupTime ? pickupTime.value : ""
+    };
+
+    fetch("/cart/preferences", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(()=>{});
+  }
+
+  if (cutlerySwitch) cutlerySwitch.addEventListener("change", savePrefs);
+  if (pickupDate) pickupDate.addEventListener("change", savePrefs);
+  if (pickupTime) pickupTime.addEventListener("change", savePrefs);
 </script>
 
 </body>
 </html>
-
