@@ -5,136 +5,106 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HomeBitez Menu</title>
 
+<!-- Google Font -->
+<link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
+
+<!-- Bootstrap CSS & Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
 <style>
-    body{
-        margin:0;
-        font-family: Arial, sans-serif;
-        background:#faefe5;
-    }
+body{
+    margin:0;
+    font-family: Arial, sans-serif;
+    background:#faefe5;
+}
 
-    /* TOP NAV */
-    .navbar{
-        width:100%;
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        padding:20px 40px;
-    }
-    .navbar .logo{
-        font-size:26px;
-        font-weight:bold;
-        color:#dd9b00;
-    }
-    .navbar .links a{
-        margin:0 15px;
-        text-decoration:none;
-        color:black;
-        font-size:14px;
-    }
-    .navbar .icons i{
-        margin-left:18px;
-        cursor:pointer;
-    }
+/* MENU TITLE */
+.title{
+    text-align:center;
+    font-size:26px;
+    margin-top:10px;
+    margin-bottom:5px;
+}
+.underline{
+    width:70px;
+    height:3px;
+    background:#dd9b00;
+    margin:0 auto 25px;
+}
 
-    /* MENU TITLE */
-    .title{
-        text-align:center;
-        font-size:26px;
-        margin-top:10px;
-        margin-bottom:5px;
-    }
-    .underline{
-        width:70px;
-        height:3px;
-        background:#dd9b00;
-        margin:0 auto 25px;
-    }
+/* CATEGORY TABS */
+.tabs{
+    display:flex;
+    justify-content:center;
+    gap:15px;
+    margin-bottom:30px;
+    flex-wrap:wrap;
+}
+.tab{
+    padding:8px 18px;
+    border-radius:20px;
+    background:white;
+    cursor:pointer;
+    border:1px solid #ddd;
+    font-size:14px;
+}
+.tab.active{
+    background:#dd9b00;
+    color:white;
+    border-color:#dd9b00;
+}
 
-    /* CATEGORY TABS */
-    .tabs{
-        display:flex;
-        justify-content:center;
-        gap:15px;
-        margin-bottom:30px;
-        flex-wrap:wrap;
-    }
-    .tab{
-        padding:8px 18px;
-        border-radius:20px;
-        background:white;
-        cursor:pointer;
-        border:1px solid #ddd;
-        font-size:14px;
-    }
-    .tab.active{
-        background:#dd9b00;
-        color:white;
-        border-color:#dd9b00;
-    }
+/* MENU GRID */
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(250px,1fr));
+    gap:25px;
+    padding:20px 40px;
+}
 
-    /* GRID */
-    .grid{
-        display:grid;
-        grid-template-columns:repeat(auto-fit, minmax(250px,1fr));
-        gap:25px;
-        padding:20px 40px;
-    }
-
-    /* CARD */
-    .card{
-        background:white;
-        border-radius:12px;
-        padding:15px;
-        box-shadow:0 2px 6px rgba(0,0,0,0.1);
-    }
-    .card img{
-        width:100%;
-        height:180px;
-        object-fit:cover;
-        border-radius:12px;
-    }
-    .card h3{
-        margin:12px 0 6px;
-        font-size:17px;
-    }
-    .card p{
-        font-size:13px;
-        color:#5a5a5a;
-        margin:3px 0;
-    }
-    .price{
-        margin-top:8px;
-        font-size:14px;
-    }
-    .btn{
-        margin-top:10px;
-        padding:8px 14px;
-        background:#dd9b00;
-        color:white;
-        border:none;
-        border-radius:20px;
-        cursor:pointer;
-        font-size:13px;
-    }
+/* CARD */
+.card{
+    background:white;
+    border-radius:12px;
+    padding:15px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+.card img{
+    width:100%;
+    height:180px;
+    object-fit:cover;
+    border-radius:12px;
+}
+.card h3{
+    margin:12px 0 6px;
+    font-size:17px;
+}
+.card p{
+    font-size:13px;
+    color:#5a5a5a;
+    margin:3px 0;
+}
+.price{
+    margin-top:8px;
+    font-size:14px;
+}
+.btn{
+    margin-top:10px;
+    padding:8px 14px;
+    background:#dd9b00;
+    color:white;
+    border:none;
+    border-radius:20px;
+    cursor:pointer;
+    font-size:13px;
+}
 </style>
 </head>
-
 <body>
 
-<!-- NAV -->
-<div class="navbar">
-    <div class="logo">HomeBitez</div>
-    <div class="links">
-        <a href="#">Home</a>
-        <a href="#">Contact us</a>
-        <a href="/report">Report Issue</a>
-    </div>
-    <div class="icons">
-        <i>🛒</i>
-        <i>🔍</i>
-        <i>👤</i>
-    </div>
-</div>
+<!-- INCLUDE NAVBAR -->
+<%- include('partials/navbar-user') %>
 
 <h2 class="title">Menu</h2>
 <div class="underline"></div>
@@ -152,72 +122,17 @@
 <!-- MENU GRID -->
 <div class="grid" id="menuGrid"></div>
 
+<!-- JS -->
 <script>
 const products = [
-    {
-        name:"Chicken Curry",
-        desc:"Tender chicken simmered in a blend of spices.",
-        allergies:"Nuts, Mustard, Dairy",
-        price:8.60,
-        image:"https://i.ibb.co/7jrdXyW/chicken-curry.jpg",
-        category:"local"
-    },
-    {
-        name:"Naan",
-        desc:"Soft Indian flatbread perfect for dipping.",
-        allergies:"Gluten, Dairy",
-        price:2.50,
-        image:"https://i.ibb.co/n1h2wKh/naan.jpg",
-        category:"international"
-    },
-    {
-        name:"Chicken Biryani",
-        desc:"Fragrant basmati rice cooked with tender chicken.",
-        allergies:"Milk, Nuts, Wheat, Mustard, Soy, Egg",
-        price:2.50,
-        image:"https://i.ibb.co/hHkK1H1/biryani.jpg",
-        category:"international"
-    },
-    {
-        name:"Grilled Chicken Club Sandwich",
-        desc:"Layered grilled chicken with fresh veggies.",
-        allergies:"Gluten, Dairy, Egg",
-        price:9.50,
-        image:"https://i.ibb.co/PNJLdLc/chicken-sandwich.jpg",
-        category:"international"
-    },
-    {
-        name:"Strawberry Matcha",
-        desc:"Fresh strawberries with matcha blend.",
-        allergies:"Dairy",
-        price:3.60,
-        image:"https://i.ibb.co/LtM1s7W/matcha.jpg",
-        category:"drinks"
-    },
-    {
-        name:"Chocolate Cake",
-        desc:"Moist chocolate cake with soft sponge layers.",
-        allergies:"Dairy, Egg, Gluten",
-        price:3.30,
-        image:"https://i.ibb.co/d5D3Ntf/chocolate-cake.jpg",
-        category:"dessert"
-    },
-    {
-        name:"Reuben",
-        desc:"Classic grilled sandwich with corned beef.",
-        allergies:"Dairy, Egg, Beef, Soy",
-        price:11.70,
-        image:"https://i.ibb.co/KshmbJb/reuben.jpg",
-        category:"international"
-    },
-    {
-        name:"Grilled Cheese",
-        desc:"Melted cheese sandwich grilled to perfection.",
-        allergies:"Dairy, Gluten, Egg",
-        price:5.30,
-        image:"https://i.ibb.co/zfRqVgx/grilled-cheese.jpg",
-        category:"side"
-    }
+    { name:"Chicken Curry", desc:"Tender chicken simmered in a blend of spices.", allergies:"Nuts, Mustard, Dairy", price:8.60, image:"https://i.ibb.co/7jrdXyW/chicken-curry.jpg", category:"local" },
+    { name:"Naan", desc:"Soft Indian flatbread perfect for dipping.", allergies:"Gluten, Dairy", price:2.50, image:"https://i.ibb.co/n1h2wKh/naan.jpg", category:"international" },
+    { name:"Chicken Biryani", desc:"Fragrant basmati rice cooked with tender chicken.", allergies:"Milk, Nuts, Wheat, Mustard, Soy, Egg", price:2.50, image:"https://i.ibb.co/hHkK1H1/biryani.jpg", category:"international" },
+    { name:"Grilled Chicken Club Sandwich", desc:"Layered grilled chicken with fresh veggies.", allergies:"Gluten, Dairy, Egg", price:9.50, image:"https://i.ibb.co/PNJLdLc/chicken-sandwich.jpg", category:"international" },
+    { name:"Strawberry Matcha", desc:"Fresh strawberries with matcha blend.", allergies:"Dairy", price:3.60, image:"https://i.ibb.co/LtM1s7W/matcha.jpg", category:"drinks" },
+    { name:"Chocolate Cake", desc:"Moist chocolate cake with soft sponge layers.", allergies:"Dairy, Egg, Gluten", price:3.30, image:"https://i.ibb.co/d5D3Ntf/chocolate-cake.jpg", category:"dessert" },
+    { name:"Reuben", desc:"Classic grilled sandwich with corned beef.", allergies:"Dairy, Egg, Beef, Soy", price:11.70, image:"https://i.ibb.co/KshmbJb/reuben.jpg", category:"international" },
+    { name:"Grilled Cheese", desc:"Melted cheese sandwich grilled to perfection.", allergies:"Dairy, Gluten, Egg", price:5.30, image:"https://i.ibb.co/zfRqVgx/grilled-cheese.jpg", category:"side" }
 ];
 
 const menuGrid = document.getElementById("menuGrid");
@@ -236,6 +151,9 @@ function showProducts(category){
                     <p><strong>Allergies:</strong> ${p.allergies}</p>
                     <p class="price"><strong>Price:</strong> $${p.price.toFixed(2)}</p>
                     <button class="btn">View Product</button>
+                    <button class="btn" onclick="addToCart('${p.name.replace(/'/g, "\\'")}', ${p.price})">
+                        Add to Cart
+                    </button>
                 </div>
             `;
         });
@@ -250,6 +168,31 @@ document.querySelectorAll(".tab").forEach(tab=>{
         showProducts(tab.dataset.category);
     });
 });
+
+// ADD TO CART FUNCTION
+function addToCart(name, price) {
+    fetch("/cart/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name: name,
+            price: price,
+            qty: 1
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.ok) {
+            alert("Added to cart");
+        } else {
+            alert(data.error || "Failed to add to cart");
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Error adding to cart");
+    });
+}
 </script>
 
 </body>

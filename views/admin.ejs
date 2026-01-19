@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeBitez - Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #fff5ea;
+      --cream-deep: #fde8cf;
+      --card: #ffffff;
+      --ink: #1d1d1d;
+      --muted: #6c6c6c;
+      --accent: #f0a400;
+      --accent-deep: #e38f00;
+      --shadow: 0 10px 25px rgba(20, 20, 20, 0.08);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Sora", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #fff1de 0%, transparent 60%),
+        linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--cream-deep);
+      box-shadow: 0 4px 12px rgba(20, 20, 20, 0.08);
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      font-family: "Sniglet", cursive;
+      font-size: 30px;
+      font-weight: 900;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--ink);
+      margin: 0 14px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .welcome {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 48px auto 96px;
+      padding: 0 28px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(190px, 1fr));
+      gap: 28px;
+      margin-bottom: 46px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 26px 18px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(320px, 1fr));
+      gap: 28px;
+    }
+
+    .action-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 26px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .action-card::after {
+      content: "";
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(240, 164, 0, 0.12);
+    }
+
+    .action-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .action-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 340px;
+    }
+
+    .action-btn {
+      align-self: flex-start;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 18px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: var(--accent-deep);
+    }
+
+    .arrow {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      font-size: 18px;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    @media (max-width: 1100px) {
+      .stats {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+      }
+    }
+
+    @media (max-width: 960px) {
+      .stats {
+        grid-template-columns: repeat(2, minmax(150px, 1fr));
+      }
+      .actions {
+        grid-template-columns: 1fr;
+      }
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .nav-links a {
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">HomeBitez</a>
+    <nav class="nav-links">
+      <a href="/">Home</a>
+      <a href="/menu">Menu</a>
+      <a href="/report">Contact us</a>
+    </nav>
+    <div class="welcome">Welcome, <%= adminName %>!</div>
+  </header>
+
+  <main class="page">
+    <section class="stats">
+      <div class="stat-card">
+        <div class="stat-value"><%= stats.totalCustomers %></div>
+        <div class="stat-label">Total Customers</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value"><%= stats.totalOrders %></div>
+        <div class="stat-label">Total Orders</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value"><%= stats.totalProducts %></div>
+        <div class="stat-label">Total Products</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value"><%= stats.totalIssues %></div>
+        <div class="stat-label">Issues</div>
+      </div>
+    </section>
+
+    <section class="actions">
+      <article class="action-card">
+        <div class="arrow">→</div>
+        <div class="action-title">Customer Details</div>
+        <div class="action-desc">View and manage customer details, points and accounts.</div>
+        <button class="action-btn" type="button">Manage Customers</button>
+      </article>
+      <article class="action-card">
+        <div class="arrow">→</div>
+        <div class="action-title">Purchase Records</div>
+        <div class="action-desc">View all transaction history and order details.</div>
+        <button class="action-btn" type="button">View Records</button>
+      </article>
+      <article class="action-card">
+        <div class="arrow">→</div>
+        <div class="action-title">Sales Reports</div>
+        <div class="action-desc">View sales analytics and performance snapshots.</div>
+        <button class="action-btn" type="button">View Reports</button>
+      </article>
+      <article class="action-card">
+        <div class="arrow">→</div>
+        <div class="action-title">Report Issues</div>
+        <div class="action-desc">Handle customer complaints and reported issues.</div>
+        <button class="action-btn" type="button">View Issues</button>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

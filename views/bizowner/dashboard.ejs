@@ -1,228 +1,203 @@
-<!DOCTYPE html>
-<html lang="en">
+<%- include('../partials/head', { title: 'Business Owner Dashboard' }) %>
+<%- include('../partials/navbar-bizowner') %>
 
-<head>
-    <meta charset="UTF-8">
-    <title>Business Owner Dashboard</title>
+<style>
+  /* ===== Page base ===== */
+  body {
+    background: #f6efe6;
+    color: #2a241e;
+    font-family: Arial, sans-serif;
+  }
 
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: "Poppins", Arial, sans-serif;
-            background: #faf7f2;
-        }
+  .page-wrap {
+    padding-bottom: 40px;
+  }
 
-        /* NAVBAR */
-        .navbar {
-            background: white;
-            padding: 18px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #eee;
-        }
+  /* ===== Fix navbar icons ONLY (do NOT touch links) ===== */
+  .navbar {
+    position: relative;
+  }
 
-        .logo {
-            font-size: 28px;
-            font-weight: 700;
-            color: #f4b400;
-        }
+  .hb-icons {
+    position: relative;
+    right: 32px; /* <<< THIS moves icons left */
+  }
 
-        .nav-links a {
-            margin: 0 15px;
-            text-decoration: none;
-            color: #333;
-            font-weight: 500;
-        }
+  .hb-icons a {
+    font-size: 26px;
+    display: inline-flex;
+    align-items: center;
+  }
 
-        .profile {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-        }
+  /* ===== Page title ===== */
+  .page-title {
+    margin: 26px 40px 14px;
+    font-size: 18px;
+    color: #6f6256;
+    font-weight: 500; /* NOT bold */
+  }
 
-        .profile img {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
+  /* ===== Layout rows ===== */
+  .stats-container,
+  .section-container {
+    display: flex;
+    gap: 25px;
+    padding: 0 40px;
+    flex-wrap: wrap;
+  }
 
-        /* PAGE TITLE */
-        .page-title {
-            margin: 30px 40px 10px;
-            font-size: 20px;
-            color: #777;
-            font-weight: 500;
-        }
+  .stats-container {
+    margin-bottom: 26px;
+  }
 
-        /* STAT CARDS */
-        .stats-container {
-            display: flex;
-            gap: 25px;
-            padding: 0 40px;
-            margin-bottom: 30px;
-        }
+  /* ===== Stat cards ===== */
+  .stat-card {
+    flex: 1;
+    min-width: 220px;
+    background: #fffaf3;
+    border: 1px solid #eadac6;
+    border-radius: 18px;
+    padding: 22px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(42, 36, 30, 0.08);
+  }
 
-        .stat-card {
-            flex: 1;
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            text-align: center;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.06);
-        }
+  .stat-number {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
 
-        .stat-number {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 5px;
-            color: #333;
-        }
+  .stat-label {
+    font-size: 13px;
+    color: #6f6256;
+    font-weight: 400;
+  }
 
-        .stat-label {
-            font-size: 14px;
-            color: #777;
-        }
+  /* ===== Section cards ===== */
+  .section-card {
+    flex: 1;
+    min-width: 280px;
+    background: #fffaf3;
+    border: 1px solid #eadac6;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(42, 36, 30, 0.08);
+    position: relative;
+  }
 
-        /* SECTION CARDS */
-        .section-container {
-            display: flex;
-            gap: 25px;
-            padding: 0 40px;
-            margin-top: 10px;
-        }
+  .section-card h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
 
-        .section-card {
-            flex: 1;
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.06);
-            position: relative;
-        }
+  .section-card p {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #6f6256;
+  }
 
-        .section-card h3 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-        }
+  .arrow {
+    position: absolute;
+    right: 20px;
+    top: 18px;
+    font-size: 18px;
+    color: #9a8f85;
+  }
 
-        .section-card p {
-            margin-top: 8px;
-            color: #777;
-            font-size: 14px;
-        }
+  /* ===== Buttons ===== */
+  .btn-gold {
+    margin-top: 14px;
+    padding: 10px 18px;
+    background: #d59b2d;
+    border: none;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    display: inline-block;
+  }
 
-        .arrow {
-            position: absolute;
-            right: 20px;
-            top: 20px;
-            font-size: 18px;
-            color: #999;
-        }
+  .btn-gold:hover {
+    background: #b97d18;
+  }
 
-        /* BUTTONS */
-        .yellow-btn {
-            margin-top: 15px;
-            padding: 10px 20px;
-            background: #f4b400;
-            border: none;
-            border-radius: 8px;
-            color: white;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 14px;
-            text-decoration: none;
-            display: inline-block;
-        }
+  /* ===== Mobile ===== */
+  @media (max-width: 768px) {
+    .page-title {
+      margin: 18px 20px;
+    }
 
-        .yellow-btn:hover {
-            background: #d99a00;
-        }
-    </style>
+    .stats-container,
+    .section-container {
+      padding: 0 20px;
+      gap: 16px;
+    }
 
-</head>
+    .hb-icons {
+      right: 12px;
+    }
+  }
+</style>
 
-<body>
+<div class="page-wrap">
 
-    <!-- NAVIGATION BAR -->
-    <div class="navbar">
-        <div class="logo">HomeBitez</div>
-        <div class="nav-links">
-            <a href="#">Home</a>
-            <a href="#">Menu</a>
-            <a href="#">Contact us</a>
-        </div>
-        <div class="profile">
-            <img src="/images/default-profile.jpg" alt="profile">
-            Desi Delights
-        </div>
-    </div>
+  <!-- Welcome -->
+  <div class="page-title">
+    Welcome back, <%= currentUser?.username || 'Business Owner' %>
+  </div>
 
-    <!-- PAGE TITLE -->
-    <div class="page-title">Business Owner Dashboard</div>
-
-    <!-- STAT CARDS -->
-    <div class="stats-container">
-
+  <!-- Stats -->
+  <div class="stats-container">
     <div class="stat-card">
-        <div class="stat-number"><%= totalProducts %></div>
-        <div class="stat-label">Total Products</div>
+      <div class="stat-number"><%= totalProducts %></div>
+      <div class="stat-label">Total Products</div>
     </div>
 
     <div class="stat-card">
-        <div class="stat-number">$<%= totalRevenue.toFixed(2) %></div>
-        <div class="stat-label">Total Revenue</div>
+      <div class="stat-number">$<%= Number(totalRevenue || 0).toFixed(2) %></div>
+      <div class="stat-label">Total Revenue</div>
     </div>
 
     <div class="stat-card">
-        <div class="stat-number"><%= totalStocks %></div>
-        <div class="stat-label">Total Stocks</div>
+      <div class="stat-number"><%= totalStocks %></div>
+      <div class="stat-label">Total Stocks</div>
     </div>
 
     <div class="stat-card">
-        <div class="stat-number"><%= newMessages %></div>
-        <div class="stat-label">New Messages</div>
+      <div class="stat-number"><%= newMessages %></div>
+      <div class="stat-label">New Messages</div>
     </div>
+  </div>
+
+  <!-- Sections -->
+  <div class="section-container">
+    <div class="section-card">
+      <h3>Business Profile</h3>
+      <div class="arrow">→</div>
+      <p>Edit your business information and image</p>
+      <a href="/bizowner/profile" class="btn-gold">Edit Profile</a>
+    </div>
+
+    <div class="section-card">
+      <h3>Customer Messages</h3>
+      <div class="arrow">→</div>
+      <p>Read and respond to customer inquiries</p>
+      <a href="/bizowner/messages" class="btn-gold">View Messages</a>
+    </div>
+  </div>
+
+  <div class="section-container" style="margin-top:22px;">
+    <div class="section-card">
+      <h3>Inventory Management</h3>
+      <div class="arrow">→</div>
+      <p>Add, edit and manage your product inventory</p>
+      <a href="/bizowner/inventory" class="btn-gold">Manage Inventory</a>
+    </div>
+  </div>
 
 </div>
 
-
-    <!-- SECTION CARDS -->
-    <div class="section-container">
-
-        <!-- BUSINESS PROFILE -->
-        <div class="section-card">
-            <h3>Business Profile</h3>
-            <div class="arrow">→</div>
-            <p>Edit your business information and image</p>
-            <a href="/owner/profile" class="yellow-btn">Edit Profile</a>
-        </div>
-
-        <!-- CUSTOMER MESSAGES -->
-        <div class="section-card">
-            <h3>Customer Messages</h3>
-            <div class="arrow">→</div>
-            <p>Read and respond to customer inquiries</p>
-            <a href="/owner/messages" class="yellow-btn">View Messages</a>
-        </div>
-
-    </div>
-
-    <!-- INVENTORY MANAGEMENT -->
-    <div class="section-container" style="margin-top: 25px;">
-        <div class="section-card" style="flex: 1;">
-            <h3>Inventory Management</h3>
-            <div class="arrow">→</div>
-            <p>Add, edit and manage your product inventory</p>
-            <a href="/owner/inventory" class="yellow-btn">Manage Inventory</a>
-        </div>
-    </div>
-
-</body>
-
-</html>
+<%- include('../partials/foot') %>
