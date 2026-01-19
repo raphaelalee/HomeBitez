@@ -1,191 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HomeBitez - Home</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeBitez | Home</title>
+
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-      min-height: 100vh;
-      padding: 20px;
-    }
-    
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      padding: 40px;
-      text-align: center;
-    }
-    
-    h1 {
+      background: #fff6eb;
       color: #333;
-      margin-bottom: 10px;
-      font-size: 2.5em;
     }
-    
-    .tagline {
-      color: #666;
-      margin-bottom: 30px;
-      font-size: 1.1em;
+
+    /* ================= HEADER ================= */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 60px;
+      background: #fff;
     }
-    
-    .product {
-      background: #f9f9f9;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 20px 0;
-    }
-    
-    .product-name {
-      font-size: 1.3em;
-      color: #333;
-      margin-bottom: 10px;
-    }
-    
-    .product-price {
-      font-size: 1.5em;
-      color: #27ae60;
+
+    .logo {
+      font-size: 26px;
       font-weight: bold;
+      color: #f4b400;
+    }
+
+    nav a {
+      margin: 0 15px;
+      text-decoration: none;
+      color: #333;
+      font-weight: 500;
+    }
+
+    header button {
+      padding: 8px 18px;
+      border-radius: 6px;
+      border: 1px solid #f4b400;
+      background: none;
+      cursor: pointer;
+    }
+
+    /* ================= HERO ================= */
+    .hero {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      gap: 60px;
+    }
+
+    .hero-images {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .hero-images img {
+      width: 180px;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 14px;
+    }
+
+    .hero-text h1 {
+      font-size: 36px;
       margin-bottom: 15px;
     }
-    
-    button {
-      background: #27ae60;
-      color: white;
+
+    .hero-text span {
+      color: #f4b400;
+    }
+
+    .hero-text p {
+      max-width: 420px;
+      margin-bottom: 25px;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .btn-primary {
+      background: #f4b400;
       border: none;
-      padding: 12px 30px;
-      border-radius: 6px;
+      padding: 12px 26px;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 1em;
-      transition: background 0.3s;
+      font-weight: bold;
     }
-    
-    button:hover {
-      background: #229954;
+
+    /* ================= HOW TO ORDER ================= */
+    .section {
+      padding: 60px;
+      text-align: center;
     }
-    
-    form {
-      display: inline-block;
+
+    .section h2 {
+      font-size: 28px;
+      margin-bottom: 40px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 25px;
+    }
+
+    .step {
+      background: #fff;
+      padding: 25px;
+      border-radius: 14px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    }
+
+    .step img {
+      width: 60px;
+      height: 60px;
+      margin-bottom: 12px;
+    }
+
+    .step h4 {
+      margin-bottom: 8px;
+    }
+
+    .step p {
+      font-size: 14px;
+      color: #666;
+    }
+
+    /* ================= OFFER ================= */
+    .offer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 50px;
+      padding: 60px;
+    }
+
+    .offer img {
+      width: 260px;
+      height: 260px;
+      object-fit: cover;
+      border-radius: 18px;
+    }
+
+    .offer h2 {
+      font-size: 30px;
+      margin-bottom: 12px;
+    }
+
+    .offer span {
+      color: #f4b400;
+    }
+
+    .offer p {
+      max-width: 420px;
+      margin-bottom: 18px;
+      color: #555;
+    }
+
+    /* ================= FOOTER ================= */
+    footer {
+      background: #fdecc8;
+      padding: 40px 60px;
+      margin-top: 40px;
+    }
+
+    .footer-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .payments img {
+      width: 50px;
+      margin-right: 10px;
+    }
+
+    .socials span {
+      margin-right: 12px;
+      cursor: pointer;
+    }
+
+    .copyright {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    /* ================= RESPONSIVE ================= */
+    @media (max-width: 900px) {
+      .hero, .offer {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .steps {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 500px) {
+      .steps {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
-<body>
-  <div class="container">
-    <h1>HomeBitez</h1>
-    <p class="tagline">Delicious food delivered to your doorstep</p>
-    
-    <div class="product">
-      <div class="product-name">Shrimp Fried Rice</div>
-      <div class="product-price">$5.00</div>
-      <form action="/cart/add" method="POST">
-        <input type="hidden" name="id" value="1">
-        <input type="hidden" name="name" value="Shrimp Fried Rice">
-        <input type="hidden" name="price" value="5">
-        <button type="submit">Add to Cart</button>
-      </form>
-    </div>
-  </div>
-</body>
-</html><!DOCTYPE html>
+
 <body>
 
 <header>
   <div class="logo">HomeBitez</div>
   <nav>
-    <a href="#">Home</a>
-    <a href="#">Menu</a>
-    <a href="#">Contact us</a>
+    <a href="/">Home</a>
+    <a href="/menu">Menu</a>
+    <a href="/contact">Contact</a>
   </nav>
-  <div class="header-actions">
-    <button>Login</button>
-  </div>
+  <button onclick="location.href='/login'">Login</button>
 </header>
 
 <section class="hero">
   <div class="hero-images">
-    <img src="https://images.unsplash.com/photo-1604908177522-4029c4b53b9f" />
-    <img src="https://images.unsplash.com/photo-1551218808-94e220e084d2" />
-    <img src="https://images.unsplash.com/photo-1589308078055-9189c0f5f9b4" />
-    <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd" />
+    <img src="https://images.unsplash.com/photo-1604908177522-4029c4b53b9f">
+    <img src="https://images.unsplash.com/photo-1551218808-94e220e084d2">
+    <img src="https://images.unsplash.com/photo-1589308078055-9189c0f5f9b4">
+    <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd">
   </div>
+
   <div class="hero-text">
     <h1>Discover <span>Homemade</span> Flavors From Singapore’s Heartlands</h1>
     <p>
-      Support local home chefs and enjoy meals made with care and heart.
-      Each dish is freshly prepared in neighborhood kitchens.
+      Support local home chefs and enjoy freshly prepared meals made with care.
     </p>
-    <button class="btn-primary">Order Food</button>
+    <button class="btn-primary" onclick="location.href='/menu'">Order Food</button>
   </div>
 </section>
 
 <section class="section">
   <h2>How You Can Order</h2>
+
   <div class="steps">
     <div class="step">
-      <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" />
+      <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png">
       <h4>Select Food</h4>
-      <p>Browse menu and choose your favorite dishes.</p>
+      <p>Browse and choose your favorite dishes.</p>
     </div>
+
     <div class="step">
-      <img src="https://cdn-icons-png.flaticon.com/512/263/263142.png" />
+      <img src="https://cdn-icons-png.flaticon.com/512/263/263142.png">
       <h4>Add To Cart</h4>
-      <p>Review selections and make changes easily.</p>
+      <p>Review your order easily.</p>
     </div>
+
     <div class="step">
-      <img src="https://cdn-icons-png.flaticon.com/512/1040/1040230.png" />
+      <img src="https://cdn-icons-png.flaticon.com/512/1040/1040230.png">
       <h4>Make Payment</h4>
-      <p>Pay securely using wallet or other options.</p>
+      <p>Secure payment options available.</p>
     </div>
+
     <div class="step">
-      <img src="https://cdn-icons-png.flaticon.com/512/3595/3595455.png" />
+      <img src="https://cdn-icons-png.flaticon.com/512/3595/3595455.png">
       <h4>Delivery / Pickup</h4>
-      <p>Get it delivered or pick up when ready.</p>
+      <p>Delivered or ready for pickup.</p>
     </div>
   </div>
 </section>
 
 <section class="offer">
-  <img src="https://images.unsplash.com/photo-1604908554160-7d0a41f7f96c" />
+  <img src="https://images.unsplash.com/photo-1604908554160-7d0a41f7f96c">
   <div>
     <h2>Get <span>50% Off</span> On Curry</h2>
-    <p>
-      We offer 50% off this dish. A customer favorite packed with rich flavor
-      that everyone should try.
-    </p>
-    <button class="btn-primary">Order Now</button>
+    <p>Limited-time offer on one of our most popular dishes.</p>
+    <button class="btn-primary" onclick="location.href='/menu'">Order Now</button>
   </div>
 </section>
 
 <footer>
   <div class="footer-top">
     <div class="payments">
-      <strong>Accepted Payment</strong><br />
-      <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png" />
-      <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Mastercard-logo.png" />
+      <strong>Accepted Payment</strong><br>
+      <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Mastercard-logo.png">
     </div>
+
     <div class="socials">
-      <strong>Contact</strong><br />
+      <strong>Contact</strong><br>
       <span>Facebook</span>
       <span>WhatsApp</span>
       <span>Instagram</span>
     </div>
   </div>
-  <div class="copyright">© Powered by HomeBitez</div>
+
+  <div class="copyright">
+    © HomeBitez
+  </div>
 </footer>
 
-</body>
-</html>
 </body>
 </html>
