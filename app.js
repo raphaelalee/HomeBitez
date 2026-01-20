@@ -241,21 +241,18 @@ app.post('/user/profile', upload.single('avatar'), async (req, res) => {
   }
 });
 
-// GET Contact Us page
+// GET Contact Us page (PUBLIC)
 app.get('/contact', (req, res) => {
-    if (!req.session.user) {
-        req.flash('error', 'Please log in to send a message.');
-        return res.redirect('/login');
-    }
-
     res.render('contact', {
         error: req.flash('error'),
         success: req.flash('success'),
-        userEmail: req.session.user.email || ''
+        userEmail: req.session.user ? req.session.user.email : '',
+        isLoggedIn: !!req.session.user
     });
 });
 
-// POST Contact Us form
+
+// POST Contact Us form (LOGIN REQUIRED)
 app.post('/contact', async (req, res) => {
     if (!req.session.user) {
         req.flash('error', 'Please log in to send a message.');
@@ -278,32 +275,12 @@ app.post('/contact', async (req, res) => {
         req.flash('success', 'Your message has been sent!');
         res.redirect('/contact');
     } catch (err) {
-        console.error('Error inserting message:', err);
+        console.error(err);
         req.flash('error', 'Failed to send message.');
         res.redirect('/contact');
     }
 });
 
-app.get('/bizowner/messages', async (req, res) => {
-    if (!req.session.user || req.session.user.role !== 'biz_owner') {
-        req.flash('error', 'Access denied.');
-        return res.redirect('/login');
-    }
-
-    try {
-        const [messages] = await db.query(
-            `SELECT m.*, u.username AS senderName
-             FROM messages m
-             JOIN users u ON m.senderId = u.id
-             ORDER BY m.created_at DESC`
-        );
-
-        res.render('bizowner/messages', { messages });
-    } catch (err) {
-        console.error('Error fetching messages:', err);
-        res.render('bizowner/messages', { messages: [] });
-    }
-});
 
 
 // POST change password

@@ -1,117 +1,145 @@
 <!-- views/partials/navbar-user.ejs -->
-<link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
+
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
 <style>
-  /* FULL WIDTH */
+  /* RESET */
+  * {
+    box-sizing: border-box;
+  }
+
   html, body {
-      margin:0;
-      padding:0;
-      width:100%;
-      overflow-x:hidden;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
   }
 
   /* NAVBAR */
   .navbar {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px 40px;
-      background: #fdeeda;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      position: sticky;
-      top: 0;
-      z-index: 9999;
-      font-family: Arial, sans-serif;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 60px; /* match index.ejs header */
+    background: #fdeeda; /* keep existing background */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
 
+  /* LOGO */
   .navbar-logo {
-      font-family: 'Sniglet', cursive;
-      font-size: 32px;
-      font-weight: 900;
-      color: #ff9c07;
-      text-decoration: none;
+    font-size: 26px;            /* same as homepage */
+    font-weight: 700;
+    color: #f4b400;             /* homepage yellow */
+    text-decoration: none;
+    letter-spacing: 0.3px;
   }
 
+  /* LINKS */
   .navbar-links a {
-      margin: 0 15px;
-      text-decoration: none;
-      color: black;
-      font-size: 14px;
-      transition: color 0.3s;
+    margin: 0 14px;
+    text-decoration: none;
+    color: #333;
+    font-size: 15px;
+    font-weight: 500;
+    transition: color 0.25s ease;
   }
-  .navbar-links a:hover { color: #dd9b00; }
 
-  /* HB ICONS */
+  .navbar-links a:hover {
+    color: #f4b400;
+  }
+
+  /* ICONS */
   .hb-icons {
-      display: flex;
-      align-items: center;
-      gap: 18px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
   }
+
   .hb-icons a {
-      font-size: 24px;
-      color: black;
-      text-decoration: none;
-      transition: color 0.3s;
-      position: relative;
-  }
-  .hb-icons a:hover { color: #dd9b00; }
-
-  /* Small circular avatar in navbar */
-  .hb-icons a.profile-avatar-navbar {
-      width:32px;
-      height:32px;
-      border-radius:50%;
-      overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border:1px solid #dd9b00;
-  }
-  .hb-icons a.profile-avatar-navbar img {
-      width:100%;
-      height:100%;
-      object-fit:cover;
+    font-size: 22px;
+    color: #333;
+    text-decoration: none;
+    transition: color 0.25s ease;
+    position: relative;
   }
 
-  @media(max-width:768px){
-      .navbar {
-          flex-direction: column;
-          align-items: flex-start;
-      }
-      .navbar-links {
-          margin-top: 10px;
-      }
-      .hb-icons {
-          margin-top: 10px;
-      }
+  .hb-icons a:hover {
+    color: #f4b400;
+  }
+
+  /* PROFILE AVATAR */
+  .profile-avatar-navbar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #f4b400;
+    background: #fff;
+  }
+
+  .profile-avatar-navbar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .navbar {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 16px 30px;
+    }
+
+    .navbar-links {
+      margin-top: 10px;
+    }
+
+    .navbar-links a {
+      margin: 0 10px 0 0;
+    }
+
+    .hb-icons {
+      margin-top: 12px;
+    }
   }
 </style>
 
 <div class="navbar">
-    <!-- Logo -->
-    <a href="/" class="navbar-logo">HomeBitez</a>
+  <!-- Logo -->
+  <a href="/" class="navbar-logo">HomeBitez</a>
 
-    <!-- Links -->
-    <div class="navbar-links">
-        <a href="/">Home</a>
-        <a href="/menu">Menu</a>
-        <a href="/about">About Us</a>
-        <a href="/contact">Contact Us</a>
-        <a href="/report">Report Issue</a>
-        <a href="/logout">Logout</a>
-    </div>
+  <!-- Navigation Links -->
+  <div class="navbar-links">
+    <a href="/">Home</a>
+    <a href="/menu">Menu</a>
+    <a href="/contact">Contact Us</a>
+    <a href="/report">Report Issue</a>
+  </div>
 
-    <!-- Icons -->
-    <div class="hb-icons">
-        <a href="/cart" title="Cart">
-            <i class="bi bi-cart3"></i>
-        </a>
+  <!-- Icons -->
+  <div class="hb-icons">
+    <a href="/cart" title="Cart">
+      <i class="bi bi-cart3"></i>
+    </a>
 
-        <!-- Profile (Users) -->
-        <a href="/user/profile" title="Profile" class="profile-avatar-navbar">
-            <img id="navbar-avatar" src="<%= user?.avatar || '/images/default-avatar.png' %>" alt="Profile">
-        </a>
-    </div>
+    <a href="/user/profile" title="Profile" class="profile-avatar-navbar">
+      <img
+        id="navbar-avatar"
+        src="<%= user?.avatar || '/images/default-avatar.png' %>"
+        alt="Profile"
+      >
+    </a>
+    <a href="/logout" title="Logout">
+      <i class="bi bi-box-arrow-right"></i>
+    </a>
+  </div>
 </div>
