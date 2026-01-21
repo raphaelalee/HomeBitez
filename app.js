@@ -376,6 +376,111 @@ app.get('/admin/inventory', async (req, res) => {
     });
 });
 
+// Admin sales reports
+app.get('/admin/reports', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let totalRevenue = 0;
+    let totalOrders = 0;
+    let totalCost = 0;
+    let totalProfit = 0;
+    let averageOrderValue = 0;
+    let bestItem = { name: "No data", revenue: 0 };
+    let chartLabels = [];
+    let chartValues = [];
+    let growthPercent = 0;
+
+    try {
+        const now = new Date();
+        for (let i = 5; i >= 0; i -= 1) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            chartLabels.push(d.toLocaleString("en-US", { month: "short" }));
+            chartValues.push(0);
+        }
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+        const [summaryRows] = await db.query(
+            "SELECT COUNT(*) AS totalOrders, COALESCE(SUM(totalAmount), 0) AS totalRevenue FROM orders WHERE created_at >= ? AND created_at < ?",
+            [startOfMonth, startOfNextMonth]
+        );
+        totalOrders = summaryRows?.[0]?.totalOrders || 0;
+        totalRevenue = Number(summaryRows?.[0]?.totalRevenue || 0);
+        totalCost = 0;
+        totalProfit = totalRevenue - totalCost;
+        averageOrderValue = totalOrders ? totalRevenue / totalOrders : 0;
+
+        const [prevRows] = await db.query(
+            "SELECT COALESCE(SUM(totalAmount), 0) AS totalRevenue FROM orders WHERE created_at >= ? AND created_at < ?",
+            [startOfPrevMonth, startOfMonth]
+        );
+        const prevRevenue = Number(prevRows?.[0]?.totalRevenue || 0);
+        growthPercent = prevRevenue ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
+
+        const [bestRows] = await db.query(
+            `SELECT p.product_name AS name,
+                    SUM(oi.quantity) AS totalSold,
+                    SUM(oi.quantity * oi.price) AS revenue
+             FROM order_items oi
+             JOIN product p ON p.id = oi.productId
+             GROUP BY oi.productId
+             ORDER BY totalSold DESC
+             LIMIT 1`
+        );
+        if (bestRows && bestRows[0]) {
+            bestItem = { name: bestRows[0].name, revenue: Number(bestRows[0].revenue || 0) };
+        }
+
+        const startSixMonths = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+        const [chartRows] = await db.query(
+            `SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COALESCE(SUM(totalAmount), 0) AS total
+             FROM orders
+             WHERE created_at >= ? AND created_at < ?
+             GROUP BY ym
+             ORDER BY ym ASC`,
+            [startSixMonths, startOfNextMonth]
+        );
+
+        const totalsByMonth = new Map();
+        (chartRows || []).forEach(row => totalsByMonth.set(row.ym, Number(row.total || 0)));
+
+        chartLabels = [];
+        chartValues = [];
+        for (let i = 5; i >= 0; i -= 1) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            chartLabels.push(d.toLocaleString("en-US", { month: "short" }));
+            chartValues.push(totalsByMonth.get(ym) || 0);
+        }
+    } catch (err) {
+        console.error("Admin reports error:", err);
+    }
+
+    const monthLabel = new Date().toLocaleString("en-US", { month: "long" });
+
+    res.render('admin-reports', {
+        adminName: req.session.user?.username || 'Admin',
+        monthLabel,
+        totalRevenue,
+        totalCost,
+        totalProfit,
+        totalOrders,
+        averageOrderValue,
+        bestItem,
+        chartLabels,
+        chartValues,
+        growthPercent
+    });
+});
+
 // Admin delete customer
 app.post('/admin/customers/:id/delete', async (req, res) => {
     if (!req.session.user) {
