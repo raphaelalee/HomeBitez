@@ -112,16 +112,18 @@ DROP TABLE IF EXISTS `products`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `products` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `productName` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `quantity` int NOT NULL,
-  `price` double(10,2) NOT NULL,
-  `image` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `stock` int DEFAULT '0',
-  `owner_id` int DEFAULT NULL,
-  `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `product_name` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+    `description` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+    `price` DOUBLE(10,2) NOT NULL,
+    `image` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+    `category` VARCHAR(100) NOT NULL,
+    `owner_id` INT DEFAULT NULL,
+    `quantity` INT NOT NULL,
+    `stock` INT DEFAULT 0
+);
+
+
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -130,7 +132,15 @@ CREATE TABLE `products` (
 
 LOCK TABLES `products` WRITE;
 /*!40000 ALTER TABLE `products` DISABLE KEYS */;
-INSERT INTO `products` VALUES (1,'Shrimp Fried Rice',60,10.00,'1765438234897-Shrimp-Fried-Rice-Recipe5.jpg',0,NULL,NULL),(2,'Papaya',87,5.60,'1765438274635-papaya.jpg',0,NULL,NULL);
+INSERT INTO `products` (`id`, `product_name`, `description`, `price`, `image`, `category`, `owner_id`, `quantity`) 
+VALUES
+(1, 'Shrimp Fried Rice', NULL, 12.90, '1765438234897-Shrimp-Fried-Rice-Recipe5.jpg', 'International', NULL, 60),
+(2, 'Nasi Lemak', NULL, 7.90, 'Nasi-Lemak.jpg', 'Local', NULL, 42),
+(3, 'Pandan Chiffon Cake', NULL, 5.50, 'Pandan-Chiffon-Cake.jpg', 'Dessert', NULL, 55),
+(4, 'Papaya Salad', NULL, 4.40, '1765438274635-papaya.jpg', 'Sides', NULL, 20),
+(5, 'Strawberry Matcha', NULL, 5.50, 'Strawberry-Matcha.jpg', 'Dessert', NULL, 88);
+
+
 /*!40000 ALTER TABLE `products` ENABLE KEYS */;
 UNLOCK TABLES;
 
