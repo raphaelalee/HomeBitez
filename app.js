@@ -8,6 +8,7 @@ require("dotenv").config();
 // Controllers
 const UsersController = require('./Controllers/usersController');
 const ReportModel = require('./models/ReportModel');
+const ProductModel = require('./Models/ProductModel');
 
 // DB
 const db = require('./db');
@@ -133,12 +134,20 @@ app.get('/register', UsersController.showRegister);
 app.post('/register', UsersController.register);
 app.post('/signup', UsersController.register);
 
-// Menu (requires login)
-// routes/menu.js or wherever your route is
-app.get('/menu', (req, res) => {
-    res.render('menu', {
-        user: req.session.user || null // or however you store logged-in user
-    });
+// Menu (requires login) - load products from DB and pass to view
+app.get('/menu', async (req, res) => {
+    try {
+        const [rows] = await ProductModel.getAll();
+        const products = rows || [];
+
+        res.render('menu', {
+            user: req.session.user || null,
+            products
+        });
+    } catch (err) {
+        console.error('Menu load error:', err);
+        res.render('menu', { user: req.session.user || null, products: [] });
+    }
 });
 
 

@@ -134,92 +134,30 @@ body{
 <!-- MENU GRID -->
 <div class="grid" id="menuGrid"></div>
 
-<!-- JS -->
 <script>
-const products = [
-    {
-        name:"Nasi Lemak",
-        desc:"Tender chicken simmered in a blend of spices.",
-        allergies:"Nuts, Mustard, Dairy",
-        price:4.60,
-        image:"Nasi-Lemak.jpg",
-        category:"local"
-    },
-    {
-        name:"Naan",
-        desc:"Soft Indian flatbread perfect for dipping.",
-        allergies:"Gluten, Dairy",
-        price:2.50,
-        image:"https://i.ibb.co/n1h2wKh/naan.jpg",
-        category:"international"
-    },
-    {
-        name:"Chicken Biryani",
-        desc:"Fragrant basmati rice cooked with tender chicken.",
-        allergies:"Milk, Nuts, Wheat, Mustard, Soy, Egg",
-        price:2.50,
-        image:"https://i.ibb.co/hHkK1H1/biryani.jpg",
-        category:"international"
-    },
-    {
-        name:"Grilled Chicken Club Sandwich",
-        desc:"Layered grilled chicken with fresh veggies.",
-        allergies:"Gluten, Dairy, Egg",
-        price:9.50,
-        image:"https://i.ibb.co/PNJLdLc/chicken-sandwich.jpg",
-        category:"international"
-    },
-    {
-        name:"Strawberry Matcha",
-        desc:"Fresh strawberries with matcha blend.",
-        allergies:"Dairy",
-        price:3.60,
-        image:"https://i.ibb.co/LtM1s7W/matcha.jpg",
-        category:"drinks"
-    },
-    {
-        name:"Chocolate Cake",
-        desc:"Moist chocolate cake with soft sponge layers.",
-        allergies:"Dairy, Egg, Gluten",
-        price:3.30,
-        image:"https://i.ibb.co/d5D3Ntf/chocolate-cake.jpg",
-        category:"dessert"
-    },
-    {
-        name:"Reuben",
-        desc:"Classic grilled sandwich with corned beef.",
-        allergies:"Dairy, Egg, Beef, Soy",
-        price:11.70,
-        image:"https://i.ibb.co/KshmbJb/reuben.jpg",
-        category:"international"
-    },
-    {
-        name:"Grilled Cheese",
-        desc:"Melted cheese sandwich grilled to perfection.",
-        allergies:"Dairy, Gluten, Egg",
-        price:5.30,
-        image:"https://i.ibb.co/zfRqVgx/grilled-cheese.jpg",
-        category:"side"
-    }
-];
+const products = <%- JSON.stringify(products || []) %>;
+const menuGrid = document.getElementById('menuGrid');
 
-const menuGrid = document.getElementById("menuGrid");
-
-// FUNCTION TO DISPLAY PRODUCTS
 function showProducts(category){
     menuGrid.innerHTML = "";
     products
-        .filter(p => category === "all" ? true : p.category === category)
+        .filter(p => category === "all" ? true : (p.category || '').toLowerCase() === category)
         .forEach(p => {
+            const name = p.productName || p.name || '';
+            const desc = p.description || p.desc || '';
+            const allergies = p.allergies || '';
+            const priceVal = Number(p.price || 0);
+            const image = p.image || '/images/default.jpg';
+
             menuGrid.innerHTML += `
                 <div class="card">
-                    <img src="${p.image}">
-                    <h3>${p.name}</h3>
-                    <p>${p.desc}</p>
-                    <p><strong>Allergies:</strong> ${p.allergies}</p>
-                    <p class="price"><strong>Price:</strong> $${p.price.toFixed(2)}</p>
+                    <img src="${image}" alt="${name}">
+                    <h3>${name}</h3>
+                    <p>${desc}</p>
+                    <p><strong>Allergies:</strong> ${allergies}</p>
+                    <p class="price"><strong>Price:</strong> $${priceVal.toFixed(2)}</p>
                     <button class="btn">View Product</button>
-                    <button class="btn" onclick="addToCart('${p.name.replace(/'/g, "\\'")}', ${p.price})">
+                    <button class="btn" onclick="addToCart('${name.replace(/'/g, "\\'")}', ${priceVal}, '${image}')">
                         Add to Cart
                     </button>
                 </div>
@@ -231,21 +169,23 @@ showProducts("all");
 // CATEGORY FILTERING
 document.querySelectorAll(".tab").forEach(tab=>{
     tab.addEventListener("click",()=>{
-        document.querySelector(".tab.active").classList.remove("active");
+        const current = document.querySelector(".tab.active");
+        if (current) current.classList.remove("active");
         tab.classList.add("active");
         showProducts(tab.dataset.category);
     });
 });
 
 // ADD TO CART FUNCTION
-function addToCart(name, price) {
+function addToCart(name, price, image) {
     fetch("/cart/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             name: name,
             price: price,
-            qty: 1
+            qty: 1,
+            image: image || ''
         })
     })
     .then(res => res.json())
