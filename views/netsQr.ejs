@@ -247,7 +247,7 @@
             <hr class="my-3"/>
 
             <div class="hb-muted small mb-1">Transaction reference</div>
-            <div class="hb-mono"><%= txnRetrievalRef %></div>
+            <div class="hb-mono"><%= (typeof txnRetrievalRef !== 'undefined' ? txnRetrievalRef : '') %></div>
 
             <% if (typeof total !== 'undefined') { %>
               <div class="hb-muted small mt-3 mb-1">Amount</div>
@@ -290,7 +290,7 @@
 
 <script>
   (function(){
-    const txnRetrievalRef = "<%= txnRetrievalRef %>";
+    const txnRetrievalRef = "<%= (typeof txnRetrievalRef !== 'undefined' ? txnRetrievalRef : '') %>";
 
     // ===== Timer UI (5 minutes default) =====
     const totalSeconds = 5 * 60;

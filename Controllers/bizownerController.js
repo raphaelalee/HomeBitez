@@ -20,6 +20,14 @@ function requireBizOwner(req, res) {
   return { ok: true, user };
 }
 
+function addPaymentMeta(order) {
+  const hasPaypal = !!(order.paypal_order_id || order.paypalOrderId);
+  const paymentMethod = hasPaypal ? "PayPal" : "Other";
+  const paymentRef = order.paypal_order_id || order.paypalOrderId || order.id || "-";
+  const paymentCapture = order.paypal_capture_id || order.paypalCaptureId || "-";
+  return { paymentMethod, paymentRef, paymentCapture };
+}
+
 // ------------------------------------
 // DASHBOARD
 // ------------------------------------
@@ -42,10 +50,22 @@ exports.dashboard = async (req, res) => {
     );
     const totalStocks = stockRows?.[0]?.totalStocks ?? 0;
 
-    const [revenueRows] = await db.query(
-      "SELECT SUM(totalAmount) AS revenue FROM orders"
-    );
-    const totalRevenue = revenueRows?.[0]?.revenue ?? 0;
+    let totalRevenue = 0;
+    try {
+      const [revenueRows] = await db.query(
+        "SELECT SUM(totalAmount) AS revenue FROM orders"
+      );
+      totalRevenue = revenueRows?.[0]?.revenue ?? 0;
+    } catch (err) {
+      try {
+        const [revenueRows] = await db.query(
+          "SELECT SUM(total) AS revenue FROM orders"
+        );
+        totalRevenue = revenueRows?.[0]?.revenue ?? 0;
+      } catch (err2) {
+        totalRevenue = 0;
+      }
+    }
 
     const [msgRows] = await db.query(
       "SELECT COUNT(*) AS unread FROM messages WHERE ownerId = ? AND isRead = 0",
@@ -266,7 +286,8 @@ exports.ordersPage = async (req, res) => {
 
   try {
     const orders = await OrdersModel.list(200);
-    return res.render("bizowner/orders", { orders });
+    const withMeta = (orders || []).map(o => ({ ...o, ...addPaymentMeta(o) }));
+    return res.render("bizowner/orders", { orders: withMeta });
   } catch (err) {
     console.error("Orders page error:", err);
     // Return stack for debugging locally
@@ -288,7 +309,7 @@ exports.orderDetailsPage = async (req, res) => {
     const order = await OrdersModel.getById(id);
     if (!order) return res.redirect("/bizowner/orders");
 
-    return res.render("bizowner/orderDetails", { order });
+    return res.render("bizowner/orderDetails", { order: { ...order, ...addPaymentMeta(order) } });
   } catch (err) {
     console.error("Order details error:", err);
     return res.status(500).send(`<pre>${(err && err.stack) ? err.stack : String(err)}</pre>`);

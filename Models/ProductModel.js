@@ -3,11 +3,11 @@ const db = require("../db");
 module.exports = {
 
     getAll() {
-        return db.query("SELECT id, product_name AS productName, description, price, image, category, owner_id, quantity, stock FROM product");
+        return db.query("SELECT id, product_name AS productName, description, price, image, category, owner_id, quantity FROM product");
     },
 
     getById(id) {
-        return db.query("SELECT id, product_name AS productName, description, price, image, category, owner_id, quantity, stock FROM product WHERE id = ?", [id]);
+        return db.query("SELECT id, product_name AS productName, description, price, image, category, owner_id, quantity FROM product WHERE id = ?", [id]);
     },
 
     create(product) {

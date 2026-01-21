@@ -19,8 +19,9 @@
     <div class="meta">
       <div>
         <div><strong>Order #</strong> <%= order.id %></div>
-        <div><strong>PayPal Order</strong> <%= order.paypal_order_id || '-' %></div>
-        <div><strong>Capture ID</strong> <%= order.paypal_capture_id || '-' %></div>
+        <div><strong>Payment Method</strong> <%= order.paymentMethod %></div>
+        <div><strong>Payment Ref</strong> <%= order.paymentRef || '-' %></div>
+        <div><strong>Txn / Capture ID</strong> <%= order.paymentCapture || '-' %></div>
       </div>
       <div style="text-align:right;">
         <div><strong>Payer</strong></div>
@@ -58,7 +59,7 @@
     </div>
 
     <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:12px;">
-      <a class="btn-back" href="/bizowner/orders">← Back</a>
+      <a class="btn-back" href="/bizowner/orders">Back</a>
       <a class="btn-back" href="/bizowner">Dashboard</a>
     </div>
   </div>
