@@ -28,6 +28,75 @@ body {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
+.report-list {
+    max-width: 700px;
+    margin: 0 auto 60px;
+    display: grid;
+    gap: 16px;
+}
+
+.report-item {
+    background: white;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.report-item h5 {
+    font-size: 16px;
+    margin-bottom: 6px;
+}
+
+.report-item .meta {
+    font-size: 12px;
+    color: #7a6e63;
+    margin-bottom: 10px;
+}
+
+.reply-box {
+    background: #f6f6f6;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+.user-reply {
+    background: #fff3d6;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+.reply-form textarea {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid #e0d4c8;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+.reply-btn {
+    background: #dd9b00;
+    border: none;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.resolve-btn {
+    background: #dd9b00;
+    border: none;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
 /* BUTTON */
 .btn-submit {
     background: #dd9b00;
@@ -74,6 +143,46 @@ body {
         </div>
     </form>
 </div>
+
+<% if (issues && issues.length) { %>
+    <div class="report-list">
+        <% issues.forEach(issue => { %>
+            <div class="report-item">
+                <h5><%= issue.subject %></h5>
+                <div class="meta">
+                    <span><%= issue.created_at ? new Date(issue.created_at).toLocaleDateString("en-GB") : "" %></span>
+                    <span class="ms-2">Status: <%= issue.status || 'new' %></span>
+                </div>
+                <div><%= issue.description %></div>
+                <% if (issue.admin_reply) { %>
+                    <div class="reply-box">
+                        <strong>Admin reply:</strong>
+                        <div><%= issue.admin_reply %></div>
+                    </div>
+                <% } %>
+                <% if (issue.user_reply) { %>
+                    <div class="user-reply">
+                        <strong>Your reply:</strong>
+                        <div><%= issue.user_reply %></div>
+                    </div>
+                <% } %>
+                <% if (issue.admin_reply && (issue.status || '').toLowerCase() !== 'resolved') { %>
+                    <form method="POST" action="/report/<%= issue.id %>/reply" class="reply-form mt-3">
+                        <textarea name="reply" rows="3" placeholder="Reply to admin..." required></textarea>
+                        <div class="mt-2">
+                            <button type="submit" class="reply-btn">Send Reply</button>
+                        </div>
+                    </form>
+                <% } %>
+                <% if ((issue.status || '').toLowerCase() !== 'resolved') { %>
+                    <form method="POST" action="/report/<%= issue.id %>/resolve" class="mt-3">
+                        <button type="submit" class="resolve-btn">Mark as Resolved</button>
+                    </form>
+                <% } %>
+            </div>
+        <% }) %>
+    </div>
+<% } %>
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

@@ -15,6 +15,46 @@ const db = require('./db');
 // NETS service (for QR)
 const nets = require("./services/nets");
 
+let reportColumnsEnsured = false;
+async function ensureReportReplyColumns() {
+    if (reportColumnsEnsured) return;
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS report_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NULL,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(150) NOT NULL,
+                subject VARCHAR(200) NOT NULL,
+                description TEXT NOT NULL,
+                status ENUM('new','in_progress','resolved') DEFAULT 'new',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                admin_reply TEXT NULL,
+                replied_at DATETIME NULL,
+                replied_by INT NULL,
+                user_reply TEXT NULL,
+                user_reply_at DATETIME NULL
+            )
+        `);
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN admin_reply TEXT NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN replied_at DATETIME NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN replied_by INT NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN user_reply TEXT NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN user_reply_at DATETIME NULL");
+    } catch (err) {}
+    reportColumnsEnsured = true;
+}
+
 // Initialize app
 const app = express();
 
@@ -87,10 +127,29 @@ app.get('/report', (req, res) => {
         return res.redirect('/login');
     }
 
-    res.render('report', {
-        success: req.flash('success'),
-        error: req.flash('error'),
-        userEmail: req.session.user.email || ''
+    const userId = req.session.user.id;
+    const userEmail = req.session.user.email || '';
+
+    ensureReportReplyColumns().then(() => {
+        return db.query(
+            "SELECT id, subject, description, status, created_at, admin_reply, replied_at, user_reply, user_reply_at FROM report_messages WHERE user_id = ? ORDER BY created_at DESC",
+            [userId]
+        );
+    }).then(([rows]) => {
+        res.render('report', {
+            success: req.flash('success'),
+            error: req.flash('error'),
+            userEmail,
+            issues: rows || []
+        });
+    }).catch(err => {
+        console.error("Report list error:", err);
+        res.render('report', {
+            success: req.flash('success'),
+            error: req.flash('error'),
+            userEmail,
+            issues: []
+        });
     });
 });
 
@@ -124,6 +183,62 @@ app.post('/report', async (req, res) => {
         req.flash('error', 'Failed to submit report.');
         res.redirect('/report');
     }
+});
+
+// User mark report as resolved
+app.post('/report/:id/resolve', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please log in to continue.');
+        return res.redirect('/login');
+    }
+
+    const reportId = Number(req.params.id);
+    if (!Number.isFinite(reportId)) {
+        req.flash('error', 'Invalid report ID.');
+        return res.redirect('/report');
+    }
+
+    try {
+        await ensureReportReplyColumns();
+        await db.query(
+            "UPDATE report_messages SET status = 'resolved' WHERE id = ? AND user_id = ?",
+            [reportId, req.session.user.id]
+        );
+        req.flash('success', 'Issue marked as resolved.');
+    } catch (err) {
+        console.error('Report resolve error:', err);
+        req.flash('error', 'Failed to update issue status.');
+    }
+
+    return res.redirect('/report');
+});
+
+app.post('/report/:id/reply', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please log in to continue.');
+        return res.redirect('/login');
+    }
+
+    const reportId = Number(req.params.id);
+    const reply = (req.body.reply || '').trim();
+    if (!Number.isFinite(reportId) || !reply) {
+        req.flash('error', 'Reply cannot be empty.');
+        return res.redirect('/report');
+    }
+
+    try {
+        await ensureReportReplyColumns();
+        await db.query(
+            "UPDATE report_messages SET user_reply = ?, user_reply_at = NOW(), status = 'in_progress' WHERE id = ? AND user_id = ?",
+            [reply, reportId, req.session.user.id]
+        );
+        req.flash('success', 'Reply sent to admin.');
+    } catch (err) {
+        console.error('User reply error:', err);
+        req.flash('error', 'Failed to send reply.');
+    }
+
+    return res.redirect('/report');
 });
 
 // Auth
@@ -181,8 +296,167 @@ app.get('/admin', async (req, res) => {
             totalProducts,
             totalIssues
         },
-        adminName: 'Admin'
+        adminName: req.session.user?.username || 'Admin'
     });
+});
+
+// Admin manage customers
+app.get('/admin/customers', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let customers = [];
+    try {
+        let rows = [];
+        try {
+            const [withPoints] = await db.query(
+                "SELECT id, username, email, contact, IFNULL(points, 0) AS points FROM users WHERE role = 'user' ORDER BY id ASC"
+            );
+            rows = withPoints;
+        } catch (err) {
+            const [fallback] = await db.query(
+                "SELECT id, username, email, contact FROM users WHERE role = 'user' ORDER BY id ASC"
+            );
+            rows = fallback.map(row => ({ ...row, points: 0 }));
+        }
+        customers = rows;
+    } catch (err) {
+        console.error("Admin customers error:", err);
+    }
+
+    res.render('admin-customers', {
+        customers,
+        adminName: req.session.user?.username || 'Admin'
+    });
+});
+
+// Admin inventory
+app.get('/admin/inventory', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let products = [];
+    try {
+        const [rows] = await db.query(
+            `SELECT p.id, p.productName, p.image, p.description, p.quantity, p.price, p.owner_id,
+                    u.username AS businessName
+             FROM products p
+             LEFT JOIN users u ON u.id = p.owner_id
+             ORDER BY p.id ASC`
+        );
+        products = rows;
+    } catch (err) {
+        console.error("Admin inventory error:", err);
+    }
+
+    res.render('admin-inventory', {
+        products,
+        adminName: req.session.user?.username || 'Admin'
+    });
+});
+
+// Admin delete customer
+app.post('/admin/customers/:id/delete', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    const customerId = Number(req.params.id);
+    if (!Number.isFinite(customerId)) {
+        req.flash('error', 'Invalid customer ID.');
+        return res.redirect('/admin/customers');
+    }
+
+    try {
+        await db.query("DELETE FROM users WHERE id = ? AND role = 'user'", [customerId]);
+        req.flash('success', 'Customer account terminated.');
+    } catch (err) {
+        console.error("Admin delete customer error:", err);
+        req.flash('error', 'Failed to terminate account.');
+    }
+
+    return res.redirect('/admin/customers');
+});
+
+// Admin issues reported
+app.get('/admin/issues', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let issues = [];
+    try {
+        await ensureReportReplyColumns();
+        const [rows] = await db.query(
+            `SELECT rm.id, rm.name, rm.email, rm.subject, rm.description, rm.status, rm.created_at,
+                    rm.admin_reply, rm.replied_at, rm.user_reply, rm.user_reply_at, u.contact
+             FROM report_messages rm
+             LEFT JOIN users u ON u.id = rm.user_id
+             ORDER BY rm.created_at DESC`
+        );
+        issues = rows;
+    } catch (err) {
+        console.error("Admin issues error:", err);
+    }
+
+    res.render('admin-issues', {
+        issues,
+        adminName: req.session.user?.username || 'Admin'
+    });
+});
+
+app.post('/admin/issues/:id/reply', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    const issueId = Number(req.params.id);
+    const reply = (req.body.reply || '').trim();
+    if (!Number.isFinite(issueId) || !reply) {
+        req.flash('error', 'Reply cannot be empty.');
+        return res.redirect('/admin/issues');
+    }
+
+    try {
+        await ensureReportReplyColumns();
+        await db.query(
+            "UPDATE report_messages SET admin_reply = ?, replied_at = NOW(), replied_by = ? WHERE id = ?",
+            [reply, req.session.user.id, issueId]
+        );
+        req.flash('success', 'Reply sent.');
+    } catch (err) {
+        console.error("Admin reply error:", err);
+        req.flash('error', 'Failed to send reply.');
+    }
+
+    return res.redirect('/admin/issues');
 });
 
 // Logout

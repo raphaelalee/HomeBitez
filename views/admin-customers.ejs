@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeBitez - Manage Customers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #fff5ea;
+      --cream-deep: #fde8cf;
+      --card: #ffffff;
+      --ink: #1d1d1d;
+      --muted: #6c6c6c;
+      --accent: #f0a400;
+      --accent-deep: #e38f00;
+      --shadow: 0 12px 28px rgba(20, 20, 20, 0.08);
+      --line: rgba(20, 20, 20, 0.12);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Sora", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #fff1de 0%, transparent 60%),
+        linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--cream-deep);
+      box-shadow: 0 4px 12px rgba(20, 20, 20, 0.08);
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      font-family: "Sniglet", cursive;
+      font-size: 30px;
+      font-weight: 900;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--ink);
+      margin: 0 14px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .welcome {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 48px auto 96px;
+      padding: 0 28px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .title-block h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .title-block p {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .search {
+      min-width: 280px;
+      flex: 0 0 320px;
+    }
+
+    .search input {
+      width: 100%;
+      border-radius: 999px;
+      border: 1px solid rgba(20, 20, 20, 0.12);
+      padding: 10px 16px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .search input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(240, 164, 0, 0.15);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 700;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    tbody td {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+
+    .avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #111;
+      display: inline-block;
+      position: relative;
+    }
+
+    .avatar::after {
+      content: "";
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      top: 4px;
+      left: 7px;
+      box-shadow: 0 10px 0 0 #fff;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      background: #ff6b6b;
+      color: #fff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .action-btn span {
+      display: inline-flex;
+      width: 20px;
+      height: 20px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      font-weight: 800;
+    }
+
+    .empty {
+      padding: 32px 8px;
+      text-align: center;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    @media (max-width: 980px) {
+      .card-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .search {
+        flex: 1 1 auto;
+        min-width: auto;
+      }
+    }
+
+    @media (max-width: 780px) {
+      thead {
+        display: none;
+      }
+      table, tbody, tr, td {
+        display: block;
+        width: 100%;
+      }
+      tbody tr {
+        padding: 12px 0;
+      }
+      tbody td {
+        border: none;
+        padding: 6px 0;
+      }
+      tbody td::before {
+        content: attr(data-label);
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 4px;
+        font-weight: 600;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .nav-links a {
+        margin: 0;
+      }
+      .page {
+        padding: 0 18px;
+      }
+      .card {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">HomeBitez</a>
+    <nav class="nav-links">
+      <a href="/admin">Home</a>
+      <a href="/">Menu</a>
+      <a href="/admin/inventory">Inventory</a>
+    </nav>
+    <div class="welcome">Welcome, <%= adminName %>!</div>
+  </header>
+
+  <main class="page">
+    <section class="card">
+      <div class="card-header">
+        <div class="title-block">
+          <h1>Manage Customers</h1>
+          <p>All Customers (<span id="customerCount"><%= customers.length %></span>)</p>
+        </div>
+        <div class="search">
+          <input type="search" id="customerSearch" placeholder="Search by name, email or customer ID" />
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Customer ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Number</th>
+              <th>Points</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (customers.length === 0) { %>
+              <tr>
+                <td class="empty" colspan="7">No customers found.</td>
+              </tr>
+            <% } %>
+            <% customers.forEach(customer => { %>
+              <% const searchData = `${customer.id} ${customer.username || ''} ${customer.email || ''} ${customer.contact || ''}`.toLowerCase(); %>
+              <tr data-search="<%= searchData %>">
+                <td data-label="Profile"><span class="avatar" aria-hidden="true"></span></td>
+                <td data-label="Customer ID"><%= customer.id %></td>
+                <td data-label="Name"><%= customer.username || '-' %></td>
+                <td data-label="Email"><%= customer.email || '-' %></td>
+                <td data-label="Number"><%= customer.contact || '-' %></td>
+                <td data-label="Points"><%= Number.isFinite(Number(customer.points)) ? Number(customer.points) : 0 %></td>
+                <td data-label="Action">
+                  <form method="POST" action="/admin/customers/<%= customer.id %>/delete" onsubmit="return confirm('Terminate this account?');">
+                    <button class="action-btn" type="submit">
+                      <span>X</span>
+                      Terminate Account
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const searchInput = document.getElementById("customerSearch");
+    const countEl = document.getElementById("customerCount");
+    const rows = Array.from(document.querySelectorAll("tbody tr[data-search]"));
+
+    const updateCount = () => {
+      const visible = rows.filter(row => row.style.display !== "none").length;
+      countEl.textContent = visible;
+    };
+
+    const filterRows = () => {
+      const query = searchInput.value.trim().toLowerCase();
+      rows.forEach(row => {
+        const haystack = row.getAttribute("data-search") || "";
+        row.style.display = haystack.includes(query) ? "" : "none";
+      });
+      updateCount();
+    };
+
+    searchInput.addEventListener("input", filterRows);
+  </script>
+</body>
+</html>

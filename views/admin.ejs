@@ -143,6 +143,7 @@
     }
 
     .action-btn {
+      display: inline-block;
       align-self: flex-start;
       background: var(--accent);
       color: #fff;
@@ -152,6 +153,7 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      text-decoration: none;
       transition: background 0.2s ease;
     }
 
@@ -204,9 +206,9 @@
   <header class="topbar">
     <a class="brand" href="/">HomeBitez</a>
     <nav class="nav-links">
-      <a href="/">Home</a>
-      <a href="/menu">Menu</a>
-      <a href="/report">Contact us</a>
+      <a href="/admin">Home</a>
+      <a href="/">Menu</a>
+      <a href="/admin/inventory">Inventory</a>
     </nav>
     <div class="welcome">Welcome, <%= adminName %>!</div>
   </header>
@@ -236,7 +238,7 @@
         <div class="arrow">→</div>
         <div class="action-title">Customer Details</div>
         <div class="action-desc">View and manage customer details, points and accounts.</div>
-        <button class="action-btn" type="button">Manage Customers</button>
+        <a class="action-btn" href="/admin/customers">Manage Customers</a>
       </article>
       <article class="action-card">
         <div class="arrow">→</div>
@@ -254,7 +256,7 @@
         <div class="arrow">→</div>
         <div class="action-title">Report Issues</div>
         <div class="action-desc">Handle customer complaints and reported issues.</div>
-        <button class="action-btn" type="button">View Issues</button>
+        <a class="action-btn" href="/admin/issues">View Issues</a>
       </article>
     </section>
   </main>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeBitez - Inventory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #fff5ea;
+      --cream-deep: #fde8cf;
+      --card: #ffffff;
+      --ink: #1d1d1d;
+      --muted: #6c6c6c;
+      --accent: #f0a400;
+      --accent-deep: #e38f00;
+      --line: rgba(20, 20, 20, 0.12);
+      --shadow: 0 12px 28px rgba(20, 20, 20, 0.08);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Sora", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #fff1de 0%, transparent 60%),
+        linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--cream-deep);
+      box-shadow: 0 4px 12px rgba(20, 20, 20, 0.08);
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      font-family: "Sniglet", cursive;
+      font-size: 30px;
+      font-weight: 900;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--ink);
+      margin: 0 14px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .welcome {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 42px auto 96px;
+      padding: 0 28px;
+      text-align: center;
+    }
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .table-card {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+      padding: 10px 8px 0;
+      overflow-x: auto;
+      text-align: left;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 860px;
+    }
+
+    thead th {
+      font-weight: 700;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .product-img {
+      width: 46px;
+      height: 46px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: #f1f1f1;
+      border: 1px solid rgba(20, 20, 20, 0.08);
+    }
+
+    .biz-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #f0a400;
+      color: #fff;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .desc {
+      max-width: 240px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .action-link {
+      background: transparent;
+      border: none;
+      color: #2a241e;
+      font-weight: 600;
+      cursor: default;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 28px 0 32px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    @media (max-width: 600px) {
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .nav-links a {
+        margin: 0;
+      }
+      .page {
+        padding: 0 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">HomeBitez</a>
+    <nav class="nav-links">
+      <a href="/admin">Home</a>
+      <a href="/">Menu</a>
+      <a href="/admin/inventory">Inventory</a>
+    </nav>
+    <div class="welcome">Welcome, <%= adminName %>!</div>
+  </header>
+
+  <main class="page">
+    <h1 class="page-title">HomeBitez Inventory</h1>
+    <section class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>Product Image</th>
+            <th>Business Name</th>
+            <th>Business Image</th>
+            <th>Description</th>
+            <th>Allergies</th>
+            <th>Stock</th>
+            <th>Price</th>
+            <th>Edit</th>
+            <th>Delete</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!products.length) { %>
+            <tr>
+              <td class="empty" colspan="10">No products found.</td>
+            </tr>
+          <% } %>
+          <% products.forEach(product => { %>
+            <% const bizName = product.businessName || "Unknown"; %>
+            <% const initials = bizName.split(" ").filter(Boolean).map(s => s[0]).join("").slice(0, 2); %>
+            <tr>
+              <td><%= product.productName || "-" %></td>
+              <td>
+                <% if (product.image) { %>
+                  <img class="product-img" src="/images/<%= product.image %>" alt="product">
+                <% } else { %>
+                  <div class="product-img"></div>
+                <% } %>
+              </td>
+              <td><%= bizName %></td>
+              <td><span class="biz-avatar"><%= initials || "HB" %></span></td>
+              <td class="desc"><%= product.description || "-" %></td>
+              <td>-</td>
+              <td><%= Number.isFinite(Number(product.quantity)) ? Number(product.quantity) : 0 %></td>
+              <td>$<%= Number(product.price || 0).toFixed(2) %></td>
+              <td><button class="action-link" type="button">Edit</button></td>
+              <td><button class="action-link" type="button">Delete</button></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeBitez - Issues Reported</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #fff5ea;
+      --cream-deep: #fde8cf;
+      --card: #ffffff;
+      --ink: #1d1d1d;
+      --muted: #6c6c6c;
+      --accent: #f0a400;
+      --accent-deep: #e38f00;
+      --line: rgba(20, 20, 20, 0.08);
+      --shadow: 0 12px 28px rgba(20, 20, 20, 0.08);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Sora", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #fff1de 0%, transparent 60%),
+        linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--cream-deep);
+      box-shadow: 0 4px 12px rgba(20, 20, 20, 0.08);
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      font-family: "Sniglet", cursive;
+      font-size: 30px;
+      font-weight: 900;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--ink);
+      margin: 0 14px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .welcome {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 40px auto 96px;
+      padding: 0 28px;
+    }
+
+    .page-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 26px;
+    }
+
+    .issues {
+      display: grid;
+      gap: 18px;
+    }
+
+    .issue-card {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 22px 28px;
+      border: 1px solid var(--line);
+    }
+
+    .issue-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .issue-name {
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .meta span::before {
+      content: "• ";
+      margin-right: 4px;
+    }
+
+    .meta span:first-child::before {
+      content: "";
+      margin-right: 0;
+    }
+
+    .issue-date {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .issue-body {
+      background: #f6f6f6;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    .issue-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .reply-form {
+      display: none;
+      margin-top: 12px;
+      gap: 10px;
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .reply-form textarea {
+      width: 100%;
+      min-height: 80px;
+      border-radius: 8px;
+      border: 1px solid rgba(20, 20, 20, 0.12);
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    .reply-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .btn {
+      border-radius: 8px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+    }
+
+    .btn-outline {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #fff;
+    }
+
+    .btn-solid {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 28px 0;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    @media (max-width: 780px) {
+      .issue-header {
+        flex-direction: column;
+      }
+      .issue-date {
+        order: 2;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .nav-links a {
+        margin: 0;
+      }
+      .page {
+        padding: 0 18px;
+      }
+      .issue-card {
+        padding: 20px;
+      }
+      .issue-actions {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">HomeBitez</a>
+    <nav class="nav-links">
+      <a href="/admin">Home</a>
+      <a href="/">Menu</a>
+      <a href="/admin/inventory">Inventory</a>
+    </nav>
+    <div class="welcome">Welcome, <%= adminName %>!</div>
+  </header>
+
+  <main class="page">
+    <h1 class="page-title">Issues Reported</h1>
+
+    <section class="issues">
+      <% if (!issues.length) { %>
+        <div class="empty">No issues reported yet.</div>
+      <% } %>
+
+      <% issues.forEach(issue => { %>
+        <article class="issue-card">
+          <div class="issue-header">
+            <div>
+              <div class="issue-name"><%= issue.name || "Unknown User" %></div>
+              <div class="meta">
+                <% if (issue.email) { %>
+                  <span><%= issue.email %></span>
+                <% } %>
+                <% if (issue.contact) { %>
+                  <span><%= issue.contact %></span>
+                <% } %>
+              </div>
+            </div>
+            <div class="issue-date">
+              <%= issue.created_at ? new Date(issue.created_at).toLocaleDateString("en-GB") : "" %>
+            </div>
+          </div>
+
+          <div class="issue-body">
+            <strong><%= issue.subject || "No subject" %></strong>
+            <% if (issue.description) { %>
+              <div><%= issue.description %></div>
+            <% } %>
+          </div>
+
+          <% if (issue.admin_reply) { %>
+            <div class="reply-meta">
+              Admin reply <%= issue.replied_at ? `- ${new Date(issue.replied_at).toLocaleDateString("en-GB")}` : "" %>
+            </div>
+            <div class="issue-body">
+              <%= issue.admin_reply %>
+            </div>
+          <% } %>
+          <% if (issue.user_reply) { %>
+            <div class="reply-meta">
+              User reply <%= issue.user_reply_at ? `- ${new Date(issue.user_reply_at).toLocaleDateString("en-GB")}` : "" %>
+            </div>
+            <div class="issue-body">
+              <%= issue.user_reply %>
+            </div>
+          <% } %>
+
+          <div class="issue-actions">
+            <button class="btn btn-outline reply-toggle" type="button">Reply</button>
+            <button class="btn btn-solid" type="button">Mark as Resolved</button>
+          </div>
+
+          <form class="reply-form" method="POST" action="/admin/issues/<%= issue.id %>/reply">
+            <textarea name="reply" placeholder="Write a reply..." required></textarea>
+            <button class="btn btn-solid" type="submit">Send Reply</button>
+          </form>
+        </article>
+      <% }) %>
+    </section>
+  </main>
+
+  <script>
+    document.querySelectorAll(".reply-toggle").forEach(button => {
+      button.addEventListener("click", () => {
+        const form = button.closest(".issue-card").querySelector(".reply-form");
+        const isOpen = form.style.display === "flex";
+        form.style.display = isOpen ? "none" : "flex";
+      });
+    });
+  </script>
+</body>
+</html>
