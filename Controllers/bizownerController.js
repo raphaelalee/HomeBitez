@@ -96,14 +96,14 @@ exports.addProduct = async (req, res) => {
     if (req.file) imageFilename = req.file.filename;
 
     const productName = (req.body.productName || "").trim();
-    const quantity = parseInt(req.body.quantity, 10);
+    const category = (req.body.category || "").trim();
     const price = parseFloat(req.body.price);
 
     if (!productName) return res.redirect("/bizowner/add");
-    if (!Number.isInteger(quantity) || quantity < 0) return res.redirect("/bizowner/add");
+    if (!category) return res.redirect("/bizowner/add");
     if (Number.isNaN(price) || price < 0) return res.redirect("/bizowner/add");
 
-    const product = { productName, quantity, price, image: imageFilename };
+    const product = { productName, category, price, image: imageFilename };
 
     await ProductModel.create(product);
     return res.redirect("/bizowner/inventory");
@@ -149,14 +149,14 @@ exports.updateProduct = async (req, res) => {
     if (req.file) imageFilename = req.file.filename;
 
     const productName = (req.body.productName || "").trim();
-    const quantity = parseInt(req.body.quantity, 10);
+    const category = (req.body.category || "").trim();
     const price = parseFloat(req.body.price);
 
     if (!productName) return res.redirect(`/bizowner/edit/${id}`);
-    if (!Number.isInteger(quantity) || quantity < 0) return res.redirect(`/bizowner/edit/${id}`);
+    if (!category) return res.redirect(`/bizowner/edit/${id}`);
     if (Number.isNaN(price) || price < 0) return res.redirect(`/bizowner/edit/${id}`);
 
-    const product = { productName, quantity, price, image: imageFilename };
+    const product = { productName, category, price, image: imageFilename };
 
     await ProductModel.update(id, product);
     return res.redirect("/bizowner/inventory");

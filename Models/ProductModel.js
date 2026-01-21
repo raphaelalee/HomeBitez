@@ -12,15 +12,15 @@ module.exports = {
 
     create(product) {
         return db.query(
-            "INSERT INTO product (product_name, quantity, price, image) VALUES (?, ?, ?, ?)",
-            [product.productName, product.quantity, product.price, product.image]
+            "INSERT INTO product (product_name, category, price, image) VALUES (?, ?, ?, ?)",
+            [product.productName, product.category, product.price, product.image]
         );
     },
 
     update(id, product) {
         return db.query(
-            "UPDATE product SET product_name=?, quantity=?, price=?, image=? WHERE id=?",
-            [product.productName, product.quantity, product.price, product.image, id]
+            "UPDATE product SET product_name=?, category=?, price=?, image=? WHERE id=?",
+            [product.productName, product.category, product.price, product.image, id]
         );
     },
 

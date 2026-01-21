@@ -113,8 +113,15 @@
             <label>Product Name</label>
             <input type="text" name="productName" value="<%= product.productName %>" required>
 
-            <label>Quantity</label>
-            <input type="number" name="quantity" value="<%= product.quantity %>" required>
+            <label>Category</label>
+            <select name="category" required>
+                <option value="">Select category</option>
+                <option value="International" <%= product.category === 'International' ? 'selected' : '' %>>International</option>
+                <option value="Local" <%= product.category === 'Local' ? 'selected' : '' %>>Local</option>
+                <option value="Dessert" <%= product.category === 'Dessert' ? 'selected' : '' %>>Dessert</option>
+                <option value="Sides" <%= product.category === 'Sides' ? 'selected' : '' %>>Sides</option>
+                <option value="Beverage" <%= product.category === 'Beverage' ? 'selected' : '' %>>Beverage</option>
+            </select>
 
             <label>Price (S$)</label>
             <input type="number" step="0.01" name="price" value="<%= product.price %>" required>

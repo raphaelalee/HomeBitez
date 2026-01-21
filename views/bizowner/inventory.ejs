@@ -4,19 +4,19 @@
   <%- include('../partials/head', { title: 'Inventory - HomeBitez' }) %>
 
   <style>
-    /* Keep your styles here for now. Later move to /css/theme.css */
     body {
       margin: 0;
       padding: 0;
       font-family: "Poppins", sans-serif;
+      font-weight: 400;
+      color: #2a241e;
     }
 
-    /* HERO HEADER (beige, less highlighter-yellow) */
+    /* HERO HEADER */
     .hero {
       background: linear-gradient(135deg, #f1dfc7, #f6efe6);
       padding: 50px 50px 80px;
       border-radius: 0 0 35px 35px;
-      color: #2a241e;
       border-bottom: 1px solid #eadac6;
     }
 
@@ -29,7 +29,8 @@
     .hero-sub {
       margin-top: 8px;
       font-size: 15px;
-      color: rgba(42,36,30,0.75);
+      font-weight: 400;
+      color: rgba(42,36,30,0.7);
     }
 
     .hero-buttons {
@@ -41,34 +42,23 @@
 
     .hero-btn {
       padding: 12px 22px;
-      border: none;
       border-radius: 999px;
       font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: .2s;
+      font-weight: 600;
       text-decoration: none;
-      display: inline-block;
+      cursor: pointer;
     }
 
     .add-product-btn {
       background: #d59b2d;
       color: #fff;
-      box-shadow: 0 10px 24px rgba(213, 155, 45, 0.25);
-    }
-
-    .add-product-btn:hover {
-      background: #b97d18;
-      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(213,155,45,0.25);
     }
 
     .ghost-btn {
-      background: rgba(255,255,255,0.6);
+      background: rgba(255,255,255,0.7);
       color: #2a241e;
       border: 1px solid #eadac6;
-    }
-    .ghost-btn:hover {
-      background: rgba(255,255,255,0.85);
     }
 
     /* STATS */
@@ -80,27 +70,26 @@
     }
 
     .stat-box {
-      background: rgba(255, 255, 255, 0.65);
+      background: rgba(255,255,255,0.65);
       border: 1px solid #eadac6;
       padding: 16px 22px;
       border-radius: 18px;
       width: 190px;
-      color: #2a241e;
-      box-shadow: 0 10px 24px rgba(42, 36, 30, 0.08);
+      box-shadow: 0 10px 24px rgba(42,36,30,0.08);
     }
 
     .stat-number {
       font-size: 26px;
-      font-weight: 800;
+      font-weight: 700;
     }
 
     .stat-label {
-      color: rgba(42,36,30,0.7);
       font-size: 13px;
-      margin-top: 2px;
+      font-weight: 400;
+      color: rgba(42,36,30,0.65);
     }
 
-    /* CONTENT WRAPPER */
+    /* CONTENT */
     .content {
       background: #fffaf3;
       margin: -40px auto 40px;
@@ -108,17 +97,16 @@
       width: 92%;
       border-radius: 22px;
       border: 1px solid #eadac6;
-      box-shadow: 0 12px 30px rgba(42, 36, 30, 0.10);
+      box-shadow: 0 12px 30px rgba(42,36,30,0.10);
     }
 
     .section-title {
       font-size: 22px;
-      font-weight: 800;
+      font-weight: 700;
       margin-bottom: 18px;
-      color: #2a241e;
     }
 
-    /* SEARCH / SORT */
+    /* SEARCH */
     .top-controls {
       display: flex;
       justify-content: space-between;
@@ -139,26 +127,23 @@
       padding: 12px 14px;
       border-radius: 999px;
       border: 1px solid #eadac6;
-      background: #fff;
-      outline: none;
+      font-weight: 400;
     }
 
     .search-btn {
       padding: 12px 18px;
       background: #d59b2d;
-      border: none;
       border-radius: 999px;
       color: white;
-      font-weight: 800;
-      cursor: pointer;
+      font-weight: 600;
+      border: none;
     }
 
     .sort-select {
       padding: 12px 14px;
       border-radius: 999px;
       border: 1px solid #eadac6;
-      font-size: 14px;
-      background: #fff;
+      font-weight: 400;
     }
 
     /* PRODUCT GRID */
@@ -173,14 +158,8 @@
       padding: 18px;
       border-radius: 22px;
       border: 1px solid #eadac6;
-      box-shadow: 0 10px 26px rgba(42, 36, 30, 0.08);
-      transition: 0.2s;
+      box-shadow: 0 10px 26px rgba(42,36,30,0.08);
       position: relative;
-    }
-
-    .product-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 14px 34px rgba(42, 36, 30, 0.12);
     }
 
     .product-img {
@@ -192,25 +171,25 @@
     }
 
     .product-name {
-      font-size: 17px;
-      font-weight: 800;
-      color: #2a241e;
+      font-size: 16px;
+      font-weight: 600;
     }
 
     .product-price {
-      color: #2a241e;
-      font-weight: 800;
+      font-size: 14px;
+      font-weight: 600;
       margin-bottom: 6px;
     }
 
     .meta {
-      color: rgba(42,36,30,0.7);
       font-size: 12px;
+      font-weight: 400;
+      color: rgba(42,36,30,0.65);
       margin-bottom: 10px;
-      line-height: 1.35;
+      line-height: 1.4;
     }
 
-    /* ACTION ICONS (nicer hover + consistent) */
+    /* ICON ACTIONS */
     .icon-actions {
       position: absolute;
       top: 12px;
@@ -223,22 +202,14 @@
     .icon-btn {
       width: 40px;
       height: 40px;
-      background: #fffaf3;
       border-radius: 999px;
+      background: #fffaf3;
       border: 1px solid #eadac6;
-      box-shadow: 0 8px 18px rgba(42, 36, 30, 0.12);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: .15s ease;
       padding: 0;
-      text-decoration: none;
-    }
-
-    .icon-btn:hover {
-      transform: translateY(-1px) scale(1.05);
-      background: #fff;
     }
 
     .edit-btn svg { stroke: #1f7a4a; stroke-width: 2; }
@@ -255,56 +226,48 @@
       padding: 10px 12px;
       border-radius: 999px;
       border: 1px solid #eadac6;
-      outline: none;
+      font-weight: 400;
     }
 
     .replenish-btn {
       background: #2a241e;
-      border: none;
-      padding: 10px 14px;
       border-radius: 999px;
       color: white;
-      font-weight: 800;
-      cursor: pointer;
+      font-weight: 600;
+      border: none;
+      padding: 10px 14px;
     }
 
-    /* TOAST (flash message) */
+    /* TOAST */
     .toast {
       position: fixed;
       top: 88px;
       right: 24px;
-      z-index: 9999;
       padding: 12px 16px;
       border-radius: 14px;
-      font-weight: 800;
-      border: 1px solid #eadac6;
       background: #fffaf3;
-      box-shadow: 0 12px 30px rgba(42, 36, 30, 0.18);
-      animation: popIn .18s ease-out;
+      border: 1px solid #eadac6;
+      box-shadow: 0 12px 30px rgba(42,36,30,0.18);
+      font-weight: 600;
     }
 
     .toast-success { color: #1f7a4a; }
     .toast-error { color: #b42318; }
-
-    @keyframes popIn {
-      from { transform: translateY(-6px); opacity: 0; }
-      to   { transform: translateY(0); opacity: 1; }
-    }
   </style>
 </head>
 
 <body>
   <%- include('../partials/navbar-bizowner') %>
 
-  <% if (success && success.length) { %>
+  <% if (success?.length) { %>
     <div class="toast toast-success"><%= success[0] %></div>
   <% } %>
 
-  <% if (error && error.length) { %>
+  <% if (error?.length) { %>
     <div class="toast toast-error"><%= error[0] %></div>
   <% } %>
 
-  <!-- HERO HEADER -->
+  <!-- HERO -->
   <div class="hero">
     <div class="hero-title">Keep your catalogue looking sharp</div>
     <div class="hero-sub">Review, adjust, and launch products easily.</div>
@@ -321,13 +284,13 @@
       </div>
 
       <div class="stat-box">
-        <div class="stat-number"><%= products.reduce((a,b)=>a + Number(b.quantity || 0), 0) %></div>
+        <div class="stat-number"><%= products.reduce((a,b)=>a + Number(b.quantity||0),0) %></div>
         <div class="stat-label">Total Stock</div>
       </div>
 
       <div class="stat-box">
         <div class="stat-number">
-          $<%= products.length ? (products.reduce((a,b)=>a + Number(b.price || 0), 0) / products.length).toFixed(2) : "0.00" %>
+          $<%= products.length ? (products.reduce((a,b)=>a+Number(b.price||0),0)/products.length).toFixed(2) : "0.00" %>
         </div>
         <div class="stat-label">Avg. Price</div>
       </div>
@@ -341,7 +304,7 @@
     <div class="top-controls">
       <div class="search-box">
         <input id="search" class="search-input" placeholder="Search products...">
-        <button class="search-btn" type="button">Search</button>
+        <button class="search-btn">Search</button>
       </div>
 
       <select class="sort-select">
@@ -354,43 +317,40 @@
 
     <div class="product-grid">
       <% products.forEach(p => { %>
-        <div class="product-card" data-name="<%= String(p.productName || '').toLowerCase() %>">
+        <div class="product-card">
           <div class="icon-actions">
-            <!-- EDIT -->
-            <a href="/bizowner/edit/<%= p.id %>" class="icon-btn edit-btn" title="Edit">
-              <svg width="18" height="18" fill="none">
+            <a href="/bizowner/edit/<%= p.id %>" class="icon-btn edit-btn">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
                 <path d="M12 2l4 4-10 10H2v-4L12 2z"></path>
               </svg>
             </a>
 
-            <!-- DELETE -->
             <form action="/bizowner/delete/<%= p.id %>" method="POST">
-              <button type="submit" class="icon-btn delete-btn" title="Delete"
+              <button class="icon-btn delete-btn"
                 onclick="return confirm('Delete this product?')">
-                <svg width="18" height="18" fill="none">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6l-1 14H6L5 6"></path>
-                  <path d="M10 11v6"></path>
-                  <path d="M14 11v6"></path>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+                  <path d="M3 6h18" />
+                  <path d="M8 6v14h8V6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
                 </svg>
               </button>
             </form>
           </div>
 
-          <img src="/images/<%= p.image %>" class="product-img" alt="product">
+          <img src="/images/<%= p.image %>" class="product-img">
 
           <div class="product-name"><%= p.productName %></div>
-          <div class="product-price">$<%= Number(p.price || 0).toFixed(2) %></div>
+          <div class="product-price">$<%= Number(p.price).toFixed(2) %></div>
 
           <div class="meta">
             ID: <%= p.id %><br>
-            Stock: <%= p.quantity %><br>
-            Image: <%= p.image %>
+            Stock: <%= p.quantity %>
           </div>
 
           <form action="/bizowner/replenish/<%= p.id %>" method="POST" class="replenish-row">
-            <input type="number" min="1" class="replenish-input" name="quantity" placeholder="Add stock" required>
-            <button type="submit" class="replenish-btn">+</button>
+            <input type="number" class="replenish-input" name="quantity" placeholder="Add stock" required>
+            <button class="replenish-btn">+</button>
           </form>
         </div>
       <% }) %>
@@ -398,7 +358,6 @@
   </div>
 
   <script>
-    // auto-hide toast
     setTimeout(() => {
       const t = document.querySelector(".toast");
       if (t) t.style.display = "none";
