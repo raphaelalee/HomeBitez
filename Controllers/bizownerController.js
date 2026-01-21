@@ -31,14 +31,14 @@ exports.dashboard = async (req, res) => {
     const ownerId = guard.user.id;
 
     // If you want totals for ALL products, keep as-is.
-    // If you want totals per-owner, you'll need ownerId column on products table.
+    // If you want totals per-owner, you'll need ownerId column on product table.
     const [productCountRows] = await db.query(
-      "SELECT COUNT(*) AS total FROM products"
+      "SELECT COUNT(*) AS total FROM product"
     );
     const totalProducts = productCountRows?.[0]?.total ?? 0;
 
     const [stockRows] = await db.query(
-      "SELECT SUM(quantity) AS totalStocks FROM products"
+      "SELECT SUM(quantity) AS totalStocks FROM product"
     );
     const totalStocks = stockRows?.[0]?.totalStocks ?? 0;
 
@@ -309,7 +309,7 @@ exports.replenish = async (req, res) => {
     }
 
     await db.query(
-      "UPDATE products SET quantity = quantity + ? WHERE id = ?",
+      "UPDATE product SET quantity = quantity + ? WHERE id = ?",
       [quantityToAdd, id]
     );
 

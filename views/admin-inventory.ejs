@@ -202,8 +202,6 @@
             <th>Allergies</th>
             <th>Stock</th>
             <th>Price</th>
-            <th>Edit</th>
-            <th>Delete</th>
           </tr>
         </thead>
         <tbody>
@@ -230,8 +228,10 @@
               <td>-</td>
               <td><%= Number.isFinite(Number(product.quantity)) ? Number(product.quantity) : 0 %></td>
               <td>$<%= Number(product.price || 0).toFixed(2) %></td>
-              <td><button class="action-link" type="button">Edit</button></td>
-              <td><button class="action-link" type="button">Delete</button></td>
+              <td>
+                <button class="action-link" type="button">Edit</button>
+                <button class="action-link" type="button">Delete</button>
+              </td>
             </tr>
           <% }) %>
         </tbody>

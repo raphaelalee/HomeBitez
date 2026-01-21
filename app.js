@@ -283,7 +283,7 @@ app.get('/admin', async (req, res) => {
     let totalIssues = 0;
 
     try {
-        const [p] = await db.query("SELECT COUNT(*) AS total FROM products");
+        const [p] = await db.query("SELECT COUNT(*) AS total FROM product");
         totalProducts = p[0]?.total || 0;
 
         const [o] = await db.query("SELECT COUNT(*) AS total FROM orders");
@@ -359,9 +359,9 @@ app.get('/admin/inventory', async (req, res) => {
     let products = [];
     try {
         const [rows] = await db.query(
-            `SELECT p.id, p.productName, p.image, p.description, p.quantity, p.price, p.owner_id,
+            `SELECT p.id, p.product_name AS productName, p.image, p.description, p.quantity, p.price, p.owner_id,
                     u.username AS businessName
-             FROM products p
+             FROM product p
              LEFT JOIN users u ON u.id = p.owner_id
              ORDER BY p.id ASC`
         );
