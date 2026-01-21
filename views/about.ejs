@@ -18,34 +18,40 @@
   .wrap{
     max-width: 1100px;
     margin: 0 auto;
-    padding: 26px 20px 50px;
+    padding: 40px 20px 60px;
+    display: flex;
+    justify-content: center;
   }
 
   .panel{
     background:#fdeeda;
     border-radius: 14px;
-    padding: 28px 32px;
+    padding: 32px 36px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    width: 100%;
+    text-align: center;
   }
 
   .title{
     font-family: 'Sniglet', cursive;
     font-weight: 900;
-    font-size: 34px;
+    font-size: 36px;
     color: #ff9c07;
-    margin: 0 0 6px;
+    margin-bottom: 10px;
   }
 
   .subtitle{
-    margin: 0 0 18px;
     color:#333;
-    font-size: 14px;
+    font-size: 15px;
+    max-width: 700px;
+    margin: 0 auto 24px;
   }
 
   .section{
-    margin-top: 18px;
-    padding-top: 18px;
+    margin-top: 22px;
+    padding-top: 22px;
     border-top: 1px solid rgba(0,0,0,0.15);
+    text-align: left;
   }
 
   .section h5{
@@ -64,8 +70,8 @@
   }
 
   .btn-menu{
-    margin-top: 18px;
-    padding: 12px 28px;
+    margin-top: 26px;
+    padding: 12px 30px;
     background:#dd9b00;
     color:white;
     border-radius:8px;
@@ -82,8 +88,6 @@
 
 <body>
 
-<%- include('partials/navbar-user') %>
-
 <div class="wrap">
   <div class="panel">
 
@@ -94,7 +98,7 @@
 
     <div class="section">
       <h5>Our Mission</h5>
-      <p style="margin:0;">
+      <p>
         To provide an easy, friendly food ordering experience with clear menu info, smooth checkout, and reliable pickup.
       </p>
     </div>
@@ -111,17 +115,18 @@
 
     <div class="section">
       <h5>Why HomeBitez?</h5>
-      <ul style="margin:0; padding-left: 18px;">
+      <ul>
         <li>Simple interface that’s easy to use</li>
         <li>Clear prices and quick cart management</li>
         <li>Designed to be clean, modern, and mobile-friendly</li>
       </ul>
     </div>
 
-    <a href="/menu" class="btn-menu">Go to Menu 🍽️</a>
+    <a href="/" class="btn-menu">Back 🍽️</a>
 
   </div>
 </div>
 
 </body>
 </html>
+
