@@ -111,7 +111,7 @@ UNLOCK TABLES;
 DROP TABLE IF EXISTS `products`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE Product (
+CREATE TABLE Products (
     'id' INT AUTO_INCREMENT PRIMARY KEY,
     'product_name' VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
     'description' VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
@@ -119,8 +119,8 @@ CREATE TABLE Product (
     'image' VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
     'category' VARCHAR(100) NOT NULL,
     'owner_id' INT DEFAULT NULL,
-    'quantity' INT NOT NULL
-	'stock' int DEFAULT '0'
+    'quantity' INT NOT NULL,
+    'stock' int DEFAULT '0'
 );
 
 /*!40101 SET character_set_client = @saved_cs_client */;
