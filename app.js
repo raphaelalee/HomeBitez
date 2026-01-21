@@ -110,13 +110,18 @@ app.get('/', (req, res) => {
     res.render('index');
 });
 
-// Logout
+// Logout route
 app.get('/logout', (req, res) => {
+  // If using express-session
   req.session.destroy(err => {
     if (err) {
-      return res.redirect('/user');
+      console.error('Error destroying session:', err);
+      return res.redirect('/'); // fallback to home
     }
-    res.redirect('/login');
+    // Clear the cookie (optional, if using cookies)
+    res.clearCookie('connect.sid'); 
+    // Redirect to homepage
+    res.redirect('/');
   });
 });
 
