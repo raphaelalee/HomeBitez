@@ -119,16 +119,6 @@
       overflow: hidden;
     }
 
-    .action-card::after {
-      content: "";
-      position: absolute;
-      top: 18px;
-      right: 18px;
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: rgba(240, 164, 0, 0.12);
-    }
 
     .action-title {
       font-size: 18px;
@@ -161,14 +151,6 @@
       background: var(--accent-deep);
     }
 
-    .arrow {
-      position: absolute;
-      right: 20px;
-      top: 20px;
-      font-size: 18px;
-      color: var(--accent);
-      font-weight: 700;
-    }
 
     @media (max-width: 1100px) {
       .stats {
@@ -235,25 +217,21 @@
 
     <section class="actions">
       <article class="action-card">
-        <div class="arrow">→</div>
         <div class="action-title">Customer Details</div>
         <div class="action-desc">View and manage customer details, points and accounts.</div>
         <a class="action-btn" href="/admin/customers">Manage Customers</a>
       </article>
       <article class="action-card">
-        <div class="arrow">→</div>
         <div class="action-title">Purchase Records</div>
         <div class="action-desc">View all transaction history and order details.</div>
         <button class="action-btn" type="button">View Records</button>
       </article>
       <article class="action-card">
-        <div class="arrow">→</div>
         <div class="action-title">Sales Reports</div>
         <div class="action-desc">View sales analytics and performance snapshots.</div>
-        <button class="action-btn" type="button">View Reports</button>
+        <a class="action-btn" href="/admin/reports">View Reports</a>
       </article>
       <article class="action-card">
-        <div class="arrow">→</div>
         <div class="action-title">Report Issues</div>
         <div class="action-desc">Handle customer complaints and reported issues.</div>
         <a class="action-btn" href="/admin/issues">View Issues</a>
