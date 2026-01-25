@@ -159,16 +159,23 @@ exports.requestNetsQr = async (req, res) => {
     }
 
     const qrData = await nets.requestNetsQr(cartTotal, NETS_TXN_ID);
+    const txnRetrievalRef =
+      qrData?.txn_retrieval_ref ||
+      qrData?.txnRetrievalRef ||
+      qrData?.txn_ref ||
+      null;
 
     if (nets.isQrSuccess(qrData)) {
       req.session.netsPending = {
         amount: cartTotal,
+        txnRetrievalRef,
         createdAt: Date.now(),
       };
 
       return res.render("netsQR", {
         qrCodeUrl: `data:image/png;base64,${qrData.qr_code}`,
-        amount: cartTotal,
+        txnRetrievalRef,
+        total: cartTotal,
       });
     }
 

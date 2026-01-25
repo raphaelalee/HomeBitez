@@ -834,11 +834,17 @@ app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
 
     const interval = setInterval(async () => {
         try {
-            // If you have real check function:
-            // const status = await nets.checkStatus(txnRetrievalRef);
+            let status = netsStatusOverrides[txnRetrievalRef] || "PENDING";
 
-            // Sandbox placeholder. Use in-memory override for testing without simulator app
-            const status = netsStatusOverrides[txnRetrievalRef] || "PENDING";
+            // Prefer real NETS enquiry if available
+            if (status === "PENDING" && typeof nets.checkStatus === "function") {
+                try {
+                    const res = await nets.checkStatus(txnRetrievalRef);
+                    status = res?.status || status;
+                } catch (err) {
+                    console.error("NETS status check error:", err.message);
+                }
+            }
 
             if (status === "SUCCESS") {
                 console.log('SSE: reporting SUCCESS for', txnRetrievalRef);
