@@ -105,16 +105,27 @@ module.exports = {
 
     // POST /cart/preferences
     savePreferences(req, res) {
-        const { cutlery, pickupDate, pickupTime } = req.body;
+        const { cutlery, pickupDate, pickupTime, mode, address, contact, notes } = req.body;
 
         if (!req.session.cartPrefs) {
-            req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "" };
+            req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", address: "", contact: "", notes: "" };
         }
 
         req.session.cartPrefs.cutlery = !!cutlery;
         req.session.cartPrefs.pickupDate = pickupDate || "";
         req.session.cartPrefs.pickupTime = pickupTime || "";
+        req.session.cartPrefs.mode = mode || "pickup";
+        req.session.cartPrefs.address = address || "";
+        req.session.cartPrefs.contact = contact || "";
+        req.session.cartPrefs.notes = notes || "";
 
+        return res.json({ ok: true });
+    },
+
+    // POST /cart/clear
+    clearCart(req, res) {
+        req.session.cart = [];
+        req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", address: "", contact: "", notes: "" };
         return res.json({ ok: true });
     }
 };

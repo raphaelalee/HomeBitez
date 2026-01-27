@@ -96,7 +96,6 @@
       justify-content:space-between;
       font-weight:900;
       font-size:18px;
-      margin-top:10px;
     }
     .hb-total span:last-child{
       color:#dd9b00;
@@ -129,6 +128,17 @@
       border:1px solid #dd9b00;
     }
     #paypal-button-container{margin-top:10px;}
+    .muted-label{font-size:12px;color:#6b6b6b;}
+    .option-block{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border:1px solid #f0e0bf;
+      border-radius:10px;
+      margin-bottom:10px;
+    }
+    .small-note{font-size:12px;color:#5a5a5a;margin:0;}
   </style>
 </head>
 
@@ -155,6 +165,68 @@
 
     <!-- LEFT -->
     <div class="d-flex flex-column gap-4">
+
+      <!-- Fulfillment -->
+      <div class="hb-card">
+        <div class="hb-card-title">
+          <i class="bi bi-truck"></i>
+          Fulfillment
+        </div>
+
+        <div class="option-block">
+          <input type="radio" name="mode" id="modePickup" value="pickup" <%= (prefs?.mode || 'pickup') === 'pickup' ? 'checked' : '' %>>
+          <label for="modePickup" class="mb-0">
+            <strong>Pickup</strong><br>
+            <span class="small-note">Collect in store; no delivery fee.</span>
+          </label>
+        </div>
+
+        <div id="pickupFields" style="display:<%= (prefs?.mode || 'pickup') === 'pickup' ? 'block' : 'none' %>;">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="muted-label">Pickup date</label>
+              <input class="form-control hb-input" type="date" id="pickupDate" value="<%= prefs?.pickupDate || '' %>">
+            </div>
+            <div class="col-md-6">
+              <label class="muted-label">Pickup time</label>
+              <input class="form-control hb-input" type="time" id="pickupTime" value="<%= prefs?.pickupTime || '' %>">
+            </div>
+          </div>
+        </div>
+
+        <div class="option-block">
+          <input type="radio" name="mode" id="modeDelivery" value="delivery" <%= (prefs?.mode || 'pickup') === 'delivery' ? 'checked' : '' %>>
+          <label for="modeDelivery" class="mb-0">
+            <strong>Delivery</strong><br>
+            <span class="small-note">Flat fee $<%= defaultDeliveryFee.toFixed(2) %>.</span>
+          </label>
+        </div>
+
+        <div id="deliveryFields" style="display:<%= (prefs?.mode || 'pickup') === 'delivery' ? 'block' : 'none' %>;">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="muted-label">Name</label>
+              <input class="form-control hb-input" id="deliveryName" placeholder="Name"
+                value="<%= (user && (user.username || user.name)) || '' %>">
+            </div>
+            <div class="col-md-6">
+              <label class="muted-label">Contact</label>
+              <input class="form-control hb-input" id="deliveryContact" placeholder="Contact"
+                value="<%= prefs?.contact || '' %>">
+            </div>
+            <div class="col-12">
+              <label class="muted-label">Address</label>
+              <input class="form-control hb-input" id="deliveryAddress" placeholder="Address"
+                value="<%= prefs?.address || '' %>">
+            </div>
+            <div class="col-12">
+              <label class="muted-label">Notes (optional)</label>
+              <input class="form-control hb-input" id="deliveryNotes" placeholder="Notes"
+                value="<%= prefs?.notes || '' %>">
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Order Summary -->
       <div class="hb-card">
@@ -188,46 +260,31 @@
         <div class="hb-summary">
           <div class="hb-line">
             <span>Subtotal</span>
-            <span>$<%= subtotal.toFixed(2) %></span>
+            <span id="summarySubtotal">$<%= subtotal.toFixed(2) %></span>
           </div>
           <div class="hb-line">
             <span>Delivery Fee</span>
-            <span>$<%= defaultDeliveryFee.toFixed(2) %></span>
+            <span id="summaryDeliveryFee">$<%= initialDeliveryFee.toFixed(2) %></span>
+          </div>
+          <div class="hb-line">
+            <span>Fulfillment</span>
+            <span id="summaryMode"><%= (prefs?.mode || 'pickup') === 'delivery' ? 'Delivery' : 'Pickup' %></span>
+          </div>
+          <div class="hb-line">
+            <span>Pickup slot</span>
+            <span id="summaryPickup">
+              <%= (prefs?.pickupDate || 'Set date') %> · <%= (prefs?.pickupTime || 'Set time') %>
+            </span>
           </div>
           <div class="hb-total">
             <span>Total</span>
-            <span>$<%= total.toFixed(2) %></span>
+            <span id="summaryTotal">$<%= total.toFixed(2) %></span>
           </div>
         </div>
 
         <div class="d-flex gap-2 flex-wrap mt-3">
           <a class="hb-btn hb-btn-outline" href="/cart"><i class="bi bi-cart3"></i> Back to Cart</a>
           <a class="hb-btn" href="/menu"><i class="bi bi-plus-circle"></i> Add More</a>
-        </div>
-      </div>
-
-      <!-- Delivery Details -->
-      <div class="hb-card">
-        <div class="hb-card-title">
-          <i class="bi bi-geo-alt"></i>
-          Delivery Details
-          <span class="hb-pill">display only</span>
-        </div>
-
-        <div class="row g-3">
-          <div class="col-md-6">
-            <input class="form-control hb-input" placeholder="Name"
-              value="<%= (user && (user.username || user.name)) || '' %>">
-          </div>
-          <div class="col-md-6">
-            <input class="form-control hb-input" placeholder="Contact">
-          </div>
-          <div class="col-12">
-            <input class="form-control hb-input" placeholder="Address">
-          </div>
-          <div class="col-12">
-            <input class="form-control hb-input" placeholder="Notes (optional)">
-          </div>
         </div>
       </div>
 
@@ -250,47 +307,60 @@
         <script>
           const checkoutItems = <%- JSON.stringify(items) %>;
           const checkoutSubtotal = <%= subtotal.toFixed(2) %>;
-          const checkoutDeliveryFee = <%= defaultDeliveryFee.toFixed(2) %>;
+          const baseDeliveryFee = <%= defaultDeliveryFee.toFixed(2) %>;
+          let currentDeliveryFee = <%= initialDeliveryFee.toFixed(2) %>;
 
-          paypal.Buttons({
-            createOrder: async () => {
-              const res = await fetch("/paypal/create-order", {
-                method: "POST",
-                credentials: "same-origin",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  items: checkoutItems,
-                  subtotal: checkoutSubtotal,
-                  deliveryFee: checkoutDeliveryFee
-                })
-              });
-              const data = await res.json();
-              if (!res.ok) throw new Error(data.error || "Create order failed");
-              return data.id;
-            },
-
-            onApprove: async (data) => {
-              const res = await fetch("/paypal/capture-order", {
-                method: "POST",
-                credentials: "same-origin",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId: data.orderID })
-              });
-              const result = await res.json();
-              if (!res.ok || !result.ok) {
-                throw new Error(result.error || "Capture failed");
-              }
+          function renderPaypal(){
+            if (!window.paypal) {
               document.getElementById("paypal-status").innerText =
-                "Payment successful. Redirecting…";
-              window.location.href = "/receipt";
-            },
-
-            onError: (err) => {
-              console.error(err);
-              document.getElementById("paypal-status").innerText =
-                "PayPal error: " + (err.message || "Unknown error");
+                "PayPal not available. Ensure PAYPAL_CLIENT_ID is set and internet is reachable.";
+              return;
             }
-          }).render("#paypal-button-container");
+
+            window.paypal.Buttons({
+              createOrder: async () => {
+                const res = await fetch("/paypal/create-order", {
+                  method: "POST",
+                  credentials: "same-origin",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    items: checkoutItems,
+                    subtotal: checkoutSubtotal,
+                    deliveryFee: currentDeliveryFee
+                  })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Create order failed");
+                return data.id;
+              },
+
+              onApprove: async (data) => {
+                const res = await fetch("/paypal/capture-order", {
+                  method: "POST",
+                  credentials: "same-origin",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ orderId: data.orderID })
+                });
+                const result = await res.json();
+                if (!res.ok || !result.ok) {
+                  throw new Error(result.error || "Capture failed");
+                }
+                document.getElementById("paypal-status").innerText =
+                  "Payment successful. Redirecting…";
+                window.location.href = "/receipt";
+              },
+
+              onError: (err) => {
+                console.error(err);
+                document.getElementById("paypal-status").innerText =
+                  "PayPal error: " + (err.message || "Unknown error");
+              }
+            }).render("#paypal-button-container");
+          }
+
+          // wait for SDK load
+          if (document.readyState === "complete") renderPaypal();
+          else window.addEventListener("load", renderPaypal);
         </script>
       </div>
 
@@ -302,9 +372,9 @@
           <span class="hb-pill">QR</span>
         </div>
 
-        <form action="/nets-qr/request" method="POST">
-          <input type="hidden" name="cartTotal" value="<%= total.toFixed(2) %>">
-          <button class="hb-btn w-100">
+        <form id="netsForm" action="/nets-qr/request" method="POST">
+          <input type="hidden" id="netsCartTotal" name="cartTotal" value="<%= total.toFixed(2) %>">
+          <button class="hb-btn w-100" type="submit">
             <i class="bi bi-qr-code"></i> Pay with NETS
           </button>
         </form>
@@ -333,6 +403,89 @@
   <% } %>
 
   </div>
+
+  <script>
+    // Fulfillment controls
+    const modePickup = document.getElementById("modePickup");
+    const modeDelivery = document.getElementById("modeDelivery");
+    const pickupFields = document.getElementById("pickupFields");
+    const deliveryFields = document.getElementById("deliveryFields");
+    const pickupDate = document.getElementById("pickupDate");
+    const pickupTime = document.getElementById("pickupTime");
+    const deliveryContact = document.getElementById("deliveryContact");
+    const deliveryAddress = document.getElementById("deliveryAddress");
+    const deliveryNotes = document.getElementById("deliveryNotes");
+
+    const summaryDeliveryFee = document.getElementById("summaryDeliveryFee");
+    const summaryTotal = document.getElementById("summaryTotal");
+    const summaryMode = document.getElementById("summaryMode");
+    const summaryPickup = document.getElementById("summaryPickup");
+    const netsCartTotal = document.getElementById("netsCartTotal");
+
+    const subtotalValue = Number(<%= subtotal.toFixed(2) %>);
+    const baseDeliveryFeeNum = Number(<%= defaultDeliveryFee.toFixed(2) %>);
+    let currentDeliveryFeeNum = Number(<%= initialDeliveryFee.toFixed(2) %>);
+
+    function computeTotal(){
+      return Number((subtotalValue + currentDeliveryFeeNum).toFixed(2));
+    }
+
+    function syncSummary(){
+      summaryDeliveryFee.textContent = `$${currentDeliveryFeeNum.toFixed(2)}`;
+      summaryMode.textContent = modeDelivery.checked ? "Delivery" : "Pickup";
+      summaryPickup.textContent = modePickup.checked
+        ? `${pickupDate.value || "Set date"} · ${pickupTime.value || "Set time"}`
+        : "N/A";
+      summaryTotal.textContent = `$${computeTotal().toFixed(2)}`;
+      if (netsCartTotal) netsCartTotal.value = computeTotal().toFixed(2);
+      // Update PayPal variable used inside createOrder closure
+      if (typeof currentDeliveryFee !== "undefined") {
+        currentDeliveryFee = Number(currentDeliveryFeeNum.toFixed(2));
+      }
+    }
+
+    function savePrefs(){
+      const payload = {
+        mode: modeDelivery.checked ? "delivery" : "pickup",
+        pickupDate: pickupDate ? pickupDate.value : "",
+        pickupTime: pickupTime ? pickupTime.value : "",
+        address: deliveryAddress ? deliveryAddress.value : "",
+        contact: deliveryContact ? deliveryContact.value : "",
+        notes: deliveryNotes ? deliveryNotes.value : ""
+      };
+
+      fetch("/cart/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).catch(()=>{});
+    }
+
+    function handleModeChange(){
+      if (modeDelivery.checked){
+        pickupFields.style.display = "none";
+        deliveryFields.style.display = "block";
+        currentDeliveryFeeNum = baseDeliveryFeeNum;
+      } else {
+        pickupFields.style.display = "block";
+        deliveryFields.style.display = "none";
+        currentDeliveryFeeNum = 0;
+      }
+      syncSummary();
+      savePrefs();
+    }
+
+    if (modePickup) modePickup.addEventListener("change", handleModeChange);
+    if (modeDelivery) modeDelivery.addEventListener("change", handleModeChange);
+
+    if (pickupDate) pickupDate.addEventListener("change", () => { syncSummary(); savePrefs(); });
+    if (pickupTime) pickupTime.addEventListener("change", () => { syncSummary(); savePrefs(); });
+    if (deliveryContact) deliveryContact.addEventListener("change", savePrefs);
+    if (deliveryAddress) deliveryAddress.addEventListener("change", savePrefs);
+    if (deliveryNotes) deliveryNotes.addEventListener("change", savePrefs);
+
+    syncSummary();
+  </script>
 
 </body>
 </html>

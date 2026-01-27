@@ -132,6 +132,42 @@ module.exports = {
     const [rows] = await db.query(sql, [Number(limit) || 100]);
     return rows.map(rw => ({ ...rw, items: rw.items ? (() => { try { return JSON.parse(rw.items); } catch(e){ return []; } })() : [] }));
   },
+  async listByUser(userId, limit = 100) {
+    await ensureTable();
+    if (!userId) return this.list(limit);
+
+    const colMap = [
+      { alias: 'id', candidates: ['id'] },
+      { alias: 'user_id', candidates: ['user_id', 'userId', 'user'] },
+      { alias: 'paypal_order_id', candidates: ['paypal_order_id', 'paypalOrderId'] },
+      { alias: 'paypal_capture_id', candidates: ['paypal_capture_id', 'paypalCaptureId'] },
+      { alias: 'payer_email', candidates: ['payer_email', 'payerEmail', 'email'] },
+      { alias: 'shipping_name', candidates: ['shipping_name', 'shippingName'] },
+      { alias: 'items', candidates: ['items', 'order_items', 'orderItems'] },
+      { alias: 'subtotal', candidates: ['subtotal', 'subTotal'] },
+      { alias: 'delivery_fee', candidates: ['delivery_fee', 'deliveryFee'] },
+      { alias: 'total', candidates: ['total', 'totalAmount', 'total_amount'] },
+      { alias: 'created_at', candidates: ['created_at', 'createdAt'] }
+    ];
+
+    const selectParts = [];
+    let userCol = null;
+    for (const m of colMap) {
+      const physical = await findExistingColumn(m.candidates);
+      if (physical) {
+        selectParts.push(`${physical} AS ${m.alias}`);
+        if (m.alias === 'user_id' && !userCol) userCol = physical;
+      } else {
+        selectParts.push(`NULL AS ${m.alias}`);
+      }
+    }
+
+    if (!userCol) return this.list(limit);
+
+    const sql = `SELECT ${selectParts.join(', ')} FROM orders WHERE ${userCol} = ? ORDER BY created_at DESC LIMIT ?`;
+    const [rows] = await db.query(sql, [userId, Number(limit) || 100]);
+    return rows.map(rw => ({ ...rw, items: rw.items ? (() => { try { return JSON.parse(rw.items); } catch(e){ return []; } })() : [] }));
+  },
   async getById(id) {
     await ensureTable();
     // Use same mapping approach as list() so we support camelCase and snake_case column names.

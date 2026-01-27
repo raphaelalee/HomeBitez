@@ -11,34 +11,38 @@
   <style>
     :root {
       --accent: #dd9b00;
+      --accent-dark: #c08400;
+      --muted: #6b5d4a;
       --bg: #faefe5;
+      --card: #fffdf8;
+      --border: #f1dfbb;
     }
 
     body {
       background: var(--bg);
-      font-family: Arial, sans-serif;
-      color: #222;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #2f2a24;
     }
 
     .receipt-wrap {
-      max-width: 980px;
-      margin: 28px auto;
-      padding: 20px;
+      max-width: 1080px;
+      margin: 24px auto 60px;
+      padding: 0 20px 20px;
     }
 
     .receipt-card {
-      background: white;
-      border-radius: 12px;
-      padding: 22px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-      border: 1px solid #eee;
+      background: var(--card);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
     }
 
     .receipt-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 12px;
+      gap: 14px;
     }
 
     .brand {
@@ -48,45 +52,98 @@
     }
 
     .brand-logo {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: var(--accent);
+      width: 58px;
+      height: 58px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), #ffc446);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
+      color: #2f2a24;
       font-weight: 900;
       font-size: 18px;
     }
 
     .brand-title {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 900;
+    }
+
+    .status-flow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .status-step{
+      padding:6px 10px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      font-size:12px;
+      background:#fff;
+      color:#2f2a24;
+    }
+    .status-step.done{
+      background:#fce7b3;
+      border-color:#f1d48a;
+      font-weight:700;
     }
 
     .meta {
       text-align: right;
       font-size: 13px;
-      color: #444;
+      color: var(--muted);
+      min-width: 220px;
     }
 
     .meta strong {
-      color: #111;
+      color: #1f1a14;
     }
 
-    .payer {
-      margin-top: 14px;
-      font-size: 14px;
+    .section-card {
+      border:1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      background: #fff;
+    }
+
+    .section-title {
+      font-weight: 800;
+      margin-bottom: 8px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .pill {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      background:#fff4dc;
+      border:1px solid var(--border);
+      border-radius:999px;
+      font-size:12px;
+      color:#2f2a24;
+      margin-top:8px;
     }
 
     .items-table thead th {
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid var(--border);
       font-weight: 700;
+      color:#433d33;
+    }
+
+    .items-table tbody td {
+      border-color: var(--border);
     }
 
     .totals {
       min-width: 260px;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:14px 16px;
     }
 
     .totals .line {
@@ -94,31 +151,43 @@
       justify-content: space-between;
       margin: 6px 0;
       color: #444;
+      font-weight:600;
     }
 
     .totals .total-amount {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 900;
       color: var(--accent);
     }
 
     .actions {
-      margin-top: 18px;
+      margin-top: 20px;
       display: flex;
       gap: 10px;
+      flex-wrap:wrap;
+    }
+
+    .btn-hb{
+      border-radius:10px;
+      border:1px solid var(--accent);
+      padding:10px 14px;
+      font-weight:700;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      text-decoration:none;
+      color:var(--accent);
+      background:white;
+    }
+    .btn-hb.primary{
+      background:var(--accent);
+      color:white;
     }
 
     @media print {
-      body {
-        background: white;
-      }
-      .actions, .navbar {
-        display: none !important;
-      }
-      .receipt-card {
-        box-shadow: none;
-        border: none;
-      }
+      body { background: white; }
+      .actions, .navbar { display: none !important; }
+      .receipt-card { box-shadow: none; border: none; }
     }
   </style>
 </head>
@@ -137,41 +206,57 @@
           <div>
             <div class="brand-title">HomeBitez</div>
             <div class="text-muted">Payment Receipt</div>
+            <div class="status-flow">
+              <div class="status-step done">pending</div>
+              <div class="status-step done">paid</div>
+              <div class="status-step <%= paypalCapture ? 'done' : '' %>">fulfilled</div>
+            </div>
           </div>
         </div>
 
         <div class="meta">
-          <div>
-            PayPal Order ID:
-            <strong>
-              <%= paypalCapture && paypalCapture.orderId ? paypalCapture.orderId : '-' %>
-            </strong>
-          </div>
-
-          <div>
-            Capture ID:
-            <strong>
-              <%= paypalCapture && paypalCapture.captureId ? paypalCapture.captureId : '-' %>
-            </strong>
-          </div>
-
-          <% if (latestOrderDbId) { %>
-            <div>
-              Record ID:
-              <strong><%= latestOrderDbId %></strong>
-            </div>
-          <% } %>
-
+          <div><strong>Receipt</strong></div>
+          <div>Order #: <strong><%= latestOrderDbId || 'N/A' %></strong></div>
+          <div>Payment: <strong><%= paymentMethod %></strong></div>
+          <div>Order ID: <strong><%= paypalCapture?.orderId || '-' %></strong></div>
+          <div>Capture ID: <strong><%= paypalCapture?.captureId || '-' %></strong></div>
           <div class="text-muted" style="margin-top:6px;">
-            Date: <%= new Date().toLocaleString() %>
+            Issued: <%= new Date().toLocaleString() %>
           </div>
         </div>
       </div>
 
-      <!-- PAYER -->
-      <div class="payer">
-        <strong>Payer Email:</strong>
-        <%= paypalCapture && paypalCapture.payerEmail ? paypalCapture.payerEmail : 'N/A' %>
+      <!-- INFO BLOCKS -->
+      <div class="row g-3 mt-3">
+        <div class="col-md-6">
+          <div class="section-card">
+            <div class="section-title"><i class="bi bi-person-circle"></i> Bill to</div>
+            <div style="font-weight:800;"><%= (user && (user.username || user.name)) || 'Guest' %></div>
+            <div class="text-muted" style="font-size:13px;">
+              <%= paypalCapture && paypalCapture.payerEmail ? paypalCapture.payerEmail : (user?.email || 'Email not provided') %>
+            </div>
+            <div class="pill">Payment: <%= paymentMethod %></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="section-card">
+            <div class="section-title"><i class="bi bi-geo-alt"></i> Fulfillment</div>
+            <div style="font-weight:800; text-transform:capitalize;"><%= fulfillment %></div>
+            <div class="text-muted" style="font-size:13px;">
+              Delivery fee: $<%= Number(deliveryFee || 0).toFixed(2) %>
+            </div>
+            <% if (fulfillment === 'Pickup') { %>
+              <div class="text-muted" style="font-size:13px;">Pickup slot: <%= (prefs?.pickupDate || 'Set date') %> · <%= (prefs?.pickupTime || 'Set time') %></div>
+              <div class="pill">Status: Ready for pickup</div>
+            <% } else { %>
+              <div style="font-size:13px; margin-top:6px;">
+                <div><strong>Address:</strong> <%= prefs?.address || 'Not provided' %></div>
+                <div><strong>Contact:</strong> <%= prefs?.contact || 'Not provided' %></div>
+                <div><strong>Notes:</strong> <%= prefs?.notes || '—' %></div>
+              </div>
+            <% } %>
+          </div>
+        </div>
       </div>
 
       <!-- ITEMS -->
@@ -199,6 +284,13 @@
               </tbody>
             </table>
           </div>
+          <div class="section-card mt-2">
+            <div class="section-title"><i class="bi bi-card-text"></i> Notes</div>
+            <div class="text-muted" style="font-size:13px;">
+              Thank you for dining with us. This receipt serves as proof of payment.
+              For changes, contact support within 1 hour of order.
+            </div>
+          </div>
         </div>
 
         <!-- TOTALS -->
@@ -209,12 +301,12 @@
               <span>$<%= Number(subtotal || 0).toFixed(2) %></span>
             </div>
             <div class="line">
-              <span>Delivery</span>
+              <span>Delivery fee</span>
               <span>$<%= Number(deliveryFee || 0).toFixed(2) %></span>
             </div>
             <hr />
             <div class="line">
-              <span>Total</span>
+              <span>Total paid</span>
               <span class="total-amount">$<%= Number(total || 0).toFixed(2) %></span>
             </div>
           </div>
@@ -223,14 +315,10 @@
 
       <!-- ACTIONS -->
       <div class="actions">
-        <button class="btn btn-outline-secondary" onclick="location.href='/menu'">
-          ← Back to Menu
-        </button>
-        <button class="btn btn-primary" onclick="location.href='/'">
-          Home
-        </button>
-        <button class="btn btn-success ms-auto" onclick="window.print()">
-          <i class="bi bi-printer"></i> Print Receipt
+        <a class="btn-hb" href="/menu"><i class="bi bi-arrow-left"></i> Back to Menu</a>
+        <a class="btn-hb" href="/"><i class="bi bi-house"></i> Home</a>
+        <button class="btn-hb primary ms-auto" onclick="window.print()">
+          <i class="bi bi-printer"></i> Print / Save PDF
         </button>
       </div>
 

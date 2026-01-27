@@ -140,23 +140,31 @@
     <table>
       <thead>
         <tr>
-          <th>Order ID</th>
+          <th>Order #</th>
           <th>Date</th>
-          <th>Quantity</th>
-          <th>Total Amount</th>
+          <th>Qty</th>
+          <th>Total</th>
           <th>Status</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
-        <% (orders || []).forEach(order => { %>
+        <% if (!orders || orders.length === 0) { %>
           <tr>
-            <td><%= order.id %></td>
-            <td><%= order.date %></td>
-            <td><%= order.qty %></td>
-            <td>$<%= order.total.toFixed(2) %></td>
-            <td><%= order.status %></td>
+            <td colspan="6" style="text-align:center; color:#6f6256;">No orders yet.</td>
           </tr>
-        <% }) %>
+        <% } else { %>
+          <% orders.forEach(order => { %>
+            <tr>
+              <td style="font-weight:700;"><%= order.orderId %></td>
+              <td><%= order.date %></td>
+              <td><%= order.qty %></td>
+              <td>$<%= order.total.toFixed(2) %></td>
+              <td><%= order.status %></td>
+              <td><a href="/receipt" style="text-decoration:none; color:#d59b2d; font-weight:600;">View receipt</a></td>
+            </tr>
+          <% }) %>
+        <% } %>
       </tbody>
     </table>
   </div>

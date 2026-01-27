@@ -9,6 +9,7 @@ require("dotenv").config();
 const UsersController = require('./Controllers/usersController');
 const ReportModel = require('./models/ReportModel');
 const ProductModel = require('./Models/ProductModel');
+const OrdersModel = require('./Models/OrdersModel');
 
 // DB
 const db = require('./db');
@@ -83,6 +84,34 @@ app.use((req, res, next) => {
 });
 
 app.use(flash());
+
+// Public routes allowed without login
+const publicPaths = [
+    '/',
+    '/menu',
+    '/contact',
+    '/report',
+    '/login',
+    '/register',
+    '/logout'
+];
+
+app.use((req, res, next) => {
+    const user = req.session.user;
+    const path = req.path;
+
+    // allow static assets and favicon (already handled, but keep explicit)
+    if (path.startsWith('/public') || path.startsWith('/images') || path === '/favicon.ico') {
+        return next();
+    }
+
+    const isPublic = publicPaths.some(p => path === p || path.startsWith(p + '/'));
+    if (!user && !isPublic) {
+        if (req.flash) req.flash('error', 'Please login or register to continue.');
+        return res.redirect('/login');
+    }
+    next();
+});
 
 // EJS setup
 app.set('view engine', 'ejs');
@@ -592,8 +621,24 @@ app.get('/user/profile', async (req, res) => {
   const userId = req.session.user.id;
   let user = req.session.user;
 
-  // Optional: fetch extra data like points history from DB
-  const orders = []; // replace with real orders if you have
+  // Pull recent orders for this user
+  let orders = [];
+  try {
+    const rawOrders = await OrdersModel.listByUser(userId, 50);
+    orders = rawOrders.map(o => {
+      const qty = (o.items || []).reduce((s, i) => s + Number(i.qty || i.quantity || 0), 0);
+      return {
+        orderId: o.paypal_order_id || `ORD-${o.id}`,
+        date: o.created_at ? new Date(o.created_at).toLocaleString() : '-',
+        qty,
+        total: Number(o.total || 0),
+        status: o.paypal_capture_id ? 'Paid' : 'Pending'
+      };
+    });
+  } catch (err) {
+    console.error('profile history error:', err);
+    orders = [];
+  }
 
   res.render('userprofile', { 
       user, 
