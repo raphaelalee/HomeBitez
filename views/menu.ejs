@@ -5,70 +5,86 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HomeBitez Menu</title>
 
-<!-- Google Font -->
-<link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
-
-<!-- Bootstrap CSS & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
 <style>
 body{
     margin:0;
-    font-family: Arial, sans-serif;
     background:#faefe5;
+    font-family: Arial, sans-serif;
 }
 
-/* MENU TITLE */
+/* HEADER */
+header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:15px 40px;
+}
+.logo{
+    font-family:'Sniglet', cursive;
+    font-size:26px;
+    color:#dd9b00;
+}
+.nav-links a{
+    margin:0 12px;
+    text-decoration:none;
+    color:#333;
+}
+.icons i{
+    margin-left:15px;
+    font-size:18px;
+    cursor:pointer;
+}
+
+/* TITLE */
 .title{
     text-align:center;
-    font-size:26px;
+    font-size:28px;
     margin-top:10px;
-    margin-bottom:5px;
 }
 .underline{
     width:70px;
     height:3px;
     background:#dd9b00;
-    margin:0 auto 25px;
+    margin:8px auto 25px;
 }
 
-/* CATEGORY TABS */
+/* TABS */
 .tabs{
     display:flex;
     justify-content:center;
     gap:15px;
-    margin-bottom:30px;
     flex-wrap:wrap;
 }
 .tab{
     padding:8px 18px;
-    border-radius:20px;
     background:white;
-    cursor:pointer;
+    border-radius:20px;
     border:1px solid #ddd;
     font-size:14px;
 }
 .tab.active{
     background:#dd9b00;
     color:white;
-    border-color:#dd9b00;
 }
 
-/* MENU GRID */
+/* GRID */
 .grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(250px,1fr));
     gap:25px;
-    padding:20px 40px;
+    padding:30px 50px;
 }
 
 /* CARD */
 .card{
     background:white;
-    border-radius:12px;
+    border-radius:14px;
     padding:15px;
-    box-shadow:0 2px 6px rgba(0,0,0,0.1);
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
 .card img{
     width:100%;
@@ -76,146 +92,84 @@ body{
     object-fit:cover;
     border-radius:12px;
 }
-.card h3{
-    margin:12px 0 6px;
-    font-size:17px;
+.card h5{
+    margin-top:12px;
 }
 .card p{
     font-size:13px;
-    color:#5a5a5a;
-    margin:3px 0;
+    color:#555;
+    margin:4px 0;
 }
 .price{
-    margin-top:8px;
-    font-size:14px;
+    font-weight:bold;
+    margin-top:6px;
 }
-.btn{
-    margin-top:10px;
-    padding:8px 14px;
+.btn-view{
     background:#dd9b00;
     color:white;
     border:none;
+    padding:6px 14px;
     border-radius:20px;
-    cursor:pointer;
     font-size:13px;
 }
 </style>
 </head>
-<body>
 
-<%- include('partials/navbar-user') %>
+<body>
 
 <h2 class="title">Menu</h2>
 <div class="underline"></div>
 
-<!-- CATEGORY TABS -->
 <div class="tabs">
-    <div class="tab active" data-category="all">All</div>
-    <div class="tab" data-category="local">Local</div>
-    <div class="tab" data-category="international">International</div>
-    <div class="tab" data-category="side">Side Dishes</div>
-    <div class="tab" data-category="drinks">Drinks</div>
-    <div class="tab" data-category="dessert">Dessert</div>
+    <div class="tab active" data-category="All">All</div>
+    <div class="tab" data-category="Local">Local</div>
+    <div class="tab" data-category="International">International</div>
+    <div class="tab" data-category="Side Dishes">Side Dishes</div>
+    <div class="tab" data-category="Drinks">Drinks</div>
+    <div class="tab" data-category="Dessert">Dessert</div>
 </div>
 
-<!-- MENU GRID -->
-<div class="grid" id="menuGrid"></div>
+<div class="grid">
+    <% products.forEach(product => { %>
+        <div class="card">
+            <img src="/uploads/<%= product.image %>" alt="<%= product.product_name %>">
+            <h5><%= product.product_name %></h5>
+            <p><%= product.description %></p>
+            <p class="price">$<%= product.price %></p>
+            <button class="btn-view">View Product</button>
+            <button class="btn add-to-cart"
+                data-id="<%=product.id %>"
+                data-name="<%= product.product_name %>"
+                data-price="<%= product.price %>"
+                data-image="/public/images/<%= product.image %>">
+                Add to Cart
+            </button>
+        </div>
+    <% }) %>
+</div>
 
-<!-- JS -->
 <script>
-const products = [
-    {
-        name:"Nasi Lemak",
-        desc:"Tender chicken simmered in a blend of spices.",
-        allergies:"Nuts, Mustard, Dairy",
-        price:4.60,
-        image:"Nasi-Lemak.jpg",
-        category:"local"
-    },
-    {
-        name:"Naan",
-        desc:"Soft Indian flatbread perfect for dipping.",
-        allergies:"Gluten, Dairy",
-        price:2.50,
-        image:"https://i.ibb.co/n1h2wKh/naan.jpg",
-        category:"international"
-    },
-    {
-        name:"Chicken Biryani",
-        desc:"Fragrant basmati rice cooked with tender chicken.",
-        allergies:"Milk, Nuts, Wheat, Mustard, Soy, Egg",
-        price:2.50,
-        image:"https://i.ibb.co/hHkK1H1/biryani.jpg",
-        category:"international"
-    },
-    {
-        name:"Grilled Chicken Club Sandwich",
-        desc:"Layered grilled chicken with fresh veggies.",
-        allergies:"Gluten, Dairy, Egg",
-        price:9.50,
-        image:"https://i.ibb.co/PNJLdLc/chicken-sandwich.jpg",
-        category:"international"
-    },
-    {
-        name:"Strawberry Matcha",
-        desc:"Fresh strawberries with matcha blend.",
-        allergies:"Dairy",
-        price:3.60,
-        image:"https://i.ibb.co/LtM1s7W/matcha.jpg",
-        category:"drinks"
-    },
-    {
-        name:"Chocolate Cake",
-        desc:"Moist chocolate cake with soft sponge layers.",
-        allergies:"Dairy, Egg, Gluten",
-        price:3.30,
-        image:"https://i.ibb.co/d5D3Ntf/chocolate-cake.jpg",
-        category:"dessert"
-    },
-    {
-        name:"Reuben",
-        desc:"Classic grilled sandwich with corned beef.",
-        allergies:"Dairy, Egg, Beef, Soy",
-        price:11.70,
-        image:"https://i.ibb.co/KshmbJb/reuben.jpg",
-        category:"international"
-    },
-    {
-        name:"Grilled Cheese",
-        desc:"Melted cheese sandwich grilled to perfection.",
-        allergies:"Dairy, Gluten, Egg",
-        price:5.30,
-        image:"https://i.ibb.co/zfRqVgx/grilled-cheese.jpg",
-        category:"side"
-    }
-];
-
-const menuGrid = document.getElementById("menuGrid");
-
-// FUNCTION TO DISPLAY PRODUCTS
-function showProducts(category){
+function showProducts(category) {
+    const menuGrid = document.getElementById("menuGrid");
     menuGrid.innerHTML = "";
-    products
-        .filter(p => category === "all" ? true : p.category === category)
-        .forEach(p => {
-            menuGrid.innerHTML += `
-                <div class="card">
-                    <img src="${p.image}">
-                    <h3>${p.name}</h3>
-                    <p>${p.desc}</p>
-                    <p><strong>Allergies:</strong> ${p.allergies}</p>
-                    <p class="price"><strong>Price:</strong> $${p.price.toFixed(2)}</p>
-                    <button class="btn">View Product</button>
-                    <button class="btn" onclick="addToCart('${p.name.replace(/'/g, "\\'")}', ${p.price})">
-                        Add to Cart
-                    </button>
-                </div>
-            `;
-        });
-}
-showProducts("all");
 
-// CATEGORY FILTERING
+    const filtered = category === "All"
+        ? products
+        : products.filter(p => p.category === category);
+
+    filtered.forEach(product => {
+        menuGrid.innerHTML += `
+            <div class="product-card">
+                <img src="/public/images/${product.image}">
+                <h3>${product.product_name}</h3>
+                <p>$${product.price}</p>
+            </div>
+        `;
+    });
+}
+</script>
+
+<script>
 document.querySelectorAll(".tab").forEach(tab=>{
     tab.addEventListener("click",()=>{
         document.querySelector(".tab.active").classList.remove("active");
@@ -223,31 +177,40 @@ document.querySelectorAll(".tab").forEach(tab=>{
         showProducts(tab.dataset.category);
     });
 });
+</script>
 
-// ADD TO CART FUNCTION
-function addToCart(name, price) {
-    fetch("/cart/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            name: name,
-            price: price,
-            qty: 1
+<script>
+document.querySelectorAll('.add-to-cart').forEach(btn => {
+    btn.addEventListener('click', () => {
+        fetch("/cart/add", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: btn.dataset.name,
+                price: btn.dataset.price,
+                qty: 1,
+                image: btn.dataset.image
+            })
         })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.ok) {
-            alert("Added to cart");
-        } else {
-            alert(data.error || "Failed to add to cart");
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Error adding to cart");
+        .then(res => res.json())
+        .then(data => {
+            if (data.ok) alert("Added to cart!");
+            else alert(data.error || "Failed to add");
+        })
+        .catch(() => alert("Server error"));
     });
-}
+});
+</script>
+
+<script>
+// Attach click handlers to server-rendered "Add to Cart" buttons
+document.querySelectorAll('.add-to-cart').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const name = btn.dataset.name || '';
+        const price = parseFloat(btn.dataset.price) || 0;
+        addToCart(name, price);
+    });
+});
 </script>
 
 </body>
