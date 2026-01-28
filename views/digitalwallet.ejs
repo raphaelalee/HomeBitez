@@ -92,16 +92,6 @@
     document.getElementById(screen).classList.remove('hidden');
   }
 
-  function selectMethod(m) {
-    const amount = parseFloat(document.getElementById('amount').value);
-    if (!isFinite(amount) || amount <= 0) { alert('Please enter a valid amount'); return; }
-    method = m;
-    document.getElementById('cMethod').innerText = m;
-    document.getElementById('cAmount').innerText = `$${amount.toFixed(2)}`;
-    document.getElementById('cTotal').innerText = `$${amount.toFixed(2)}`;
-    go('confirm');
-  }
-
   function confirmTopUp() {
     const amount = parseFloat(document.getElementById('amount').value);
     if (!isFinite(amount) || amount <= 0) { alert('Invalid amount'); go('topup'); return; }
