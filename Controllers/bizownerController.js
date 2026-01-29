@@ -111,24 +111,25 @@ exports.addProduct = async (req, res) => {
   const guard = requireBizOwner(req, res);
   if (!guard.ok) return;
 
-  try {
-    let imageFilename = "default.png";
-    if (req.file) imageFilename = req.file.filename;
+    try {
+        let imageFilename = "default.png";
+        if (req.file) imageFilename = req.file.filename;
 
-    const productName = (req.body.productName || "").trim();
-    const category = (req.body.category || "").trim();
-    const price = parseFloat(req.body.price);
+        const productName = (req.body.productName || "").trim();
+        const category = (req.body.category || "").trim();
+        const price = parseFloat(req.body.price);
+        const quantity = Math.max(0, parseInt(req.body.quantity, 10) || 0);
 
-    if (!productName) return res.redirect("/bizowner/add");
-    if (!category) return res.redirect("/bizowner/add");
-    if (Number.isNaN(price) || price < 0) return res.redirect("/bizowner/add");
+        if (!productName) return res.redirect("/bizowner/add");
+        if (!category) return res.redirect("/bizowner/add");
+        if (Number.isNaN(price) || price < 0) return res.redirect("/bizowner/add");
 
-    const product = { productName, category, price, image: imageFilename };
+        const product = { productName, category, price, image: imageFilename, quantity };
 
-    await ProductModel.create(product);
-    return res.redirect("/bizowner/inventory");
-  } catch (err) {
-    console.error("Add product error:", err);
+        await ProductModel.create(product);
+        return res.redirect("/bizowner/inventory");
+    } catch (err) {
+        console.error("Add product error:", err);
     return res.status(500).send("Server error");
   }
 };
