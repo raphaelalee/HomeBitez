@@ -238,34 +238,11 @@
       padding: 10px 14px;
     }
 
-    /* TOAST */
-    .toast {
-      position: fixed;
-      top: 88px;
-      right: 24px;
-      padding: 12px 16px;
-      border-radius: 14px;
-      background: #fffaf3;
-      border: 1px solid #eadac6;
-      box-shadow: 0 12px 30px rgba(42,36,30,0.18);
-      font-weight: 600;
-    }
-
-    .toast-success { color: #1f7a4a; }
-    .toast-error { color: #b42318; }
   </style>
 </head>
 
 <body>
   <%- include('../partials/navbar-bizowner') %>
-
-  <% if (success?.length) { %>
-    <div class="toast toast-success"><%= success[0] %></div>
-  <% } %>
-
-  <% if (error?.length) { %>
-    <div class="toast toast-error"><%= error[0] %></div>
-  <% } %>
 
   <!-- HERO -->
   <div class="hero">
@@ -357,11 +334,5 @@
     </div>
   </div>
 
-  <script>
-    setTimeout(() => {
-      const t = document.querySelector(".toast");
-      if (t) t.style.display = "none";
-    }, 2500);
-  </script>
 </body>
 </html>

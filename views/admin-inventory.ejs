@@ -108,7 +108,7 @@
     }
 
     tbody td {
-      padding: 14px 12px;
+      padding: 12px 12px;
       border-bottom: 1px solid var(--line);
       vertical-align: middle;
     }
@@ -140,20 +140,20 @@
       text-transform: uppercase;
     }
 
-    .desc {
-      max-width: 240px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.4;
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      white-space: nowrap;
     }
-
-    .action-link {
-      background: transparent;
+    .btn.small { padding: 8px 12px; font-size: 13px; }
+    .btn.danger {
+      background: #c92a2a;
+      color: #fff;
       border: none;
-      color: #2a241e;
-      font-weight: 600;
-      cursor: default;
+      box-shadow: 0 6px 14px rgba(201,42,42,0.18);
     }
+    .btn.danger:hover { background: #b02626; }
 
     .empty {
       text-align: center;
@@ -184,6 +184,7 @@
       <a href="/admin">Home</a>
       <a href="/">Menu</a>
       <a href="/admin/inventory">Inventory</a>
+      <a href="/admin/profile">Profile</a>
     </nav>
     <div class="welcome">Welcome, <%= adminName %>!</div>
   </header>
@@ -198,10 +199,9 @@
             <th>Product Image</th>
             <th>Business Name</th>
             <th>Business Image</th>
-            <th>Description</th>
-            <th>Allergies</th>
             <th>Stock</th>
             <th>Price</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -224,13 +224,13 @@
               </td>
               <td><%= bizName %></td>
               <td><span class="biz-avatar"><%= initials || "HB" %></span></td>
-              <td class="desc"><%= product.description || "-" %></td>
-              <td>-</td>
               <td><%= Number.isFinite(Number(product.quantity)) ? Number(product.quantity) : 0 %></td>
               <td>$<%= Number(product.price || 0).toFixed(2) %></td>
-              <td>
-                <button class="action-link" type="button">Edit</button>
-                <button class="action-link" type="button">Delete</button>
+              <td class="actions">
+                <a href="/bizowner/edit/<%= product.id %>" class="btn ghost small">Edit</a>
+                <form action="/bizowner/delete/<%= product.id %>" method="POST" onsubmit="return confirm('Delete this product?');" style="display:inline;">
+                  <button class="btn danger small" type="submit">Delete</button>
+                </form>
               </td>
             </tr>
           <% }) %>

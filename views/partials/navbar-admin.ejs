@@ -1,0 +1,85 @@
+<link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; width:100%; overflow-x:hidden; }
+
+  .navbar-admin {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 60px;
+    background: #fdeeda;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+    font-family: 'Sora', 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  .navbar-admin .logo {
+    font-family: 'Sniglet', cursive;
+    font-size: 26px;
+    font-weight: 900;
+    color: #ff9c07;
+    text-decoration: none;
+    letter-spacing: 0.3px;
+  }
+
+  .navbar-admin .links a {
+    margin: 0 12px;
+    text-decoration: none;
+    color: #333;
+    font-size: 15px;
+    font-weight: 600;
+    transition: color 0.25s ease;
+  }
+  .navbar-admin .links a:hover { color: #f4b400; }
+
+  .navbar-admin .icons {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .navbar-admin .icons a {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.18);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    color: #333;
+    text-decoration: none;
+    transition: color 0.25s ease, border-color 0.25s ease;
+    background: rgba(255,255,255,0.75);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .navbar-admin .icons a:hover { color: #f4b400; border-color: #f4b400; }
+
+  @media (max-width: 768px) {
+    .navbar-admin { flex-direction: column; align-items: flex-start; padding: 16px 28px; gap: 10px; }
+    .navbar-admin .links { display: flex; flex-wrap: wrap; gap: 10px; }
+    .navbar-admin .links a { margin: 0; }
+  }
+</style>
+
+<div class="navbar-admin">
+  <a class="logo" href="/admin">HomeBitez</a>
+  <div class="links">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/inventory">Inventory</a>
+    <a href="/admin/reports">Reports</a>
+    <a href="/admin/issues">Issues</a>
+    <a href="/admin/customers">Customers</a>
+  </div>
+  <div class="icons">
+    <a href="/admin/profile" title="Profile"><i class="bi bi-person-circle"></i></a>
+    <a href="/logout" title="Logout"><i class="bi bi-box-arrow-right"></i></a>
+  </div>
+</div>
+
+<%- include('./flash') %>
