@@ -1,322 +1,299 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HomeBitez - Sales Report</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Reports - HomeBitez</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
       --cream: #fff5ea;
       --cream-deep: #fde8cf;
-      --card: #ffffff;
-      --ink: #1d1d1d;
-      --muted: #6c6c6c;
-      --accent: #f0a400;
-      --accent-deep: #e38f00;
-      --shadow: 0 12px 28px rgba(20, 20, 20, 0.08);
-      --line: rgba(20, 20, 20, 0.12);
+      --card: #fffaf3;
+      --ink: #2a241e;
+      --muted: #6f6256;
+      --accent: #d59b2d;
+      --accent-strong: #b97d18;
+      --line: #eadac6;
+      --shadow: 0 12px 28px rgba(42,36,30,0.10);
     }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; }
     body {
-      font-family: "Sora", sans-serif;
+      margin: 0;
+      font-family: 'Sora', 'Inter', sans-serif;
+      background: linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
       color: var(--ink);
-      background:
-        radial-gradient(1200px 600px at 10% -10%, #fff1de 0%, transparent 60%),
-        linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
-      min-height: 100vh;
     }
-
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      background: var(--cream-deep);
-      box-shadow: 0 4px 12px rgba(20, 20, 20, 0.08);
-      padding: 18px 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
-    .brand {
-      font-family: "Sniglet", cursive;
-      font-size: 30px;
-      font-weight: 900;
-      color: var(--accent);
-      text-decoration: none;
-      letter-spacing: 0.5px;
-    }
-
-    .nav-links a {
-      text-decoration: none;
-      color: var(--ink);
-      margin: 0 14px;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .welcome {
-      font-weight: 600;
-      font-size: 15px;
-    }
-
-    .page {
-      max-width: 1100px;
-      margin: 40px auto 96px;
-      padding: 0 28px;
-    }
-
-    .card {
-      background: var(--card);
-      border-radius: 18px;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--line);
-      padding: 28px;
-    }
-
-    .title {
-      text-align: center;
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 18px;
-    }
-
-    .stats {
+    main {
+      max-width: 1180px;
+      margin: 26px auto 64px;
+      padding: 0 24px;
       display: grid;
-      grid-template-columns: repeat(5, minmax(140px, 1fr));
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-
-    .stat {
-      background: #f6f6f6;
-      border-radius: 12px;
-      padding: 12px;
-      text-align: center;
-      font-size: 12px;
-      font-weight: 600;
-      min-height: 86px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .stat strong {
-      display: block;
-      font-size: 16px;
-      margin-top: 6px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
       gap: 18px;
     }
-
-    .panel {
-      background: #f6f6f6;
-      border-radius: 14px;
-      padding: 16px;
-    }
-
-    .panel-title {
-      font-size: 13px;
-      font-weight: 700;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-
-    .chart {
-      height: 220px;
-      display: flex;
-      align-items: flex-end;
-      gap: 10px;
-      padding: 14px 10px 6px;
-      border-radius: 12px;
-      background: #fff;
-    }
-
-    .bar {
-      flex: 1;
-      background: linear-gradient(180deg, #38a3ff 0%, #0f5bbd 100%);
-      border-radius: 8px 8px 4px 4px;
-      position: relative;
-      min-height: 6px;
-    }
-
-    .bar::after {
-      content: attr(data-label);
-      position: absolute;
-      bottom: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 10px;
-      color: var(--muted);
-    }
-
-
-    .side-panels {
+    .grid-3 {
       display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 14px;
     }
-
-    .best-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 18px;
     }
-
-    .food {
-      width: 54px;
-      height: 54px;
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    .stat-value { font-size: 22px; font-weight: 700; margin-top: 6px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .kpi { display: flex; justify-content: space-between; align-items: center; }
+    .pill {
+      background: rgba(213,155,45,0.12);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .pill.danger { background: rgba(201,42,42,0.10); color: #c92a2a; }
+    .pill.amber { background: rgba(245,159,0,0.14); color: #f59f00; }
+    .flex {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .chart-wrap { height: 260px; }
+    .list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+    .list-item {
+      border: 1px solid var(--line);
       border-radius: 10px;
-      background: #f0a400;
-      color: #fff;
-      display: inline-flex;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 700;
+      background: #fffdf9;
     }
-
-    .metric {
-      font-size: 22px;
-      font-weight: 700;
-      text-align: center;
-    }
-
-    .muted {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .refresh {
+    .bar-row {
       display: flex;
       align-items: center;
-      justify-content: center;
-      height: 90px;
-      font-size: 42px;
+      gap: 10px;
     }
-
-    .refresh-btn {
-      width: 100%;
-      border: none;
-      border-radius: 12px;
-      height: 72px;
-      background: #fff;
-      font-size: 26px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: inset 0 0 0 1px rgba(20, 20, 20, 0.08);
+    .bar-track {
+      flex: 1;
+      height: 8px;
+      background: #eef2f7;
+      border-radius: 999px;
+      overflow: hidden;
     }
-
-    @media (max-width: 980px) {
-      .stats {
-        grid-template-columns: repeat(2, minmax(140px, 1fr));
-      }
-      .grid {
-        grid-template-columns: 1fr;
-      }
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2f9e44, #7ccf6a);
     }
-
-    @media (max-width: 600px) {
-      .nav-links {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      .nav-links a {
-        margin: 0;
-      }
-      .page {
-        padding: 0 18px;
-      }
+    @media (max-width: 900px) {
+      main { padding: 0 18px; }
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">HomeBitez</a>
-    <nav class="nav-links">
-      <a href="/admin">Home</a>
-      <a href="/">Menu</a>
-      <a href="/admin/inventory">Inventory</a>
-    </nav>
-    <div class="welcome">Welcome, <%= adminName %>!</div>
-  </header>
+  <%- include('partials/navbar-admin') %>
 
-  <main class="page">
+  <main>
+    <section class="grid-3">
+      <div class="card">
+        <div class="muted">Total Products</div>
+        <div class="stat-value"><%= totalProducts %></div>
+      </div>
+      <div class="card">
+        <div class="muted">Total Revenue</div>
+        <div class="stat-value">S$ <%= totalRevenue.toFixed(2) %></div>
+      </div>
+      <div class="card">
+        <div class="muted">Total Orders</div>
+        <div class="stat-value"><%= totalOrders %></div>
+      </div>
+      <div class="card">
+        <div class="muted">Avg Order Value</div>
+        <div class="stat-value">S$ <%= averageOrderValue.toFixed(2) %></div>
+      </div>
+      <div class="card">
+        <div class="muted">Growth vs last 7 days</div>
+        <div class="stat-value"><%= growthPercent.toFixed(1) %>%</div>
+        <div class="pill <%= growthPercent < 0 ? 'danger' : 'amber' %>">
+          <%= growthPercent < 0 ? 'Down' : 'Up' %>
+        </div>
+      </div>
+    </section>
+
     <section class="card">
-      <h1 class="title">Performance Dashboard</h1>
-      <div class="stats">
-        <div class="stat">Date Range<strong><%= monthLabel %></strong></div>
-        <div class="stat">Total Revenue<strong>$<%= totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong></div>
-        <div class="stat">Total Cost<strong>$<%= totalCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong></div>
-        <div class="stat">Total Profit<strong>$<%= totalProfit.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong></div>
-        <div class="stat">Total Orders<strong><%= totalOrders %></strong></div>
+      <div class="kpi">
+        <h2>Daily sales (last 7 days)</h2>
+        <div class="muted">Updated <%= updatedAt %></div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </section>
+
+    <section class="flex">
+      <div class="card" style="flex:2; min-width:320px;">
+        <h2>Recent orders</h2>
+        <ul class="list">
+          <% if (!recentOrders.length) { %>
+            <li class="muted">No orders yet.</li>
+          <% } else { %>
+            <% recentOrders.forEach(o => { %>
+              <li class="list-item">
+                <div>
+                  <strong>ORD-<%= o.id %></strong><br>
+                  <span class="muted"><%= new Date(o.date).toLocaleString() %> · <%= o.items %> items</span>
+                </div>
+                <div style="text-align:right;">
+                  <div>S$ <%= o.total.toFixed(2) %></div>
+                  <div class="muted"><%= o.customer %></div>
+                </div>
+              </li>
+            <% }) %>
+          <% } %>
+        </ul>
       </div>
 
-      <div class="grid">
-        <div class="panel" style="position: relative;">
-          <div class="panel-title">Performance Report</div>
-          <div class="chart">
-            <% const maxValue = Math.max(...chartValues, 1); %>
-            <% chartValues.forEach((value, idx) => { %>
-              <% const height = Math.max((value / maxValue) * 100, 6); %>
-              <div class="bar" style="height: <%= height %>%;" data-label="<%= chartLabels[idx] %>"></div>
+      <div class="card" style="flex:1; min-width:260px;">
+        <h2>Low stock alerts</h2>
+        <ul class="list">
+          <% if (!lowStock.length) { %>
+            <li class="muted">No low stock items 🎉</li>
+          <% } else { %>
+            <% lowStock.forEach(p => { %>
+              <li class="list-item">
+                <div><strong><%= p.name %></strong></div>
+                <div class="pill danger"><%= p.quantity %> left</div>
+              </li>
             <% }) %>
-          </div>
-        </div>
+          <% } %>
+        </ul>
+      </div>
+    </section>
 
-        <div class="side-panels">
-          <div class="panel">
-            <div class="panel-title">Best Performing Food</div>
-            <div class="best-item">
-              <div class="food">HB</div>
-              <div>
-                <div><%= bestItem.name %></div>
-                <div class="muted">$<%= Number(bestItem.revenue || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
-              </div>
-            </div>
-          </div>
+    <section class="flex">
+      <div class="card" style="flex:1; min-width:300px;">
+        <h2>Sales by category</h2>
+        <ul class="list">
+          <% if (!salesByCategory.length) { %>
+            <li class="muted">No category sales yet.</li>
+          <% } else { 
+               const maxCat = Math.max(...salesByCategory.map(c => Number(c.revenue || 0)), 1);
+             %>
+            <% salesByCategory.forEach(c => { 
+                 const pct = Math.min(100, (Number(c.revenue || 0) / maxCat) * 100);
+            %>
+              <li class="bar-row">
+                <div style="width:110px;"><%= c.category || 'Uncategorized' %></div>
+                <div class="bar-track"><div class="bar-fill" style="width:<%= pct %>%"></div></div>
+                <div style="width:80px; text-align:right;">S$ <%= Number(c.revenue || 0).toFixed(2) %></div>
+              </li>
+            <% }) %>
+          <% } %>
+        </ul>
+      </div>
 
-          <div class="panel">
-            <div class="panel-title">Growth vs Last Month</div>
-            <div class="metric"><%= growthPercent.toFixed(1) %>%</div>
-          </div>
+      <div class="card" style="flex:1; min-width:260px;">
+        <h2>Best sellers</h2>
+        <ul class="list">
+          <% if (!bestSellers.length) { %>
+            <li class="muted">No best seller data yet.</li>
+          <% } else { %>
+            <% bestSellers.forEach(item => { %>
+              <li class="list-item">
+                <div>
+                  <strong><%= item.name %></strong><br>
+                  <span class="muted"><%= item.qty %> sold</span>
+                </div>
+                <div class="pill amber">S$ <%= Number(item.revenue || 0).toFixed(2) %></div>
+              </li>
+            <% }) %>
+          <% } %>
+        </ul>
+      </div>
 
-          <div class="panel">
-            <div class="panel-title">Average Order Value</div>
-            <div class="metric">$<%= averageOrderValue.toFixed(2) %></div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-title">Refresh Data?</div>
-            <button class="refresh-btn" type="button" id="refreshReport">R</button>
-          </div>
-        </div>
+      <div class="card" style="flex:1; min-width:260px;">
+        <h2>Returning customers</h2>
+        <ul class="list">
+          <% if (!returningCustomers.length) { %>
+            <li class="muted">No returning customers yet.</li>
+          <% } else { %>
+            <% returningCustomers.forEach(c => { %>
+              <li class="list-item">
+                <div>
+                  <strong><%= c.username %></strong><br>
+                  <span class="muted"><%= c.orders %> orders</span>
+                </div>
+                <div class="pill">S$ <%= Number(c.spend || 0).toFixed(2) %></div>
+              </li>
+            <% }) %>
+          <% } %>
+        </ul>
       </div>
     </section>
   </main>
 
   <script>
-    const refreshButton = document.getElementById("refreshReport");
-    if (refreshButton) {
-      refreshButton.addEventListener("click", () => {
-        window.location.reload();
+    (() => {
+      const ctx = document.getElementById('dailyChart');
+      if (!ctx) return;
+      const labels = <%- JSON.stringify(dailySales.map(d => d.label)) %>;
+      const revenue = <%- JSON.stringify(dailySales.map(d => Number(d.revenue || 0))) %>;
+      const orders = <%- JSON.stringify(dailySales.map(d => Number(d.orders || 0))) %>;
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Revenue (S$)',
+              data: revenue,
+              borderColor: '#2f9e44',
+              backgroundColor: 'rgba(47,158,68,0.12)',
+              borderWidth: 3,
+              tension: 0.35,
+              fill: true
+            },
+            {
+              label: 'Orders',
+              data: orders,
+              borderColor: '#0b7285',
+              backgroundColor: 'rgba(11,114,133,0.12)',
+              borderDash: [6,3],
+              borderWidth: 2,
+              tension: 0.35,
+              fill: false,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          plugins: { legend: { display: true } },
+          scales: {
+            y: { beginAtZero: true },
+            y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }
+          },
+          responsive: true,
+          maintainAspectRatio: false
+        }
       });
-    }
+    })();
   </script>
 </body>
 </html>

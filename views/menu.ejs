@@ -144,43 +144,6 @@ body{
     padding:30px 0;
     font-size:15px;
 }
-.cart-toast{
-    position:fixed;
-    right:20px;
-    top:90px;
-    background:#fff;
-    border:1px solid #e6d4b3;
-    box-shadow:0 10px 30px rgba(0,0,0,0.12);
-    border-radius:12px;
-    padding:12px 16px;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    opacity:0;
-    transform:translateY(-10px);
-    pointer-events:none;
-    transition:opacity 0.2s ease, transform 0.2s ease;
-    z-index:99999;
-}
-.cart-toast.show{
-    opacity:1;
-    transform:translateY(0);
-}
-.cart-toast .toast-icon{
-    width:28px;
-    height:28px;
-    border-radius:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:#dd9b00;
-    color:#fff;
-    font-size:14px;
-}
-.cart-toast .toast-text{
-    font-size:14px;
-    color:#3b2c10;
-}
 @media (max-width: 768px){
     .grid{ padding:20px; }
     .menu-search input{ min-width:140px; }
@@ -234,11 +197,6 @@ body{
     <% }) %>
 </div>
 
-<div class="cart-toast" id="cartToast" aria-live="polite">
-    <div class="toast-icon"><i class="bi bi-check-lg"></i></div>
-    <div class="toast-text" id="cartToastText">Added to cart</div>
-</div>
-
 <script>
 const tabs = document.querySelectorAll(".tab");
 const searchInput = document.getElementById("menuSearch");
@@ -288,17 +246,13 @@ searchInput.addEventListener("input", applyFilters);
 </script>
 
 <script>
-const toast = document.getElementById("cartToast");
-const toastText = document.getElementById("cartToastText");
-let toastTimer = null;
-
 function showToast(message, isError = false) {
-    toastText.textContent = message;
-    toast.querySelector(".toast-icon").style.background = isError ? "#d9534f" : "#dd9b00";
-    toast.querySelector(".toast-icon").innerHTML = isError ? '<i class="bi bi-x-lg"></i>' : '<i class="bi bi-check-lg"></i>';
-    toast.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 2000);
+    if (window.pushFlash) {
+        window.pushFlash(message, isError ? "error" : "success");
+        return;
+    }
+    // fallback if flash partial not loaded
+    alert(message);
 }
 
 document.querySelectorAll('.add-to-cart').forEach(btn => {

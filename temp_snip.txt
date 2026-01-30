@@ -1,0 +1,20 @@
+    <div class="section-card">
+      <h3>Business Profile</h3>
+      <div class="arrow">→</div>
+      <p>Edit your business information and image</p>
+      <a href="/bizowner/profile" class="btn-gold">Edit Profile</a>
+    </div>
+
+    <div class="section-card">
+      <h3>Customer Messages</h3>
+      <div class="arrow">→</div>
+      <p>Read and respond to customer inquiries</p>
+      <a href="/bizowner/messages" class="btn-gold">View Messages</a>
+    </div>
+  </div>
+
+  <div class="section-container" style="margin-top:22px;">
+    <div class="section-card">
+      <h3>Inventory Management</h3>
+      <div class="arrow">→</div>
+      <p>Add, edit and manage your product inventory</p>

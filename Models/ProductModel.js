@@ -12,8 +12,8 @@ module.exports = {
 
     create(product) {
         return db.query(
-            "INSERT INTO product (product_name, category, price, image) VALUES (?, ?, ?, ?)",
-            [product.productName, product.category, product.price, product.image]
+            "INSERT INTO product (product_name, category, price, image, quantity) VALUES (?, ?, ?, ?, ?)",
+            [product.productName, product.category, product.price, product.image, product.quantity]
         );
     },
 

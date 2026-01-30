@@ -343,6 +343,73 @@ app.get('/admin', async (req, res) => {
     });
 });
 
+// Admin profile
+app.get('/admin/profile', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    try {
+        const userId = req.session.user.id;
+        const [rows] = await db.query("SELECT * FROM users WHERE id = ?", [userId]);
+        const user = rows && rows[0] ? rows[0] : req.session.user;
+        res.render('admin-profile', {
+            user,
+            success: req.flash('success'),
+            error: req.flash('error'),
+            adminName: req.session.user?.username || 'Admin'
+        });
+    } catch (err) {
+        console.error("Admin profile page error:", err);
+        req.flash('error', 'Failed to load profile.');
+        return res.redirect('/admin');
+    }
+});
+
+app.post('/admin/profile', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    try {
+        const userId = req.session.user.id;
+        const username = (req.body.username || '').trim();
+        const email = (req.body.email || '').trim();
+        const address = (req.body.address || '').trim();
+        const contact = (req.body.contact || '').trim();
+
+        await db.query(
+            "UPDATE users SET username=?, email=?, address=?, contact=? WHERE id=?",
+            [username, email, address, contact, userId]
+        );
+
+        // keep session in sync
+        if (req.session.user) {
+            req.session.user.username = username;
+            req.session.user.email = email;
+            req.session.user.address = address;
+            req.session.user.contact = contact;
+        }
+
+        req.flash('success', 'Profile updated successfully.');
+        return res.redirect('/admin/profile');
+    } catch (err) {
+        console.error("Admin profile update error:", err);
+        req.flash('error', 'Failed to update profile.');
+        return res.redirect('/admin/profile');
+    }
+});
+
 // Admin manage customers
 app.get('/admin/customers', async (req, res) => {
     if (!req.session.user) {
@@ -423,95 +490,163 @@ app.get('/admin/reports', async (req, res) => {
 
     let totalRevenue = 0;
     let totalOrders = 0;
-    let totalCost = 0;
-    let totalProfit = 0;
+    let totalProducts = 0;
     let averageOrderValue = 0;
-    let bestItem = { name: "No data", revenue: 0 };
-    let chartLabels = [];
-    let chartValues = [];
     let growthPercent = 0;
+    let dailySales = [];
+    let lowStock = [];
+    let recentOrders = [];
+    let salesByCategory = [];
+    let bestSellers = [];
+    let returningCustomers = [];
 
     try {
-        const now = new Date();
-        for (let i = 5; i >= 0; i -= 1) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            chartLabels.push(d.toLocaleString("en-US", { month: "short" }));
-            chartValues.push(0);
-        }
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-        const [summaryRows] = await db.query(
-            "SELECT COUNT(*) AS totalOrders, COALESCE(SUM(totalAmount), 0) AS totalRevenue FROM orders WHERE created_at >= ? AND created_at < ?",
-            [startOfMonth, startOfNextMonth]
+        // detect column names to support different schemas
+        const [colRows] = await db.query(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders'"
         );
-        totalOrders = summaryRows?.[0]?.totalOrders || 0;
-        totalRevenue = Number(summaryRows?.[0]?.totalRevenue || 0);
-        totalCost = 0;
-        totalProfit = totalRevenue - totalCost;
+        const colSet = new Set((colRows || []).map(r => (r.COLUMN_NAME || '').toLowerCase()));
+        const pick = (cands, fallback) => {
+            for (const c of cands) if (colSet.has(c.toLowerCase())) return c;
+            return fallback;
+        };
+        const totalCol = pick(['totalAmount', 'total', 'total_amount'], 'total');
+        const createdCol = pick(['created_at', 'createdAt'], 'created_at');
+        const userCol = pick(['user_id', 'userId', 'user'], 'user_id');
+        const itemsCol = pick(['items', 'order_items', 'orderItems'], null);
+
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const start7 = new Date(today);
+        start7.setDate(start7.getDate() - 6);
+        const startPrev7 = new Date(start7);
+        startPrev7.setDate(startPrev7.getDate() - 7);
+
+        // headline
+        const [[revRow]] = await db.query(`SELECT COALESCE(SUM(${totalCol}),0) AS revenue, COUNT(*) AS cnt FROM orders`);
+        totalRevenue = Number(revRow?.revenue || 0);
+        totalOrders = Number(revRow?.cnt || 0);
         averageOrderValue = totalOrders ? totalRevenue / totalOrders : 0;
 
-        const [prevRows] = await db.query(
-            "SELECT COALESCE(SUM(totalAmount), 0) AS totalRevenue FROM orders WHERE created_at >= ? AND created_at < ?",
-            [startOfPrevMonth, startOfMonth]
+        const [[prodRow]] = await db.query("SELECT COUNT(*) AS total FROM product");
+        totalProducts = Number(prodRow?.total || 0);
+
+        // week growth
+        const [[currentWeek]] = await db.query(
+            `SELECT COALESCE(SUM(${totalCol}),0) AS revenue FROM orders WHERE ${createdCol} >= ? AND ${createdCol} < ?`,
+            [start7, new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)]
         );
-        const prevRevenue = Number(prevRows?.[0]?.totalRevenue || 0);
-        growthPercent = prevRevenue ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
+        const [[prevWeek]] = await db.query(
+            `SELECT COALESCE(SUM(${totalCol}),0) AS revenue FROM orders WHERE ${createdCol} >= ? AND ${createdCol} < ?`,
+            [startPrev7, start7]
+        );
+        const curRev = Number(currentWeek?.revenue || 0);
+        const prevRev = Number(prevWeek?.revenue || 0);
+        growthPercent = prevRev ? ((curRev - prevRev) / prevRev) * 100 : 0;
+
+        // daily sales last 7 days
+        const [dailyRows] = await db.query(
+            `SELECT DATE(${createdCol}) AS d, COALESCE(SUM(${totalCol}),0) AS revenue, COUNT(*) AS orders
+             FROM orders
+             WHERE ${createdCol} >= ? AND ${createdCol} < ?
+             GROUP BY d
+             ORDER BY d ASC`,
+            [start7, new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)]
+        );
+        const mapDaily = new Map();
+        (dailyRows || []).forEach(r => mapDaily.set(r.d.toISOString().slice(0,10), { revenue: Number(r.revenue || 0), orders: Number(r.orders || 0) }));
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(start7);
+            d.setDate(start7.getDate() + i);
+            const key = d.toISOString().slice(0,10);
+            const entry = mapDaily.get(key) || { revenue: 0, orders: 0 };
+            dailySales.push({ label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }), ...entry });
+        }
+
+        const [lowRows] = await db.query(
+            "SELECT id, product_name AS name, quantity FROM product WHERE quantity < 10 ORDER BY quantity ASC LIMIT 5"
+        );
+        lowStock = lowRows || [];
+
+        const [recentRows] = await db.query(
+            `SELECT o.id, o.${totalCol} AS totalAmount, o.${createdCol} AS createdAt, o.status, u.username,
+                    COALESCE(SUM(oi.quantity),0) AS items,
+                    ${itemsCol ? `o.${itemsCol} AS itemsJson` : 'NULL AS itemsJson'}
+             FROM orders o
+             LEFT JOIN order_items oi ON oi.orderId = o.id
+             LEFT JOIN users u ON u.id = o.${userCol}
+             GROUP BY o.id
+             ORDER BY o.${createdCol} DESC
+             LIMIT 5`
+        );
+        recentOrders = (recentRows || []).map(r => ({
+            id: r.id,
+            total: Number(r.totalAmount || 0),
+            date: r.createdAt,
+            items: (() => {
+                const fromJoin = Number(r.items || 0);
+                if (fromJoin > 0) return fromJoin;
+                if (r.itemsJson) {
+                    try {
+                        const arr = JSON.parse(r.itemsJson);
+                        return arr.reduce((s, it) => s + Number(it.qty || it.quantity || 0), 0);
+                    } catch (e) { return 0; }
+                }
+                return 0;
+            })(),
+            status: r.status || 'pending',
+            customer: r.username || 'Guest'
+        }));
+
+        const [catRows] = await db.query(
+            `SELECT p.category AS category, COALESCE(SUM(oi.quantity * oi.price),0) AS revenue
+             FROM order_items oi
+             JOIN product p ON p.id = oi.productId
+             GROUP BY p.category
+             ORDER BY revenue DESC`
+        );
+        salesByCategory = catRows || [];
 
         const [bestRows] = await db.query(
             `SELECT p.product_name AS name,
-                    SUM(oi.quantity) AS totalSold,
+                    SUM(oi.quantity) AS qty,
                     SUM(oi.quantity * oi.price) AS revenue
              FROM order_items oi
              JOIN product p ON p.id = oi.productId
-             GROUP BY oi.productId
-             ORDER BY totalSold DESC
-             LIMIT 1`
+             GROUP BY p.id
+             ORDER BY qty DESC
+             LIMIT 5`
         );
-        if (bestRows && bestRows[0]) {
-            bestItem = { name: bestRows[0].name, revenue: Number(bestRows[0].revenue || 0) };
-        }
+        bestSellers = bestRows || [];
 
-        const startSixMonths = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-        const [chartRows] = await db.query(
-            `SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COALESCE(SUM(totalAmount), 0) AS total
-             FROM orders
-             WHERE created_at >= ? AND created_at < ?
-             GROUP BY ym
-             ORDER BY ym ASC`,
-            [startSixMonths, startOfNextMonth]
+        const [retRows] = await db.query(
+            `SELECT u.username, COUNT(o.id) AS orders, COALESCE(SUM(o.${totalCol}),0) AS spend
+             FROM orders o
+             JOIN users u ON u.id = o.${userCol}
+             GROUP BY u.id
+             HAVING orders > 1
+             ORDER BY orders DESC, spend DESC
+             LIMIT 5`
         );
-
-        const totalsByMonth = new Map();
-        (chartRows || []).forEach(row => totalsByMonth.set(row.ym, Number(row.total || 0)));
-
-        chartLabels = [];
-        chartValues = [];
-        for (let i = 5; i >= 0; i -= 1) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-            chartLabels.push(d.toLocaleString("en-US", { month: "short" }));
-            chartValues.push(totalsByMonth.get(ym) || 0);
-        }
+        returningCustomers = retRows || [];
     } catch (err) {
         console.error("Admin reports error:", err);
     }
 
-    const monthLabel = new Date().toLocaleString("en-US", { month: "long" });
-
     res.render('admin-reports', {
         adminName: req.session.user?.username || 'Admin',
-        monthLabel,
         totalRevenue,
-        totalCost,
-        totalProfit,
         totalOrders,
+        totalProducts,
         averageOrderValue,
-        bestItem,
-        chartLabels,
-        chartValues,
-        growthPercent
+        growthPercent,
+        dailySales,
+        lowStock,
+        recentOrders,
+        salesByCategory,
+        bestSellers,
+        returningCustomers,
+        updatedAt: new Date().toLocaleString()
     });
 });
 

@@ -112,20 +112,22 @@ exports.addProduct = async (req, res) => {
   if (!guard.ok) return;
 
   try {
-    let imageFilename = "default.png";
-    if (req.file) imageFilename = req.file.filename;
+        let imageFilename = "default.png";
+        if (req.file) imageFilename = req.file.filename;
 
-    const productName = (req.body.productName || "").trim();
-    const category = (req.body.category || "").trim();
-    const price = parseFloat(req.body.price);
+        const productName = (req.body.productName || "").trim();
+        const category = (req.body.category || "").trim();
+        const price = parseFloat(req.body.price);
+        const quantity = Math.max(0, parseInt(req.body.quantity, 10) || 0);
 
     if (!productName) return res.redirect("/bizowner/add");
     if (!category) return res.redirect("/bizowner/add");
     if (Number.isNaN(price) || price < 0) return res.redirect("/bizowner/add");
 
-    const product = { productName, category, price, image: imageFilename };
+    const product = { productName, category, price, image: imageFilename, quantity };
 
     await ProductModel.create(product);
+    req.flash("success", "Product added successfully.");
     return res.redirect("/bizowner/inventory");
   } catch (err) {
     console.error("Add product error:", err);
@@ -179,6 +181,7 @@ exports.updateProduct = async (req, res) => {
     const product = { productName, category, price, image: imageFilename };
 
     await ProductModel.update(id, product);
+    req.flash("success", "Product updated successfully.");
     return res.redirect("/bizowner/inventory");
   } catch (err) {
     console.error("Update product error:", err);
@@ -198,6 +201,7 @@ exports.deleteProduct = async (req, res) => {
     if (!Number.isInteger(id)) return res.redirect("/bizowner/inventory");
 
     await ProductModel.delete(id);
+    req.flash("success", "Product removed.");
     return res.redirect("/bizowner/inventory");
   } catch (err) {
     console.error("Delete product error:", err);
@@ -217,7 +221,11 @@ exports.profilePage = async (req, res) => {
     const [rows] = await db.query("SELECT * FROM users WHERE id = ?", [userId]);
     if (!rows || !rows[0]) return res.redirect("/bizowner");
 
-    return res.render("bizowner/profile", { user: rows[0] });
+    return res.render("bizowner/profile", { 
+      user: rows[0],
+      success: req.flash("success"),
+      error: req.flash("error")
+    });
   } catch (err) {
     console.error("Profile page error:", err);
     return res.status(500).send("Server error");
@@ -243,9 +251,11 @@ exports.updateProfile = async (req, res) => {
       [username, email, address, contact, userId]
     );
 
+    req.flash("success", "Profile saved.");
     return res.redirect("/bizowner/profile");
   } catch (err) {
     console.error("Update profile error:", err);
+    req.flash("error", "Failed to update profile.");
     return res.status(500).send("Server error");
   }
 };
