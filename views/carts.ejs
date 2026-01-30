@@ -12,7 +12,8 @@
   body{
       margin:0;
       font-family:Arial, sans-serif;
-      background:#faefe5;
+      background:#f7efe3;
+      color:#2f2419;
   }
 
   .cart-wrap{
@@ -29,8 +30,8 @@
   }
 
   .card-surface{
-      background: #fdeeda;
-      border:1px solid #f3d9a4;
+      background: linear-gradient(145deg, #fff8ef 0%, #f1e1cd 100%);
+      border:1px solid #ead7b7;
       border-radius: 14px;
       padding: 26px 24px;
       box-shadow: 0 10px 28px rgba(0,0,0,0.08);
@@ -64,7 +65,7 @@
 
   .item-name{
       font-size: 16px;
-      font-weight: 700;
+      font-weight: 600;
       margin: 0;
       line-height: 1.2;
       color:#2f2a24;
@@ -80,22 +81,22 @@
       font-size: 12px;
       margin-left: 10px;
       text-decoration: none;
-      color: #0d6efd;
+      color: #0b63d1;
       cursor: pointer;
-      font-weight: 700;
+      font-weight: 600;
   }
   .edit-link:hover{ text-decoration: underline; }
 
   .price-col{
       text-align: left;
-      font-weight: 700;
+      font-weight: 600;
       color:#2f2a24;
   }
 
   .line-total{
       font-size: 13px;
       color:#5a5144;
-      font-weight:600;
+      font-weight:500;
   }
 
   .qty-col{
@@ -111,7 +112,7 @@
       border-radius: 50%;
       border: 1px solid rgba(0,0,0,0.15);
       background:#fff;
-      font-weight: 800;
+      font-weight: 600;
       line-height: 1;
       cursor: pointer;
   }
@@ -119,7 +120,7 @@
   .qty-display{
       min-width: 32px;
       text-align: center;
-      font-weight: 800;
+      font-weight: 600;
   }
 
   .section-block{
@@ -135,7 +136,7 @@
 
   .label{
       font-size: 14px;
-      font-weight: 800;
+      font-weight: 600;
       color:#2f2a24;
       margin:0;
   }
@@ -149,8 +150,8 @@
   .summary-card{
       position: sticky;
       top: 90px;
-      border: 1px solid #f3d9a4;
-      background: linear-gradient(180deg, #ffefcf 0%, #fde6bd 100%);
+      border: 1px solid #ead7b7;
+      background: linear-gradient(180deg, #ffefd8 0%, #f6dfbf 100%);
   }
 
   .summary-row{
@@ -170,11 +171,11 @@
   .btn-back{
       padding: 12px 18px;
       border: 1px solid #d1b26f;
-      background:#fff;
+      background:#fffaf2;
       border-radius: 10px;
-      font-weight: 800;
+      font-weight: 600;
       text-decoration: none;
-      color: #222;
+      color: #2f2419;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -184,22 +185,23 @@
 
   .btn-checkout{
       padding: 12px 18px;
-      background:#dd9b00;
-      color:white;
+      background:#d09a2e;
+      color:#fffaf2;
       border-radius:10px;
       border:none;
-      font-weight:800;
+      font-weight:600;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
       transition: transform .12s ease, box-shadow .12s ease;
+      box-shadow:0 8px 18px rgba(0,0,0,0.08);
   }
   .btn-checkout:hover{
       transform: translateY(-1px);
-      box-shadow: 0 8px 18px rgba(0,0,0,0.12);
-      color:white;
+      box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+      color:#fffaf2;
   }
 
   .btn-area{
@@ -258,8 +260,8 @@
     <% if (!cart || cart.length === 0) { %>
       <div class="card-surface" style="grid-column:1 / -1;">
         <div class="empty">
-          <h5 style="margin-bottom:10px; font-weight:800;">Your cart is empty</h5>
-          <p style="margin:0;">Go to the menu and add some items 🥗️</p>
+          <h5 style="margin-bottom:10px; font-weight:600;">Your cart is empty</h5>
+          <p style="margin:0;">Go to the menu and add some items :)</p>
 
           <div class="btn-area" style="justify-content:center;">
             <a href="/menu" class="btn-back">Back to Menu</a>
@@ -270,7 +272,7 @@
 
       <!-- LEFT COLUMN: items + preferences -->
       <div class="card-surface">
-          <h4 style="margin:0 0 14px; font-weight:800;">Your Order</h4>
+          <h4 style="margin:0 0 14px; font-weight:600;">Your Order</h4>
 
         <div class="items-list">
           <% cart.forEach((item, i) => { %>
@@ -328,13 +330,13 @@
         <div class="btn-area" style="justify-content:flex-start; gap:10px; padding-top:16px;">
           <button type="button" class="btn-back" id="clearCartBtn">Clear Cart</button>
           <a href="/menu" class="btn-back">Back to Menu</a>
-          <span style="font-size:12px; color:#6b5d4a; margin-left:auto;">Checkout on the right →</span>
+          <span style="font-size:12px; color:#6b5d4a; margin-left:auto;">Checkout on the right &rarr;</span>
         </div>
       </div>
 
       <!-- RIGHT COLUMN: summary -->
       <aside class="card-surface summary-card">
-        <h5 style="margin:0 0 10px; font-weight:900;">Order Summary</h5>
+        <h5 style="margin:0 0 10px; font-weight:600;">Order Summary</h5>
         <div class="summary-row small">
           <span>Items (<%= cart.length %>)</span>
           <span>$<%= Number(subtotal).toFixed(2) %></span>
@@ -363,7 +365,7 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border-radius:14px;">
       <div class="modal-header">
-        <h5 class="modal-title" style="font-weight:800;">Edit Item</h5>
+        <h5 class="modal-title" style="font-weight:600;">Edit Item</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
@@ -387,7 +389,7 @@
 
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn" style="background:#dd9b00; color:#fff; font-weight:800;" id="modalSave">
+        <button type="button" class="btn" style="background:#d09a2e; color:#fff; font-weight:600;" id="modalSave">
           Save
         </button>
       </div>
@@ -521,3 +523,6 @@
 
 </body>
 </html>
+
+
+
