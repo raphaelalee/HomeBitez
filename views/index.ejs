@@ -226,17 +226,40 @@
   <div class="logo">HomeBitez</div>
   <nav>
     <a href="/">Home</a>
-    <a href="/login">Menu</a>
-    <a href="/about">About Us</a>
-    <a href="/contact">Contact Us</a>
+    <% if (user && user.role === 'admin') { %>
+      <a href="/admin">Admin Dashboard</a>
+    <% } else { %>
+      <a href="<%= user ? '/menu' : '/login' %>">Menu</a>
+      <a href="/about">About Us</a>
+      <a href="/contact">Contact Us</a>
+    <% } %>
   </nav>
   <div class="header-actions">
+<<<<<<< Updated upstream
     <a href="/login">
       <button>Login</button>
     </a>
     <a href="/register">
       <button>Sign Up</button>
     </a>
+=======
+    <% if (user && user.role === 'admin') { %>
+      <a href="/user/profile">
+        <button>Profile</button>
+      </a>
+    <% } else if (user) { %>
+      <a href="/user/profile">
+        <button>Profile</button>
+      </a>
+      <a href="/logout">
+        <button>Logout</button>
+      </a>
+    <% } else { %>
+      <a href="/login">
+        <button>Login</button>
+      </a>
+    <% } %>
+>>>>>>> Stashed changes
   </div>
 </header>
 
