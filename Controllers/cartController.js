@@ -1,7 +1,22 @@
+const CartModel = require("../Models/cartModels");
+
+async function hydrateCartFromDb(req) {
+    if (!req.session.user) return;
+    if (req.session.cart && req.session.cart.length) return;
+    const rows = await CartModel.getByUserId(req.session.user.id);
+    req.session.cart = rows.map(r => ({
+        name: r.name,
+        price: Number(r.price || 0),
+        quantity: Number(r.quantity || 0),
+        image: r.image || ""
+    }));
+}
+
 module.exports = {
 
     // GET /cart
-    viewCart(req, res) {
+    async viewCart(req, res) {
+        await hydrateCartFromDb(req);
         const cart = req.session.cart || [];
 
         let subtotal = 0;
@@ -20,16 +35,14 @@ module.exports = {
     },
 
     // POST /cart/add  (called by fetch)
-    addToCart(req, res) {
+    async addToCart(req, res) {
         const { name, price, qty, image } = req.body;
 
         if (!name || !price) {
             return res.status(400).json({ ok: false, error: "Missing item data" });
         }
 
-        if (!req.session.cart) {
-            req.session.cart = [];
-        }
+        if (!req.session.cart) req.session.cart = [];
 
         const cart = req.session.cart;
 
@@ -47,6 +60,14 @@ module.exports = {
         }
 
         req.session.cart = cart;
+        if (req.session.user) {
+            await CartModel.upsertItem(req.session.user.id, {
+                name,
+                price: parseFloat(price),
+                quantity: Number(qty || 1),
+                image: image || ""
+            });
+        }
 
         return res.json({ ok: true, cartCount: cart.length });
     },
@@ -55,7 +76,7 @@ module.exports = {
     // Supports:
     //  A) { name, quantity }
     //  B) { name, action: "increase" | "decrease" }
-    updateItem(req, res) {
+    async updateItem(req, res) {
         const { name, quantity, action } = req.body;
 
         if (!req.session.cart) req.session.cart = [];
@@ -70,6 +91,13 @@ module.exports = {
                 }
                 return item;
             });
+
+            if (req.session.user) {
+                const updated = req.session.cart.find(i => i.name === name);
+                if (updated) {
+                    await CartModel.updateQuantity(req.session.user.id, name, updated.quantity);
+                }
+            }
 
             return res.json({ ok: true });
         }
@@ -89,16 +117,23 @@ module.exports = {
             return item;
         });
 
+        if (req.session.user) {
+            await CartModel.updateQuantity(req.session.user.id, name, q);
+        }
+
         return res.json({ ok: true });
     },
 
     // POST /cart/remove
-    removeItem(req, res) {
+    async removeItem(req, res) {
         const { name } = req.body;
 
         if (!req.session.cart) req.session.cart = [];
 
         req.session.cart = req.session.cart.filter(item => item.name !== name);
+        if (req.session.user) {
+            await CartModel.removeItem(req.session.user.id, name);
+        }
 
         return res.json({ ok: true });
     },
@@ -123,9 +158,12 @@ module.exports = {
     },
 
     // POST /cart/clear
-    clearCart(req, res) {
+    async clearCart(req, res) {
         req.session.cart = [];
         req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", address: "", contact: "", notes: "" };
+        if (req.session.user) {
+            await CartModel.clearCart(req.session.user.id);
+        }
         return res.json({ ok: true });
     }
 };

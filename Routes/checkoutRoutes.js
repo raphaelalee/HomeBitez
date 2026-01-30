@@ -7,6 +7,10 @@ const checkoutController = require("../controllers/checkoutController");
 // Checkout page
 router.get("/checkout", checkoutController.renderCheckout);
 
+// PayLater page
+router.get("/paylater", checkoutController.renderPayLater);
+router.post("/paylater/choose", checkoutController.choosePayLater);
+
 // Receipt page
 router.get("/receipt", checkoutController.renderReceipt);
 

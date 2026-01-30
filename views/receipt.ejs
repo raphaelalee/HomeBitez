@@ -236,6 +236,9 @@
               <%= paypalCapture && paypalCapture.payerEmail ? paypalCapture.payerEmail : (user?.email || 'Email not provided') %>
             </div>
             <div class="pill">Payment: <%= paymentMethod %></div>
+            <% if (paymentMethod === 'PayLater' && paylaterPlan) { %>
+              <div class="pill">Plan: <%= paylaterPlan.months %> months · $<%= Number(paylaterPlan.monthly || 0).toFixed(2) %>/mo</div>
+            <% } %>
           </div>
         </div>
         <div class="col-md-6">
@@ -306,9 +309,15 @@
             </div>
             <hr />
             <div class="line">
-              <span>Total paid</span>
+              <span><%= paymentMethod === 'PayLater' ? 'Total due' : 'Total paid' %></span>
               <span class="total-amount">$<%= Number(total || 0).toFixed(2) %></span>
             </div>
+            <% if (paymentMethod === 'PayLater' && paylaterPlan) { %>
+              <div class="line" style="font-size:12px;color:#6b5d4a;">
+                <span>Installment</span>
+                <span>$<%= Number(paylaterPlan.monthly || 0).toFixed(2) %> / month</span>
+              </div>
+            <% } %>
           </div>
         </div>
       </div>

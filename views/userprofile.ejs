@@ -21,7 +21,7 @@
   .profile-info p { margin:4px 0; font-size:14px; color:#6f6256; }
 
   .profile-header { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; position: relative; }
-  .wallet-btn { margin-left: auto; }
+  .wallet-btn { margin-left: auto; display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
   .wallet-btn .btn { padding: 10px 22px; font-size: 16px; text-decoration: none; }
 
   /* Tabs */
@@ -83,7 +83,8 @@
       <p>Points: <strong><%= user?.points || 0 %></strong></p>
     </div>
     <div class="wallet-btn">
-        <a href="/digitalwallet" class="btn btn-primary">Digital Wallet</a>
+        <a href="/digitalwallet" class="btn btn-primary">Homebitez Wallet</a>
+        <a href="/paylater" class="btn btn-primary">HomeBitez PayLater</a>
     </div>
   </div>
 

@@ -1,4 +1,5 @@
 const User = require('../models/UsersModel');
+const CartModel = require('../Models/cartModels');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs'); // make sure bcryptjs is installed
 
@@ -81,6 +82,18 @@ module.exports = {
       address: user.address || '',
       contact: user.contact || ''
     };
+
+    try {
+      const cartRows = await CartModel.getByUserId(req.session.user.id);
+      req.session.cart = cartRows.map(r => ({
+        name: r.name,
+        price: Number(r.price || 0),
+        quantity: Number(r.quantity || 0),
+        image: r.image || ""
+      }));
+    } catch (err) {
+      console.error("Failed to load cart from DB:", err);
+    }
 
     // Redirect based on role
     if (user.role === 'biz_owner') return res.redirect('/bizowner');

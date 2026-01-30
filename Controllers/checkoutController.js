@@ -4,6 +4,7 @@
 const paypal = require("../services/paypal");
 const nets = require("../services/nets");
 const OrdersModel = require("../Models/OrdersModel");
+const CartModel = require("../Models/cartModels");
 
 // NETS sandbox txn id (keep yours)
 const NETS_TXN_ID =
@@ -53,6 +54,93 @@ exports.renderCheckout = (req, res) => {
     paypalClientId: process.env.PAYPAL_CLIENT_ID,
     paypalCurrency: process.env.PAYPAL_CURRENCY || "SGD",
   });
+};
+
+/* =========================
+   GET /paylater
+========================= */
+exports.renderPayLater = (req, res) => {
+  const creditLimit = 300.0;
+  const walletBalance = 120.5;
+  const plan = req.session.paylaterPlan || null;
+  const outstanding = plan ? Number(plan.total || 0) : 120.0;
+  const availableCredit = Number((creditLimit - outstanding).toFixed(2));
+  const planMonths = plan ? Number(plan.months || 0) : 3;
+  const monthly = planMonths ? Number((outstanding / planMonths).toFixed(2)) : 0;
+  const today = new Date();
+  const nextDueDate = new Date(today);
+  nextDueDate.setDate(today.getDate() + 30);
+
+  const schedule = planMonths
+    ? [
+        { dueDate: nextDueDate, amount: monthly, status: "Due" },
+        {
+          dueDate: new Date(today.getFullYear(), today.getMonth() + 2, today.getDate()),
+          amount: monthly,
+          status: "Upcoming",
+        },
+        {
+          dueDate: new Date(today.getFullYear(), today.getMonth() + 3, today.getDate()),
+          amount: monthly,
+          status: "Upcoming",
+        },
+      ]
+    : [];
+
+  const paylaterMessage = req.session.paylaterMessage || null;
+  const paylaterError = req.session.paylaterError || null;
+  req.session.paylaterMessage = null;
+  req.session.paylaterError = null;
+
+  res.render("homebitez-paylater", {
+    creditLimit,
+    outstanding,
+    availableCredit,
+    walletBalance,
+    planMonths,
+    monthly,
+    nextDueDate,
+    schedule,
+    paylaterMessage,
+    paylaterError,
+  });
+};
+
+/* =========================
+   POST /paylater/choose
+========================= */
+exports.choosePayLater = (req, res) => {
+  const months = Number(req.body.months);
+  if (![3, 6].includes(months)) {
+    req.session.paylaterError = "Please select a valid PayLater plan.";
+    return res.redirect("/paylater");
+  }
+
+  const cart = req.session.cart || [];
+  const prefs = req.session.cartPrefs || { mode: "pickup" };
+  const subtotal = cart.reduce(
+    (s, i) => s + Number(i.price || 0) * Number(i.quantity || i.qty || 0),
+    0
+  );
+  const deliveryFee = prefs.mode === "delivery" ? 2.5 : 0;
+  const total = Number((subtotal + deliveryFee).toFixed(2));
+
+  if (!Number.isFinite(total) || total <= 0) {
+    req.session.paylaterError = "Cart total is invalid for PayLater.";
+    return res.redirect("/checkout");
+  }
+
+  const paylaterPlan = {
+    months,
+    total,
+    monthly: Number((total / months).toFixed(2)),
+    createdAt: Date.now(),
+  };
+  req.session.paylaterPlan = paylaterPlan;
+  req.session.paylaterPurchase = paylaterPlan;
+  req.session.paylaterMessage = `PayLater plan set: ${months} months.`;
+
+  return res.redirect("/receipt");
 };
 
 /* =========================
@@ -217,9 +305,10 @@ exports.requestNetsQr = async (req, res) => {
 /* =========================
    GET /receipt
 ========================= */
-exports.renderReceipt = (req, res) => {
+exports.renderReceipt = async (req, res) => {
   const paypalCapture = req.session?.paypalCapture || null;
   const latestOrderDbId = req.session?.latestOrderDbId || null;
+  const paylaterPurchase = req.session?.paylaterPurchase || null;
 
   const cart = req.session?.cart || [];
   const prefs = req.session?.cartPrefs || {
@@ -240,14 +329,22 @@ exports.renderReceipt = (req, res) => {
   }));
 
   const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
-  const total = paypalCapture?.total || subtotal;
+  const total = paylaterPurchase?.total || paypalCapture?.total || subtotal;
   const deliveryFee = Number((total - subtotal).toFixed(2));
-  const paymentMethod = paypalCapture ? "PayPal" : "NETS / Other";
+  const paymentMethod = paylaterPurchase ? "PayLater" : (paypalCapture ? "PayPal" : "NETS / Other");
   const fulfillment = prefs.mode === "delivery" ? "Delivery" : "Pickup";
 
   // hard reset session bits AFTER render
   req.session.cart = [];
   req.session.latestOrderDbId = null;
+  req.session.paylaterPurchase = null;
+  if (req.session.user) {
+    try {
+      await CartModel.clearCart(req.session.user.id);
+    } catch (err) {
+      console.error("Failed to clear cart in DB:", err);
+    }
+  }
 
   res.render("receipt", {
     brand: "HomeBitez",
@@ -256,6 +353,7 @@ exports.renderReceipt = (req, res) => {
     deliveryFee,
     total,
     paypalCapture,       // <-- ALWAYS DEFINED (null or object)
+    paylaterPlan: req.session?.paylaterPlan || null,
     latestOrderDbId,
     user: req.session.user || null,
     prefs,

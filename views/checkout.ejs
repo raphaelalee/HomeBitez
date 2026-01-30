@@ -139,6 +139,23 @@
       margin-bottom:10px;
     }
     .small-note{font-size:12px;color:#5a5a5a;margin:0;}
+    .paylater-options{display:flex;gap:10px;}
+    .paylater-options input{display:none;}
+    .paylater-option{
+      flex:1;
+      border:1px solid #eee;
+      border-radius:12px;
+      padding:12px;
+      cursor:pointer;
+      background:#fff;
+    }
+    .paylater-option strong{color:#2a241e;}
+    .paylater-option small{color:#8a8a8a;}
+    .paylater-options input:checked + .paylater-option{
+      border-color:#dd9b00;
+      background:#fff7e3;
+      box-shadow:0 0 0 2px rgba(221,155,0,0.15);
+    }
   </style>
 </head>
 
@@ -396,6 +413,49 @@
           Use Wallet (Coming Soon)
         </button>
       </div>
+
+      <!-- PAYLATER -->
+      <div class="hb-card">
+        <div class="hb-card-title">
+          <i class="bi bi-hourglass-split"></i>
+          HomeBitez PayLater
+          <span class="hb-pill">secure</span>
+        </div>
+
+        <div class="text-muted" style="font-size:12px;">Choose a plan and pay in installments.</div>
+        <form action="/paylater/choose" method="POST" class="mt-2">
+          <div class="paylater-options">
+            <input type="radio" id="paylater-3" name="months" value="3" checked>
+            <label for="paylater-3" class="paylater-option">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <div><strong>$<%= (total / 3).toFixed(2) %></strong></div>
+                  <small>0% interest</small>
+                </div>
+                <div><strong>x 3 mth</strong></div>
+              </div>
+            </label>
+
+            <input type="radio" id="paylater-6" name="months" value="6">
+            <label for="paylater-6" class="paylater-option">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <div><strong>$<%= (total / 6).toFixed(2) %></strong></div>
+                  <small>0% interest</small>
+                </div>
+                <div><strong>x 6 mth</strong></div>
+              </div>
+            </label>
+          </div>
+          <button type="submit" class="hb-btn w-100 mt-3">Buy Now</button>
+        </form>
+        <div class="text-muted mt-2" style="font-size:12px;">0% interest. Credit limit applies.</div>
+      </div>
+      <% if (typeof paylaterError !== "undefined" && paylaterError) { %>
+        <div class="hb-card">
+          <div class="alert alert-warning mb-0"><%= paylaterError %></div>
+        </div>
+      <% } %>
 
     </div>
 
