@@ -57,6 +57,32 @@ async function ensureReportReplyColumns() {
     reportColumnsEnsured = true;
 }
 
+let messagesTableEnsured = false;
+async function ensureMessagesTable() {
+    if (messagesTableEnsured) return;
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                senderId INT NOT NULL,
+                ownerId INT NULL,
+                message TEXT NOT NULL,
+                isRead TINYINT(1) DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_messages_sender FOREIGN KEY (senderId) REFERENCES users(id)
+            )
+        `);
+    } catch (err) {
+        console.error("ensureMessagesTable create failed:", err);
+    }
+    try {
+        await db.query("ALTER TABLE messages MODIFY ownerId INT NULL");
+    } catch (err) {
+        // ignore if column already nullable or missing
+    }
+    messagesTableEnsured = true;
+}
+
 // Initialize app
 const app = express();
 
@@ -840,9 +866,11 @@ app.post('/contact', async (req, res) => {
     }
 
     try {
+        await ensureMessagesTable();
+        const ownerId = null; // unassigned; biz owners will still see it due to fallback logic
         await db.query(
-            'INSERT INTO messages (senderId, message, isRead, created_at) VALUES (?, ?, 0, NOW())',
-            [req.session.user.id, message]
+            'INSERT INTO messages (senderId, ownerId, message, isRead, created_at) VALUES (?, ?, ?, 0, NOW())',
+            [req.session.user.id, ownerId, message]
         );
 
         req.flash('success', 'Your message has been sent!');

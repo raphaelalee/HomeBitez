@@ -36,6 +36,7 @@ router.post("/replenish/:id", ownerController.replenish);
 
 // Messages
 router.get("/messages", ownerController.messagesPage);
+router.post("/messages/reply", ownerController.replyMessage);
 
 // Orders list + details
 router.get("/orders", ownerController.ordersPage);

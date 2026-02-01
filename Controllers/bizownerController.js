@@ -283,20 +283,83 @@ exports.messagesPage = async (req, res) => {
   try {
     const ownerId = guard.user.id;
 
-    const [messages] = await db.query(
-      `SELECT m.*, u.username AS senderName 
-       FROM messages m 
-       JOIN users u ON m.senderId = u.id 
-       WHERE m.ownerId = ? 
-       ORDER BY m.created_at DESC`,
-      [ownerId]
-    );
+    // detect owner column on messages table (ownerId or owner_id). If none, show all messages.
+    let ownerCol = null;
+    try {
+      const [colRows] = await db.query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'messages' 
+         AND COLUMN_NAME IN ('ownerId','owner_id') LIMIT 1`
+      );
+      ownerCol = colRows && colRows[0] ? colRows[0].COLUMN_NAME : null;
+    } catch (err) {
+      console.error("messagesPage column detect error:", err);
+    }
 
-    return res.render("bizowner/messages", { messages });
+    let sql = `SELECT m.*, u.username AS senderName, u.email AS senderEmail
+               FROM messages m 
+               JOIN users u ON m.senderId = u.id `;
+    const params = [];
+    if (ownerCol) {
+      sql += `WHERE (m.${ownerCol} = ? OR m.${ownerCol} IS NULL) `;
+      params.push(ownerId);
+    }
+    sql += `ORDER BY m.created_at DESC`;
+
+    const [messages] = await db.query(sql, params);
+
+    // Mark these messages as read for this owner scope
+    try {
+      let updateSql = `UPDATE messages SET isRead = 1 `;
+      const updateParams = [];
+      if (ownerCol) {
+        updateSql += `WHERE ( ${ownerCol} = ? OR ${ownerCol} IS NULL )`;
+        updateParams.push(ownerId);
+      }
+      await db.query(updateSql, updateParams);
+    } catch (err) {
+      console.error("messagesPage mark read error:", err);
+    }
+
+    return res.render("bizowner/messages", { messages, success: req.flash("success"), error: req.flash("error") });
   } catch (err) {
     console.error("Messages page error:", err);
     return res.status(500).send("Server error");
   }
+};
+
+// Reply to a message (simple echo back to sender via new row)
+exports.replyMessage = async (req, res) => {
+  const guard = requireBizOwner(req, res);
+  if (!guard.ok) return;
+
+  try {
+    const { messageId, reply } = req.body;
+    if (!messageId || !reply) {
+      if (req.flash) req.flash("error", "Reply cannot be empty.");
+      return res.redirect("/bizowner/messages");
+    }
+
+    // fetch original sender
+    const [[orig]] = await db.query("SELECT senderId, ownerId FROM messages WHERE id = ?", [messageId]);
+    if (!orig) {
+      if (req.flash) req.flash("error", "Message not found.");
+      return res.redirect("/bizowner/messages");
+    }
+
+    // store reply as a new message from owner to sender (owner as senderId)
+    await db.query(
+      "INSERT INTO messages (senderId, ownerId, message, isRead, created_at) VALUES (?, ?, ?, 0, NOW())",
+      [guard.user.id, orig.senderId || null, reply]
+    );
+
+    if (req.flash) req.flash("success", "Reply sent.");
+  } catch (err) {
+    console.error("replyMessage error:", err);
+    if (req.flash) req.flash("error", "Failed to send reply.");
+  }
+
+  return res.redirect("/bizowner/messages");
 };
 
 // ------------------------------------
