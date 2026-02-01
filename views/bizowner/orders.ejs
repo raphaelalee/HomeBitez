@@ -15,6 +15,7 @@
   }
   .paid{ background:#e6f6e9; color:#1b7a2e; }
   .pending{ background:#fff4dc; color:#8c6a00; }
+  .completed{ background:#e9e7ff; color:#3f3ba6; }
   .btn-view{
     border:1px solid #dd9b00;
     color:#dd9b00;
@@ -22,6 +23,8 @@
     padding:6px 12px;
     font-weight:700;
     text-decoration:none;
+    font-family: inherit;
+    background: transparent;
   }
   .btn-view:hover{ background:#dd9b00; color:white; }
 </style>
@@ -48,15 +51,23 @@
           <% } else { %>
             <% orders.forEach(o => { 
               const orderNum = o.paypal_order_id || `ORD-${o.id}`;
-              const status = o.paypal_capture_id ? 'paid' : 'pending';
-              const statusClass = status === 'paid' ? 'paid' : 'pending';
+              const statusKey = (o.fulfillmentStatus || '').toLowerCase();
+              const statusLabel = statusKey === 'completed' ? 'Completed' : (statusKey === 'paid' ? 'Paid' : 'Pending');
+              const statusClass = statusKey === 'completed' ? 'completed' : (statusKey === 'paid' ? 'paid' : 'pending');
             %>
               <tr>
                 <td style="font-weight:700;"><%= orderNum %></td>
                 <td><%= o.created_at ? new Date(o.created_at).toLocaleString() : '-' %></td>
                 <td class="text-end">$<%= Number(o.total||0).toFixed(2) %></td>
-                <td><span class="status-pill <%= statusClass %>"><%= status %></span></td>
-                <td class="text-end"><a class="btn-view" href="/bizowner/orders/<%= o.id %>">View</a></td>
+                <td><span class="status-pill <%= statusClass %>"><%= statusLabel %></span></td>
+                <td class="text-end">
+                  <a class="btn-view" href="/bizowner/orders/<%= o.id %>">View</a>
+                  <% if (statusKey !== 'completed') { %>
+                    <form action="/bizowner/orders/<%= o.id %>/complete" method="POST" style="display:inline;" onsubmit="return confirm('Mark this order as completed?');">
+                      <button type="submit" class="btn-view" style="margin-left:6px;">Complete</button>
+                    </form>
+                  <% } %>
+                </td>
               </tr>
             <% }) %>
           <% } %>

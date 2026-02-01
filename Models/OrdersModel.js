@@ -20,6 +20,27 @@ async function ensureTable() {
   `;
 
   await db.execute(createSql);
+
+  // add fulfillment status columns if missing
+  try {
+    const statusExists = await columnExists("status");
+    if (!statusExists) {
+      await db.execute("ALTER TABLE orders ADD COLUMN status VARCHAR(30) NULL");
+      columnCache.status = true;
+    }
+  } catch (err) {
+    console.error("ensureTable: add status column failed:", err);
+  }
+
+  try {
+    const completedAtExists = await columnExists("completed_at");
+    if (!completedAtExists) {
+      await db.execute("ALTER TABLE orders ADD COLUMN completed_at DATETIME NULL");
+      columnCache.completed_at = true;
+    }
+  } catch (err) {
+    console.error("ensureTable: add completed_at column failed:", err);
+  }
   tableEnsured = true;
 }
 
@@ -64,7 +85,9 @@ module.exports = {
       { logical: 'items', candidates: ['items', 'order_items', 'orderItems'], value: order.items ? JSON.stringify(order.items) : null},
       { logical: 'subtotal', candidates: ['subtotal', 'subTotal'], value: order.subtotal || 0},
       { logical: 'delivery_fee', candidates: ['delivery_fee', 'deliveryFee'], value: order.deliveryFee || 0},
-      { logical: 'total', candidates: ['total', 'totalAmount', 'total_amount'], value: order.total || 0}
+      { logical: 'total', candidates: ['total', 'totalAmount', 'total_amount'], value: order.total || 0},
+      { logical: 'status', candidates: ['status', 'order_status', 'state'], value: order.status || null},
+      { logical: 'completed_at', candidates: ['completed_at', 'completedAt'], value: order.completedAt || null}
     ];
 
     const availableCols = [];
@@ -101,8 +124,7 @@ module.exports = {
     const [result] = await db.execute(q, params);
     try { console.log('OrdersModel.create inserted id=', result.insertId, 'cols=', availableCols); } catch(e){}
     return result.insertId;
-  }
-,
+  },
   async list(limit = 100) {
     await ensureTable();
     // Build a safe SELECT list depending on which columns exist in the DB.
@@ -118,7 +140,9 @@ module.exports = {
       { alias: 'subtotal', candidates: ['subtotal', 'subTotal'] },
       { alias: 'delivery_fee', candidates: ['delivery_fee', 'deliveryFee'] },
       { alias: 'total', candidates: ['total', 'totalAmount', 'total_amount'] },
-      { alias: 'created_at', candidates: ['created_at', 'createdAt'] }
+      { alias: 'created_at', candidates: ['created_at', 'createdAt'] },
+      { alias: 'status', candidates: ['status', 'order_status', 'state'] },
+      { alias: 'completed_at', candidates: ['completed_at', 'completedAt'] }
     ];
 
     const selectParts = [];
@@ -147,7 +171,9 @@ module.exports = {
       { alias: 'subtotal', candidates: ['subtotal', 'subTotal'] },
       { alias: 'delivery_fee', candidates: ['delivery_fee', 'deliveryFee'] },
       { alias: 'total', candidates: ['total', 'totalAmount', 'total_amount'] },
-      { alias: 'created_at', candidates: ['created_at', 'createdAt'] }
+      { alias: 'created_at', candidates: ['created_at', 'createdAt'] },
+      { alias: 'status', candidates: ['status', 'order_status', 'state'] },
+      { alias: 'completed_at', candidates: ['completed_at', 'completedAt'] }
     ];
 
     const selectParts = [];
@@ -182,7 +208,9 @@ module.exports = {
       { alias: 'subtotal', candidates: ['subtotal', 'subTotal'] },
       { alias: 'delivery_fee', candidates: ['delivery_fee', 'deliveryFee'] },
       { alias: 'total', candidates: ['total', 'totalAmount', 'total_amount'] },
-      { alias: 'created_at', candidates: ['created_at', 'createdAt'] }
+      { alias: 'created_at', candidates: ['created_at', 'createdAt'] },
+      { alias: 'status', candidates: ['status', 'order_status', 'state'] },
+      { alias: 'completed_at', candidates: ['completed_at', 'completedAt'] }
     ];
 
     // Build SELECT list and remember which physical column is the primary id for WHERE clause
@@ -209,5 +237,24 @@ module.exports = {
     const out = rows[0];
     out.items = out.items ? (() => { try { return JSON.parse(out.items); } catch(e){ return []; } })() : [];
     return out;
+  },
+
+  async updateStatus(id, status) {
+    await ensureTable();
+    const idCol = await findExistingColumn(['id', 'order_id', 'orderId', 'ID']);
+    const statusCol = await findExistingColumn(['status', 'order_status', 'state']);
+    if (!idCol || !statusCol) return false;
+    const completedCol = await findExistingColumn(['completed_at', 'completedAt']);
+
+    const setParts = [`${statusCol} = ?`];
+    const params = [status];
+    if (completedCol) {
+      setParts.push(`${completedCol} = NOW()`);
+    }
+
+    const sql = `UPDATE orders SET ${setParts.join(', ')} WHERE ${idCol} = ?`;
+    params.push(id);
+    await db.execute(sql, params);
+    return true;
   }
 };

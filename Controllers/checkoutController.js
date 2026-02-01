@@ -20,6 +20,7 @@ exports.renderCheckout = (req, res) => {
     pickupDate: "",
     pickupTime: "",
     mode: "pickup",
+    name: "",
     address: "",
     contact: "",
     notes: ""
@@ -316,6 +317,7 @@ exports.renderReceipt = async (req, res) => {
     pickupDate: "",
     pickupTime: "",
     mode: "pickup",
+    name: "",
     address: "",
     contact: "",
     notes: ""

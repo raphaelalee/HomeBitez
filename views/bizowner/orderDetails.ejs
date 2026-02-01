@@ -19,6 +19,33 @@
   .btn-row { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; flex-wrap:wrap; }
   .btn-hb { border:1px solid #dd9b00; color:#dd9b00; border-radius:10px; padding:10px 14px; font-weight:700; text-decoration:none; }
   .btn-hb.primary { background:#dd9b00; color:white; }
+  .status-pill{
+    display:inline-flex; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700; text-transform:capitalize;
+  }
+  .paid{ background:#e6f6e9; color:#1b7a2e; }
+  .pending{ background:#fff4dc; color:#8c6a00; }
+  .completed{ background:#e9e7ff; color:#3f3ba6; }
+  .table-items th, .table-items td{ text-align:center; vertical-align:middle; }
+  .charge-summary{
+    border:1px solid #f1dfbb;
+    border-radius:10px;
+    padding:10px 12px;
+    background:#fff;
+    display:flex;
+    gap:16px;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    margin-top:8px;
+  }
+  .charge-col{
+    flex:1 1 160px;
+  }
+  .charge-line{
+    display:flex;
+    justify-content:space-between;
+    margin:4px 0;
+    font-weight:700;
+  }
 </style>
 
 <div class="wrap">
@@ -34,6 +61,15 @@
       <div style="text-align:right;">
         <div class="muted">Payer</div>
         <div style="font-weight:700;"><%= order.payer_email || '-' %></div>
+        <div style="margin-top:8px;">
+          <% const statusKey = (order.fulfillmentStatus || '').toLowerCase(); %>
+          <span class="status-pill <%= statusKey === 'completed' ? 'completed' : (statusKey === 'paid' ? 'paid' : 'pending') %>">
+            <%= statusKey === 'completed' ? 'Completed' : (statusKey === 'paid' ? 'Paid' : 'Pending') %>
+          </span>
+          <% if (order.completedAt || order.completed_at) { %>
+            <div class="muted" style="margin-top:4px;">Completed at: <%= order.completedAt || order.completed_at %></div>
+          <% } %>
+        </div>
       </div>
     </div>
 
@@ -50,27 +86,38 @@
           <div class="summary-total">$<%= Number(order.total||0).toFixed(2) %></div>
         </div>
       </div>
+      <div class="charge-summary">
+        <div class="charge-col">
+          <div class="muted">Fulfillment</div>
+          <div style="font-weight:700;"><%= order.fulfillmentMode || 'Pickup' %></div>
+        </div>
+        <div class="charge-col">
+          <div class="charge-line"><span>Subtotal</span><span>$<%= Number(order.subtotal||0).toFixed(2) %></span></div>
+          <div class="charge-line"><span>Delivery / Pickup</span><span>$<%= Number(order.deliveryFee||0).toFixed(2) %></span></div>
+          <div class="charge-line"><span>Total</span><span>$<%= Number(order.total||0).toFixed(2) %></span></div>
+        </div>
+      </div>
     </div>
 
     <div class="section" style="margin-top:14px;">
       <div class="section-title"><i class="bi bi-list-ul"></i> Items</div>
       <div class="table-responsive">
-        <table class="table align-middle">
+        <table class="table align-middle table-items">
           <thead>
             <tr>
               <th>Item</th>
-              <th class="text-end">Price</th>
-              <th class="text-end">Qty</th>
-              <th class="text-end">Total</th>
+              <th>Price</th>
+              <th>Qty</th>
+              <th>Total</th>
             </tr>
           </thead>
           <tbody>
             <% (order.items || []).forEach(i => { %>
               <tr>
                 <td><%= i.name %></td>
-                <td class="text-end">$<%= Number(i.price||0).toFixed(2) %></td>
-                <td class="text-end"><%= Number(i.qty||0) %></td>
-                <td class="text-end">$<%= Number((i.price||0)*(i.qty||0)).toFixed(2) %></td>
+                <td>$<%= Number(i.price||0).toFixed(2) %></td>
+                <td><%= Number(i.qty||0) %></td>
+                <td>$<%= Number((i.price||0)*(i.qty||0)).toFixed(2) %></td>
               </tr>
             <% }) %>
           </tbody>
@@ -81,7 +128,11 @@
     <div class="btn-row">
       <a class="btn-hb" href="/bizowner/orders">Back</a>
       <a class="btn-hb" href="/bizowner">Dashboard</a>
-      <a class="btn-hb primary" href="/receipt">View Receipt</a>
+      <% if ((order.fulfillmentStatus || '').toLowerCase() !== 'completed') { %>
+        <form action="/bizowner/orders/<%= order.id %>/complete" method="POST" onsubmit="return confirm('Mark this order as completed?');">
+          <button type="submit" class="btn-hb primary">Mark Completed</button>
+        </form>
+      <% } %>
     </div>
 
   </div>

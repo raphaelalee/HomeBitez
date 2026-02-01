@@ -28,7 +28,12 @@ module.exports = {
         const prefs = req.session.cartPrefs || {
             cutlery: false,
             pickupDate: "",
-            pickupTime: ""
+            pickupTime: "",
+            mode: "pickup",
+            name: "",
+            address: "",
+            contact: "",
+            notes: ""
         };
 
         res.render('carts', { cart, subtotal, prefs });
@@ -140,16 +145,17 @@ module.exports = {
 
     // POST /cart/preferences
     savePreferences(req, res) {
-        const { cutlery, pickupDate, pickupTime, mode, address, contact, notes } = req.body;
+        const { cutlery, pickupDate, pickupTime, mode, name, address, contact, notes } = req.body;
 
         if (!req.session.cartPrefs) {
-            req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", address: "", contact: "", notes: "" };
+            req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", name: "", address: "", contact: "", notes: "" };
         }
 
         req.session.cartPrefs.cutlery = !!cutlery;
         req.session.cartPrefs.pickupDate = pickupDate || "";
         req.session.cartPrefs.pickupTime = pickupTime || "";
         req.session.cartPrefs.mode = mode || "pickup";
+        req.session.cartPrefs.name = name || "";
         req.session.cartPrefs.address = address || "";
         req.session.cartPrefs.contact = contact || "";
         req.session.cartPrefs.notes = notes || "";
@@ -160,7 +166,7 @@ module.exports = {
     // POST /cart/clear
     async clearCart(req, res) {
         req.session.cart = [];
-        req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", address: "", contact: "", notes: "" };
+        req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", name: "", address: "", contact: "", notes: "" };
         if (req.session.user) {
             await CartModel.clearCart(req.session.user.id);
         }

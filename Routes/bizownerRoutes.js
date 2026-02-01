@@ -40,6 +40,7 @@ router.get("/messages", ownerController.messagesPage);
 // Orders list + details
 router.get("/orders", ownerController.ordersPage);
 router.get("/orders/:id", ownerController.orderDetailsPage);
+router.post("/orders/:id/complete", ownerController.markOrderComplete);
 
 // If reply is not implemented yet, comment it out or add the function
 // router.post("/messages/reply/:id", ownerController.replyMessage);

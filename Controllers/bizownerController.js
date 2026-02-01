@@ -1,6 +1,7 @@
 const ProductModel = require("../Models/ProductModel");
 const db = require("../db");
 const OrdersModel = require("../Models/OrdersModel");
+const UsersModel = require("../Models/UsersModel");
 
 // -----------------------------
 // Helpers
@@ -26,6 +27,18 @@ function addPaymentMeta(order) {
   const paymentRef = order.paypal_order_id || order.paypalOrderId || order.id || "-";
   const paymentCapture = order.paypal_capture_id || order.paypalCaptureId || "-";
   return { paymentMethod, paymentRef, paymentCapture };
+}
+
+function addOrderMeta(order) {
+  const payment = addPaymentMeta(order);
+  const statusRaw = order.status || order.order_status || order.state || null;
+  const fulfillmentStatus = statusRaw || (order.paypal_capture_id || order.paypalCaptureId ? "paid" : "pending");
+  const completedAt = order.completed_at || order.completedAt || null;
+  const deliveryFee = Number(order.delivery_fee || order.deliveryFee || 0);
+  const subtotal = Number(order.subtotal || order.subTotal || (order.total ? Number(order.total) - deliveryFee : 0));
+  const total = Number(order.total || order.totalAmount || order.total_amount || 0);
+  const fulfillmentMode = deliveryFee > 0 ? "Delivery" : "Pickup";
+  return { ...order, ...payment, fulfillmentStatus, completedAt, deliveryFee, subtotal, total, fulfillmentMode };
 }
 
 // ------------------------------------
@@ -296,7 +309,7 @@ exports.ordersPage = async (req, res) => {
 
   try {
     const orders = await OrdersModel.list(200);
-    const withMeta = (orders || []).map(o => ({ ...o, ...addPaymentMeta(o) }));
+    const withMeta = (orders || []).map(addOrderMeta);
     return res.render("bizowner/orders", { orders: withMeta });
   } catch (err) {
     console.error("Orders page error:", err);
@@ -319,11 +332,44 @@ exports.orderDetailsPage = async (req, res) => {
     const order = await OrdersModel.getById(id);
     if (!order) return res.redirect("/bizowner/orders");
 
-    return res.render("bizowner/orderDetails", { order: { ...order, ...addPaymentMeta(order) } });
+    let payerEmail = order.payer_email || order.payerEmail || null;
+    if (order.user_id) {
+      try {
+        const userRows = await UsersModel.findById(order.user_id);
+        const user = Array.isArray(userRows) ? userRows[0] : userRows;
+        if (user && user.email) payerEmail = user.email;
+      } catch (err) {
+        console.error("fetch user email failed:", err);
+      }
+    }
+
+    return res.render("bizowner/orderDetails", { order: { ...addOrderMeta(order), payer_email: payerEmail } });
   } catch (err) {
     console.error("Order details error:", err);
     return res.status(500).send(`<pre>${(err && err.stack) ? err.stack : String(err)}</pre>`);
   }
+};
+
+// ------------------------------------
+// MARK ORDER COMPLETED
+// ------------------------------------
+exports.markOrderComplete = async (req, res) => {
+  const guard = requireBizOwner(req, res);
+  if (!guard.ok) return;
+
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.redirect("/bizowner/orders");
+
+    await OrdersModel.updateStatus(id, "completed");
+    if (req.flash) req.flash("success", "Order marked as completed.");
+  } catch (err) {
+    console.error("markOrderComplete error:", err);
+    if (req.flash) req.flash("error", "Unable to mark order completed.");
+  }
+
+  const ref = req.headers.referer || "/bizowner/orders";
+  return res.redirect(ref.includes(`/bizowner/orders/${req.params.id}`) ? `/bizowner/orders/${req.params.id}` : "/bizowner/orders");
 };
 
 // ------------------------------------

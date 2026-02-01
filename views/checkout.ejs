@@ -206,7 +206,14 @@
             </div>
             <div class="col-md-6">
               <label class="muted-label">Pickup time</label>
-              <input class="form-control hb-input" type="time" id="pickupTime" value="<%= prefs?.pickupTime || '' %>">
+              <select class="form-control hb-input" id="pickupTime">
+                <option value="">Select a slot</option>
+                <option value="9-12" <%= (prefs?.pickupTime === '9-12') ? 'selected' : '' %>>9:00am – 12:00pm</option>
+                <option value="12-3" <%= (prefs?.pickupTime === '12-3') ? 'selected' : '' %>>12:00pm – 3:00pm</option>
+                <option value="3-6" <%= (prefs?.pickupTime === '3-6') ? 'selected' : '' %>>3:00pm – 6:00pm</option>
+                <option value="6-8" <%= (prefs?.pickupTime === '6-8') ? 'selected' : '' %>>6:00pm – 8:00pm</option>
+              </select>
+              <div class="text-muted" style="font-size:12px;margin-top:4px;">Choose a pickup slot; times are fixed to these windows.</div>
             </div>
           </div>
         </div>
@@ -224,7 +231,7 @@
             <div class="col-md-6">
               <label class="muted-label">Name</label>
               <input class="form-control hb-input" id="deliveryName" placeholder="Name"
-                value="<%= (user && (user.username || user.name)) || '' %>">
+                value="<%= prefs?.name || (user && (user.username || user.name)) || '' %>">
             </div>
             <div class="col-md-6">
               <label class="muted-label">Contact</label>
@@ -336,6 +343,9 @@
 
             window.paypal.Buttons({
               createOrder: async () => {
+                if (typeof window.validateFulfillment === "function" && !window.validateFulfillment()) {
+                  throw new Error("Missing fulfillment details");
+                }
                 const res = await fetch("/paypal/create-order", {
                   method: "POST",
                   credentials: "same-origin",
@@ -472,6 +482,7 @@
     const deliveryFields = document.getElementById("deliveryFields");
     const pickupDate = document.getElementById("pickupDate");
     const pickupTime = document.getElementById("pickupTime");
+    const deliveryName = document.getElementById("deliveryName");
     const deliveryContact = document.getElementById("deliveryContact");
     const deliveryAddress = document.getElementById("deliveryAddress");
     const deliveryNotes = document.getElementById("deliveryNotes");
@@ -488,6 +499,24 @@
 
     function computeTotal(){
       return Number((subtotalValue + currentDeliveryFeeNum).toFixed(2));
+    }
+
+    function validateFulfillment(showAlerts = true){
+      const errs = [];
+      if (modePickup && modePickup.checked){
+        if (!pickupDate || !pickupDate.value) errs.push("Select a pickup date.");
+        if (!pickupTime || !pickupTime.value) errs.push("Choose a pickup slot.");
+      } else if (modeDelivery && modeDelivery.checked){
+        if (!deliveryName || !deliveryName.value.trim()) errs.push("Enter the delivery name.");
+        if (!deliveryContact || !deliveryContact.value.trim()) errs.push("Enter a delivery contact number.");
+        if (!deliveryAddress || !deliveryAddress.value.trim()) errs.push("Enter the delivery address.");
+      }
+
+      if (errs.length && showAlerts){
+        alert("Please finish these before checking out:\n- " + errs.join("\n- "));
+        return false;
+      }
+      return true;
     }
 
     function syncSummary(){
@@ -509,6 +538,7 @@
         mode: modeDelivery.checked ? "delivery" : "pickup",
         pickupDate: pickupDate ? pickupDate.value : "",
         pickupTime: pickupTime ? pickupTime.value : "",
+        name: deliveryName ? deliveryName.value : "",
         address: deliveryAddress ? deliveryAddress.value : "",
         contact: deliveryContact ? deliveryContact.value : "",
         notes: deliveryNotes ? deliveryNotes.value : ""
@@ -526,10 +556,16 @@
         pickupFields.style.display = "none";
         deliveryFields.style.display = "block";
         currentDeliveryFeeNum = baseDeliveryFeeNum;
+        [deliveryName, deliveryContact, deliveryAddress].forEach(el => { if (el) el.required = true; });
+        if (pickupDate) pickupDate.required = false;
+        if (pickupTime) pickupTime.required = false;
       } else {
         pickupFields.style.display = "block";
         deliveryFields.style.display = "none";
         currentDeliveryFeeNum = 0;
+        [deliveryName, deliveryContact, deliveryAddress].forEach(el => { if (el) el.required = false; });
+        if (pickupDate) pickupDate.required = true;
+        if (pickupTime) pickupTime.required = true;
       }
       syncSummary();
       savePrefs();
@@ -540,12 +576,31 @@
 
     if (pickupDate) pickupDate.addEventListener("change", () => { syncSummary(); savePrefs(); });
     if (pickupTime) pickupTime.addEventListener("change", () => { syncSummary(); savePrefs(); });
+    if (deliveryName) deliveryName.addEventListener("change", savePrefs);
     if (deliveryContact) deliveryContact.addEventListener("change", savePrefs);
     if (deliveryAddress) deliveryAddress.addEventListener("change", savePrefs);
     if (deliveryNotes) deliveryNotes.addEventListener("change", savePrefs);
 
+    handleModeChange();
     syncSummary();
+
+    const netsForm = document.getElementById("netsForm");
+    if (netsForm) {
+      netsForm.addEventListener("submit", (e) => {
+        if (!validateFulfillment()) e.preventDefault();
+      });
+    }
+
+    const paylaterForm = document.querySelector("form[action='/paylater/choose']");
+    if (paylaterForm) {
+      paylaterForm.addEventListener("submit", (e) => {
+        if (!validateFulfillment()) e.preventDefault();
+      });
+    }
+
+    window.validateFulfillment = validateFulfillment;
   </script>
 
 </body>
 </html>
+
