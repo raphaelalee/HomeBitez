@@ -215,6 +215,11 @@
               </select>
               <div class="text-muted" style="font-size:12px;margin-top:4px;">Choose a pickup slot; times are fixed to these windows.</div>
             </div>
+            <div class="col-12">
+              <label class="muted-label">Pickup notes (optional)</label>
+              <input class="form-control hb-input" id="pickupNotes" placeholder="e.g. Call when ready, extra napkins"
+                value="<%= prefs?.pickupNotes || '' %>">
+            </div>
           </div>
         </div>
 
@@ -290,6 +295,12 @@
             <span>Delivery Fee</span>
             <span id="summaryDeliveryFee">$<%= initialDeliveryFee.toFixed(2) %></span>
           </div>
+          <% if (typeof redeem !== 'undefined' && Number(redeem) > 0) { %>
+          <div class="hb-line">
+            <span>Points Applied</span>
+            <span id="summaryRedeem">- $<%= Number(redeem).toFixed(2) %></span>
+          </div>
+          <% } %>
           <div class="hb-line">
             <span>Fulfillment</span>
             <span id="summaryMode"><%= (prefs?.mode || 'pickup') === 'delivery' ? 'Delivery' : 'Pickup' %></span>
@@ -496,9 +507,31 @@
     const subtotalValue = Number(<%= subtotal.toFixed(2) %>);
     const baseDeliveryFeeNum = Number(<%= defaultDeliveryFee.toFixed(2) %>);
     let currentDeliveryFeeNum = Number(<%= initialDeliveryFee.toFixed(2) %>);
+    const redeemAmount = Number(<%= (redeem || 0).toFixed(2) %>);
+
+    // Enforce pickup date between today and +2 months
+    if (pickupDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const maxDate = new Date(today);
+      maxDate.setMonth(maxDate.getMonth() + 2);
+
+      const minDateStr = today.toISOString().split("T")[0];
+      const maxDateStr = maxDate.toISOString().split("T")[0];
+      pickupDate.setAttribute("min", minDateStr);
+      pickupDate.setAttribute("max", maxDateStr);
+
+      pickupDate.addEventListener("change", () => {
+        if (!pickupDate.value) return;
+        if (pickupDate.value < minDateStr || pickupDate.value > maxDateStr) {
+          alert(`Please choose a date between ${minDateStr} and ${maxDateStr}.`);
+          pickupDate.value = "";
+        }
+      });
+    }
 
     function computeTotal(){
-      return Number((subtotalValue + currentDeliveryFeeNum).toFixed(2));
+      return Number((subtotalValue + currentDeliveryFeeNum - redeemAmount).toFixed(2));
     }
 
     function validateFulfillment(showAlerts = true){

@@ -1,4 +1,5 @@
 const CartModel = require("../Models/cartModels");
+const UsersModel = require("../Models/UsersModel");
 
 async function hydrateCartFromDb(req) {
     if (!req.session.user) return;
@@ -24,6 +25,8 @@ module.exports = {
             subtotal += item.price * item.quantity;
         });
 
+        const redeem = Math.min(subtotal, Number(req.session.cartRedeem?.amount || 0));
+
         // Preferences stored in session
         const prefs = req.session.cartPrefs || {
             cutlery: false,
@@ -36,7 +39,17 @@ module.exports = {
             notes: ""
         };
 
-        res.render('carts', { cart, subtotal, prefs });
+        const availablePoints = req.session.user ? Number(req.session.user.points || 0) : 0;
+
+        res.render('carts', {
+            cart,
+            subtotal,
+            redeem,
+            totalAfterRedeem: Number((subtotal - redeem).toFixed(2)),
+            prefs,
+            availablePoints,
+            appliedPoints: Number(req.session.cartRedeem?.points || 0)
+        });
     },
 
     // POST /cart/add  (called by fetch)
@@ -75,6 +88,28 @@ module.exports = {
         }
 
         return res.json({ ok: true, cartCount: cart.length });
+    },
+
+    // POST /cart/redeem
+    async redeemPoints(req, res) {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+        await hydrateCartFromDb(req);
+        const cart = req.session.cart || [];
+        const subtotal = cart.reduce((s, i) => s + Number(i.price || 0) * Number(i.quantity || i.qty || 0), 0);
+        const available = Number(req.session.user.points || 0);
+        const points = Math.max(0, parseInt(req.body.points, 10) || 0);
+        const cappedPoints = Math.min(points, available);
+        const amount = Math.min(subtotal, cappedPoints * 0.01); // 1 point = $0.01
+
+        if (!cappedPoints || amount <= 0) {
+            req.session.cartRedeem = null;
+            return res.redirect('/cart');
+        }
+
+        req.session.cartRedeem = { points: cappedPoints, amount };
+        return res.redirect('/cart');
     },
 
     // POST /cart/update
@@ -167,6 +202,7 @@ module.exports = {
     async clearCart(req, res) {
         req.session.cart = [];
         req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", name: "", address: "", contact: "", notes: "" };
+        req.session.cartRedeem = null;
         if (req.session.user) {
             await CartModel.clearCart(req.session.user.id);
         }

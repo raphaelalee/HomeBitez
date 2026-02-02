@@ -5,6 +5,7 @@ const paypal = require("../services/paypal");
 const nets = require("../services/nets");
 const OrdersModel = require("../Models/OrdersModel");
 const CartModel = require("../Models/cartModels");
+const UsersModel = require("../Models/UsersModel");
 
 // NETS sandbox txn id (keep yours)
 const NETS_TXN_ID =
@@ -41,16 +42,18 @@ exports.renderCheckout = (req, res) => {
   const deliveryFee = 2.5;
   const initialMode = prefs.mode || "pickup";
   const initialDeliveryFee = initialMode === "delivery" ? deliveryFee : 0;
-  const total = Number((subtotal + initialDeliveryFee).toFixed(2));
+  const redeem = Math.min(subtotal, Number(req.session.cartRedeem?.amount || 0));
+  const total = Number((subtotal + initialDeliveryFee - redeem).toFixed(2));
 
   res.render("checkout", {
     brand: "HomeBitez",
     items,
     subtotal: Number(subtotal.toFixed(2)),
-    total,                          // total based on initial mode
+    total,                          // total based on initial mode minus redeem
     defaultDeliveryFee: deliveryFee, // base delivery fee
     initialDeliveryFee,
     prefs,
+    redeem,
     user: req.session.user || null,
     paypalClientId: process.env.PAYPAL_CLIENT_ID,
     paypalCurrency: process.env.PAYPAL_CURRENCY || "SGD",
@@ -124,7 +127,8 @@ exports.choosePayLater = (req, res) => {
     0
   );
   const deliveryFee = prefs.mode === "delivery" ? 2.5 : 0;
-  const total = Number((subtotal + deliveryFee).toFixed(2));
+    const redeem = Math.min(subtotal, Number(req.session.cartRedeem?.amount || 0));
+    const total = Number((subtotal + deliveryFee - redeem).toFixed(2));
 
   if (!Number.isFinite(total) || total <= 0) {
     req.session.paylaterError = "Cart total is invalid for PayLater.";
@@ -160,7 +164,8 @@ exports.createPaypalOrder = async (req, res) => {
     );
 
     const deliveryFee = Number(req.body.deliveryFee || 0);
-    const total = Number((subtotal + deliveryFee).toFixed(2));
+    const redeem = Math.min(subtotal, Number(req.session.cartRedeem?.amount || 0));
+    const total = Number((subtotal + deliveryFee - redeem).toFixed(2));
 
     const shippingName =
       req.body.shippingName ||
@@ -244,6 +249,32 @@ exports.capturePaypalOrder = async (req, res) => {
       total,
     });
 
+    // Deduct redeemed points first
+    if (req.session.user && req.session.cartRedeem?.points) {
+      try {
+        const { balance, entry } = await UsersModel.addPoints(req.session.user.id, -Number(req.session.cartRedeem.points), `Redeem order ${orderDbId}`);
+        req.session.user.points = balance;
+        req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);
+      } catch (err) {
+        console.error("Points redeem deduct failed (PayPal):", err);
+      }
+    }
+
+    // Award loyalty points: 1 point per $1 total (floor)
+    if (req.session.user && total > 0) {
+      try {
+        const earned = Math.floor(total * 100); // 1 point = $0.01
+        const { balance, entry } = await UsersModel.addPoints(req.session.user.id, earned, `Order ${orderDbId} (PayPal)`);
+        req.session.user.points = balance;
+        req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);
+      } catch (err) {
+        console.error("Points award failed:", err);
+      }
+    }
+
+    // clear applied redemption after use
+    req.session.cartRedeem = null;
+
     req.session.latestOrderDbId = orderDbId;
 
     return res.json({ ok: true });
@@ -311,8 +342,8 @@ exports.renderReceipt = async (req, res) => {
   const latestOrderDbId = req.session?.latestOrderDbId || null;
   const paylaterPurchase = req.session?.paylaterPurchase || null;
 
-  const cart = req.session?.cart || [];
-  const prefs = req.session?.cartPrefs || {
+  let cart = req.session?.cart || [];
+  let prefs = req.session?.cartPrefs || {
     cutlery: false,
     pickupDate: "",
     pickupTime: "",
@@ -323,6 +354,40 @@ exports.renderReceipt = async (req, res) => {
     notes: ""
   };
 
+  // If cart empty but we have an order id, hydrate from DB
+  if ((!cart || cart.length === 0) && latestOrderDbId) {
+    try {
+      const order = await OrdersModel.getById(latestOrderDbId);
+      if (order) {
+        const parsedItems = order.items
+          ? (Array.isArray(order.items) ? order.items : (() => { try { return JSON.parse(order.items); } catch (e) { return []; } })())
+          : [];
+        cart = (parsedItems || []).map(i => ({
+          name: i.name,
+          price: Number(i.price || 0),
+          quantity: Number(i.qty || i.quantity || 0),
+          qty: Number(i.qty || i.quantity || 0),
+          subtotal: Number((Number(i.price || 0) * Number(i.qty || i.quantity || 0)).toFixed(2))
+        }));
+        if (order.shipping_name || order.shippingName || order.address || order.contact) {
+          prefs = {
+            ...prefs,
+            name: order.shipping_name || order.shippingName || prefs.name,
+            address: order.address || prefs.address,
+            contact: order.contact || prefs.contact
+          };
+        }
+      }
+    } catch (err) {
+      console.error("renderReceipt hydrate order error:", err);
+    }
+  }
+
+  const redeem = Math.min(
+    Number(req.session?.cartRedeem?.amount || 0),
+    Number(cart.reduce((s,i)=>s+Number(i.price||0)*Number(i.quantity||i.qty||0),0))
+  );
+
   const items = cart.map(i => ({
     name: i.name,
     price: Number(i.price || 0),
@@ -331,7 +396,7 @@ exports.renderReceipt = async (req, res) => {
   }));
 
   const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
-  const total = paylaterPurchase?.total || paypalCapture?.total || subtotal;
+  const total = paylaterPurchase?.total || paypalCapture?.total || (subtotal - redeem);
   const deliveryFee = Number((total - subtotal).toFixed(2));
   const paymentMethod = paylaterPurchase ? "PayLater" : (paypalCapture ? "PayPal" : "NETS / Other");
   const fulfillment = prefs.mode === "delivery" ? "Delivery" : "Pickup";
@@ -340,6 +405,7 @@ exports.renderReceipt = async (req, res) => {
   req.session.cart = [];
   req.session.latestOrderDbId = null;
   req.session.paylaterPurchase = null;
+  req.session.cartRedeem = null;
   if (req.session.user) {
     try {
       await CartModel.clearCart(req.session.user.id);

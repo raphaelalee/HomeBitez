@@ -10,6 +10,7 @@ const UsersController = require('./Controllers/usersController');
 const ReportModel = require('./models/ReportModel');
 const ProductModel = require('./Models/ProductModel');
 const OrdersModel = require('./Models/OrdersModel');
+const UsersModel = require('./Models/UsersModel');
 
 // DB
 const db = require('./db');
@@ -449,6 +450,7 @@ app.get('/admin/customers', async (req, res) => {
 
     let customers = [];
     try {
+        await UsersModel.ensurePointsColumn();
         let rows = [];
         try {
             const [withPoints] = await db.query(
@@ -781,6 +783,58 @@ app.get('/user/profile', async (req, res) => {
 
   const userId = req.session.user.id;
   let user = req.session.user;
+
+  try {
+    await UsersModel.ensurePointsColumn();
+    await UsersModel.ensurePointsHistoryTable();
+    const userRows = await UsersModel.findById(userId);
+    const dbUser = Array.isArray(userRows) ? userRows[0] : userRows;
+    const points = await UsersModel.getPoints(userId);
+    let pointsHistory = await UsersModel.getPointsHistory(userId, 20);
+    // Compute running balance from oldest to newest for clarity
+    const hydrateWithBalance = (list, currentBalance) => {
+      const totalDelta = (list || []).reduce((s, h) => s + Number(h.points || 0), 0);
+      let running = currentBalance - totalDelta; // starting balance before first entry
+      return (list || []).slice().reverse().map(h => {
+        running += Number(h.points || 0);
+        return { ...h, balanceAfter: running };
+      });
+    };
+
+    let enrichedHistory = hydrateWithBalance(pointsHistory, points);
+
+    // If DB history is empty but session has recent entries (e.g., after immediate award), use session copy
+    if ((!enrichedHistory || enrichedHistory.length === 0) && Array.isArray(req.session.user.pointsHistory) && req.session.user.pointsHistory.length) {
+      enrichedHistory = hydrateWithBalance(req.session.user.pointsHistory, points);
+    }
+
+    if ((!enrichedHistory || enrichedHistory.length === 0) && points > 0) {
+      enrichedHistory.push({
+        date: '—',
+        desc: 'Existing balance',
+        points,
+        balanceAfter: points
+      });
+    }
+    if (dbUser) {
+      user = {
+        ...user,
+        username: dbUser.username || user.username,
+        email: dbUser.email || user.email,
+        address: dbUser.address || user.address,
+        contact: dbUser.contact || user.contact,
+        avatar: dbUser.avatar || user.avatar || '/images/default-avatar.png',
+        points,
+        pointsHistory: enrichedHistory
+      };
+      req.session.user = user;
+    } else {
+      user = { ...user, points, pointsHistory: enrichedHistory };
+      req.session.user = user;
+    }
+  } catch (err) {
+    console.error('Profile points load error:', err);
+  }
 
   // Pull recent orders for this user
   let orders = [];
@@ -1216,6 +1270,27 @@ app.post('/nets/complete', async (req, res) => {
                 payerId: null,
                 capturedAt: Date.now(),
             };
+
+            // Award points for NETS payment (1 point per $1)
+            if (req.session.user && pending.amount) {
+                try {
+                    const UsersModel = require("./Models/UsersModel");
+                    // Deduct redeemed points first if any
+                    if (req.session.cartRedeem?.points) {
+                        const { balance, entry } = await UsersModel.addPoints(req.session.user.id, -Number(req.session.cartRedeem.points), `Redeem NETS ${pending.txnRetrievalRef || ''}`.trim());
+                        req.session.user.points = balance;
+                        req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);
+                    }
+
+                    const earned = Math.floor(Number(pending.amount) * 100); // 1 point = $0.01
+                    const { balance, entry } = await UsersModel.addPoints(req.session.user.id, earned, `NETS ${pending.txnRetrievalRef || ''}`.trim());
+                    req.session.user.points = balance;
+                    req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);
+                    req.session.cartRedeem = null;
+                } catch (err) {
+                    console.error("Points award failed (NETS):", err);
+                }
+            }
         }
 
         console.log('Finalizing NETS payment in session, pending=', pending);

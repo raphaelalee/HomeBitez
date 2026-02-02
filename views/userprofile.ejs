@@ -189,6 +189,7 @@
             <th>Date</th>
             <th>Description</th>
             <th>Points</th>
+            <th class="text-end">Balance after</th>
           </tr>
         </thead>
         <tbody>
@@ -196,7 +197,12 @@
             <tr>
               <td><%= item.date %></td>
               <td><%= item.desc %></td>
-              <td><%= item.points %></td>
+              <td>
+                <span style="color:<%= item.points >= 0 ? '#1b7a2e' : '#8f1d1d' %>; font-weight:700;">
+                  <%= item.points >= 0 ? '+' : '' %><%= item.points %>
+                </span>
+              </td>
+              <td class="text-end" style="font-weight:700;"><%= item.balanceAfter %></td>
             </tr>
           <% }) %>
         </tbody>

@@ -7,6 +7,7 @@ router.post('/add', cartController.addToCart);
 router.post('/update', cartController.updateItem);
 router.post('/remove', cartController.removeItem);
 router.post('/clear', cartController.clearCart);
+router.post('/redeem', cartController.redeemPoints);
 
 // NEW: save cutlery + pickup datetime in session
 router.post('/preferences', cartController.savePreferences);

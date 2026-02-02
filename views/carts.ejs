@@ -345,10 +345,28 @@
           <span>Cutlery</span>
           <span><%= prefs?.cutlery ? 'Included' : 'None' %></span>
         </div>
+        <div class="summary-row small">
+          <span>Points available</span>
+          <span><%= Number(availablePoints || 0) %></span>
+        </div>
+        <div class="section-block" style="grid-template-columns:1fr auto; margin:12px 0;">
+          <div>
+            <p class="label" style="margin:0;">Redeem points</p>
+            <p class="hint" style="margin:0;">1 point = $1 off. Max up to total.</p>
+            <% if (appliedPoints > 0) { %>
+              <p class="hint" style="margin:0;">Applied: <strong><%= appliedPoints %></strong> points ( -$<%= Number(redeem||0).toFixed(2) %> )</p>
+            <% } %>
+          </div>
+          <form action="/cart/redeem" method="POST" class="d-flex gap-2 align-items-center">
+            <input type="number" min="0" max="<%= Number(availablePoints||0) %>" name="points" class="form-control"
+                   style="width:120px;" value="<%= appliedPoints || '' %>" placeholder="Pts">
+            <button type="submit" class="btn-checkout" style="padding:8px 12px;">Apply</button>
+          </form>
+        </div>
         <hr style="border-color:rgba(0,0,0,0.08); margin:12px 0;">
         <div class="summary-row" style="font-size:18px;">
           <span>Total</span>
-          <span>$<%= Number(subtotal).toFixed(2) %></span>
+          <span>$<%= Number(totalAfterRedeem || subtotal).toFixed(2) %></span>
         </div>
         <div class="btn-area" style="padding-top:18px;">
           <a href="/checkout" class="btn-checkout" style="width:100%;">Checkout</a>

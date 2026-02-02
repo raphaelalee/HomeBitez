@@ -72,6 +72,10 @@ module.exports = {
       return res.redirect('/login');
     }
 
+    // make sure points column exists and fetch points
+    await User.ensurePointsColumn();
+    const userPoints = Number(user.points || 0);
+
     // Save user session
     req.session.user = {
       id: user.id || user.user_id,
@@ -80,7 +84,8 @@ module.exports = {
       role: user.role,
       avatar: user.avatar || '/images/default-avatar.png',
       address: user.address || '',
-      contact: user.contact || ''
+      contact: user.contact || '',
+      points: userPoints
     };
 
     try {

@@ -371,9 +371,21 @@ exports.ordersPage = async (req, res) => {
   if (!guard.ok) return;
 
   try {
+    await UsersModel.ensurePointsColumn();
     const orders = await OrdersModel.list(200);
     const withMeta = (orders || []).map(addOrderMeta);
-    return res.render("bizowner/orders", { orders: withMeta });
+
+    // Map user points for any user_id present
+    const userIds = Array.from(new Set(withMeta.map(o => o.user_id).filter(Boolean)));
+    let pointsMap = {};
+    if (userIds.length) {
+      const placeholders = userIds.map(() => '?').join(',');
+      const [rows] = await db.query(`SELECT id, points FROM users WHERE id IN (${placeholders})`, userIds);
+      pointsMap = Object.fromEntries((rows || []).map(r => [r.id, Number(r.points || 0)]));
+    }
+
+    const withPoints = withMeta.map(o => ({ ...o, customerPoints: pointsMap[o.user_id] || 0 }));
+    return res.render("bizowner/orders", { orders: withPoints });
   } catch (err) {
     console.error("Orders page error:", err);
     // Return stack for debugging locally
