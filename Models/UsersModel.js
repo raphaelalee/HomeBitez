@@ -29,11 +29,11 @@ module.exports = {
         return rows && rows[0] ? Number(rows[0].points || 0) : 0;
     },
 
-    async getPointsHistory(userId, limit = 20) {
+    async getPointsHistory(userId, limit = 50) {
         await this.ensurePointsHistoryTable();
         const [rows] = await db.execute(
-            "SELECT created_at, description, points FROM user_points_history WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
-            [userId, Number(limit) || 20]
+            "SELECT created_at, description, points FROM user_points_history WHERE user_id = ? ORDER BY created_at ASC LIMIT ?",
+            [userId, Number(limit) || 50]
         );
         return rows.map(r => ({
             date: r.created_at ? new Date(r.created_at).toLocaleString() : '',
@@ -59,7 +59,8 @@ module.exports = {
             entry: {
                 date: new Date().toLocaleString(),
                 desc: description || 'Points adjustment',
-                points: pointsToAdd
+                points: pointsToAdd,
+                balanceAfter: balance
             }
         };
     },

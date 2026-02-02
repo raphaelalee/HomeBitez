@@ -263,7 +263,7 @@ exports.capturePaypalOrder = async (req, res) => {
     // Award loyalty points: 1 point per $1 total (floor)
     if (req.session.user && total > 0) {
       try {
-        const earned = Math.floor(total * 100); // 1 point = $0.01
+        const earned = Math.floor(total); // 1 pt = $1
         const { balance, entry } = await UsersModel.addPoints(req.session.user.id, earned, `Order ${orderDbId} (PayPal)`);
         req.session.user.points = balance;
         req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);

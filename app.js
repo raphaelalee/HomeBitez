@@ -791,31 +791,32 @@ app.get('/user/profile', async (req, res) => {
     const dbUser = Array.isArray(userRows) ? userRows[0] : userRows;
     const points = await UsersModel.getPoints(userId);
     let pointsHistory = await UsersModel.getPointsHistory(userId, 20);
-    // Compute running balance from oldest to newest for clarity
-    const hydrateWithBalance = (list, currentBalance) => {
-      const totalDelta = (list || []).reduce((s, h) => s + Number(h.points || 0), 0);
-      let running = currentBalance - totalDelta; // starting balance before first entry
-      return (list || []).slice().reverse().map(h => {
+    // Compute running balance from oldest to newest
+    const computeWithBalance = (list) => {
+      let running = 0;
+      return (list || []).map(h => {
         running += Number(h.points || 0);
         return { ...h, balanceAfter: running };
       });
     };
 
-    let enrichedHistory = hydrateWithBalance(pointsHistory, points);
+    let enrichedHistory = computeWithBalance(pointsHistory);
 
-    // If DB history is empty but session has recent entries (e.g., after immediate award), use session copy
+    // If DB history is empty but session has recent entries (newest-first), compute from session copy
     if ((!enrichedHistory || enrichedHistory.length === 0) && Array.isArray(req.session.user.pointsHistory) && req.session.user.pointsHistory.length) {
-      enrichedHistory = hydrateWithBalance(req.session.user.pointsHistory, points);
+      enrichedHistory = computeWithBalance((req.session.user.pointsHistory || []).slice().reverse());
     }
 
     if ((!enrichedHistory || enrichedHistory.length === 0) && points > 0) {
       enrichedHistory.push({
-        date: 'â€”',
+        date: '—',
         desc: 'Existing balance',
         points,
         balanceAfter: points
       });
     }
+    // Show newest first
+    enrichedHistory = enrichedHistory.slice().reverse();
     if (dbUser) {
       user = {
         ...user,
@@ -1282,7 +1283,7 @@ app.post('/nets/complete', async (req, res) => {
                         req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);
                     }
 
-                    const earned = Math.floor(Number(pending.amount) * 100); // 1 point = $0.01
+                    const earned = Math.floor(Number(pending.amount)); // 1 pt = $1
                     const { balance, entry } = await UsersModel.addPoints(req.session.user.id, earned, `NETS ${pending.txnRetrievalRef || ''}`.trim());
                     req.session.user.points = balance;
                     req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);
@@ -1331,3 +1332,4 @@ const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+

@@ -101,7 +101,8 @@ module.exports = {
         const available = Number(req.session.user.points || 0);
         const points = Math.max(0, parseInt(req.body.points, 10) || 0);
         const cappedPoints = Math.min(points, available);
-        const amount = Math.min(subtotal, cappedPoints * 0.01); // 1 point = $0.01
+        // Redeem rate: 100 points = $1
+        const amount = Math.min(subtotal, cappedPoints / 100);
 
         if (!cappedPoints || amount <= 0) {
             req.session.cartRedeem = null;
