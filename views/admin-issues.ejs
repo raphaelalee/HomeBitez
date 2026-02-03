@@ -214,6 +214,9 @@
                 <% if (issue.contact) { %>
                   <span><%= issue.contact %></span>
                 <% } %>
+                <% if (issue.order_id) { %>
+                  <span>Order #<%= issue.order_id %></span>
+                <% } %>
               </div>
             </div>
             <div class="issue-date">
@@ -225,6 +228,14 @@
             <strong><%= issue.subject || "No subject" %></strong>
             <% if (issue.description) { %>
               <div><%= issue.description %></div>
+            <% } %>
+            <% if (issue.address) { %>
+              <div class="meta" style="margin-top:8px;">Address: <%= issue.address %></div>
+            <% } %>
+            <% if (issue.image_url) { %>
+              <div style="margin-top:12px;">
+                <img src="<%= issue.image_url %>" alt="Issue photo" style="max-width:100%; border-radius:10px; border:1px solid rgba(20,20,20,0.08);">
+              </div>
             <% } %>
           </div>
 

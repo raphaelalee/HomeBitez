@@ -5,68 +5,206 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Report an Issue - HomeBitez</title>
 
-<!-- Google Font -->
-<link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
 
-<!-- Bootstrap CSS & Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
 <style>
-body {
-    background: #faefe5;
-    font-family: Arial, sans-serif;
+:root {
+    --ink: #2a2118;
+    --muted: #6f5c4c;
+    --cream: #fbf2e7;
+    --amber: #d98b00;
+    --terracotta: #d86f3a;
+    --card: #ffffff;
+    --line: #ead9c7;
 }
 
-/* FORM CARD */
-.form-card {
-    background: white;
-    max-width: 700px;
-    margin: 30px auto 60px;
-    padding: 30px;
-    border-radius: 14px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+body {
+    background:
+        radial-gradient(1200px 500px at 10% -10%, #fff4df 0%, rgba(255, 244, 223, 0) 60%),
+        radial-gradient(900px 400px at 90% 0%, #ffe4c4 0%, rgba(255, 228, 196, 0) 55%),
+        var(--cream);
+    font-family: "Manrope", "Segoe UI", sans-serif;
+    color: var(--ink);
+}
+
+.report-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 36px 20px 70px;
+}
+
+.report-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin: 10px 0 30px;
+}
+
+.hero-title {
+    font-family: "Fraunces", "Times New Roman", serif;
+    font-size: clamp(2rem, 3vw, 3rem);
+    font-weight: 800;
+    margin: 8px 0;
+}
+
+.hero-subtitle {
+    color: var(--muted);
+    font-size: 1.05rem;
+}
+
+.hero-badge {
+    background: linear-gradient(135deg, #ffe0ad, #ffd7a1);
+    border: 1px solid #f1c483;
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-weight: 700;
+    color: #7a4c17;
+    box-shadow: 0 8px 18px rgba(122, 76, 23, 0.15);
+}
+
+.report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.card-shell {
+    background: var(--card);
+    padding: 28px;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    box-shadow: 0 12px 30px rgba(44, 29, 12, 0.1);
+}
+
+.card-title {
+    font-family: "Fraunces", "Times New Roman", serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    margin-bottom: 6px;
+}
+
+.form-control {
+    border-radius: 12px;
+    border: 1px solid #ead9c7;
+}
+
+.form-control:focus {
+    border-color: #e1a84d;
+    box-shadow: 0 0 0 0.2rem rgba(225, 168, 77, 0.2);
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, var(--amber), var(--terracotta));
+    color: white;
+    border: none;
+}
+
+.btn-submit:hover {
+    filter: brightness(0.95);
+}
+
+.tips-card {
+    background: linear-gradient(180deg, #fff7ea 0%, #fff2e1 100%);
+    border: 1px solid #f1d4ae;
+}
+
+.tips-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.tip-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    color: var(--muted);
+}
+
+.tip-item i {
+    color: var(--terracotta);
+    font-size: 1.1rem;
+    margin-top: 2px;
 }
 
 .report-list {
-    max-width: 700px;
-    margin: 0 auto 60px;
+    margin-top: 32px;
     display: grid;
     gap: 16px;
 }
 
 .report-item {
     background: white;
-    border-radius: 14px;
-    padding: 20px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 22px;
+    border: 1px solid #f0e0bf;
+    box-shadow: 0 10px 20px rgba(44, 29, 12, 0.08);
 }
 
-.report-item h5 {
-    font-size: 16px;
-    margin-bottom: 6px;
+.report-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
 }
 
-.report-item .meta {
+.report-subject {
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.meta {
     font-size: 12px;
     color: #7a6e63;
-    margin-bottom: 10px;
+    margin-top: 6px;
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.status-new {
+    background: #fff2d6;
+    color: #7a5a00;
+    border: 1px solid #f1c483;
+}
+
+.status-in_progress {
+    background: #fff3df;
+    color: #b2572b;
+    border: 1px solid #f1b08b;
+}
+
+.status-resolved {
+    background: #e6f7ed;
+    color: #2f7a4e;
+    border: 1px solid #bde5c9;
+}
+
+.reply-box,
+.user-reply {
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    font-size: 13px;
 }
 
 .reply-box {
     background: #f6f6f6;
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-top: 10px;
-    font-size: 13px;
 }
 
 .user-reply {
     background: #fff3d6;
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-top: 10px;
-    font-size: 13px;
 }
 
 .reply-form textarea {
@@ -77,16 +215,7 @@ body {
     font-size: 13px;
 }
 
-.reply-btn {
-    background: #dd9b00;
-    border: none;
-    color: #fff;
-    padding: 6px 14px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
+.reply-btn,
 .resolve-btn {
     background: #dd9b00;
     border: none;
@@ -97,95 +226,172 @@ body {
     font-weight: 600;
 }
 
-/* BUTTON */
-.btn-submit {
-    background: #dd9b00;
-    color: white;
-    border: none;
+.empty-state {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px dashed #e4b477;
+    color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        scroll-behavior: auto !important;
+    }
 }
 </style>
 </head>
 <body>
 
-<!-- INCLUDE NAVBAR -->
 <%- include('partials/navbar-user') %>
 
-<div class="form-card">
-    <h3 class="mb-3">Report an Issue</h3>
-    <p class="text-muted">Tell us what went wrong so we can fix it quickly.</p>
+<div class="report-page">
+    <header class="report-hero">
+        <div>
+            <h1 class="hero-title">Report an Issue</h1>
+            <p class="hero-subtitle">Tell us what went wrong so we can fix it quickly.</p>
+        </div>
+        <div class="hero-badge">
+            Priority support for active orders
+        </div>
+    </header>
 
-    <% if (error && error.length) { %>
-        <div class="alert alert-danger"><%= error %></div>
-    <% } %>
-    <% if (success && success.length) { %>
-        <div class="alert alert-success"><%= success %></div>
-    <% } %>
+    <section class="report-grid">
+        <div class="card-shell">
+            <div class="card-title">Submit a report</div>
+            <p class="text-muted">We will follow up by email with updates.</p>
 
-    <form action="/report" method="POST" class="row g-3">
-        <div class="col-md-6">
-            <label class="form-label">Name</label>
-            <input type="text" name="name" class="form-control" required>
+            <% if (error && error.length) { %>
+                <div class="alert alert-danger"><%= error %></div>
+            <% } %>
+            <% if (success && success.length) { %>
+                <div class="alert alert-success"><%= success %></div>
+            <% } %>
+
+            <form action="/report" method="POST" enctype="multipart/form-data" class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Name</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" value="<%= userEmail || '' %>" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Order ID (from receipt)</label>
+                    <input type="text" name="orderId" class="form-control" value="<%= orderId || '' %>" placeholder="e.g. 1024" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Address</label>
+                    <input type="text" name="address" class="form-control" value="<%= userAddress || '' %>" placeholder="Delivery or pickup address" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Subject</label>
+                    <input type="text" name="subject" class="form-control" required placeholder="Short summary">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" rows="5" class="form-control" placeholder="Describe the issue in detail..." required></textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Upload a picture (optional)</label>
+                    <input type="file" name="issueImage" class="form-control" accept="image/*">
+                    <div class="form-text">JPG or PNG up to a few MB works best.</div>
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-submit px-4">Submit Report</button>
+                </div>
+            </form>
         </div>
-        <div class="col-md-6">
-            <label class="form-label">Email</label>
-            <input type="email" name="email" class="form-control" value="<%= userEmail || '' %>" readonly>
-        </div>
-        <div class="col-12">
-            <label class="form-label">Subject</label>
-            <input type="text" name="subject" class="form-control" required>
-        </div>
-        <div class="col-12">
-            <label class="form-label">Description</label>
-            <textarea name="description" rows="5" class="form-control" placeholder="Describe the issue in detail..." required></textarea>
-        </div>
-        <div class="col-12 text-end">
-            <button type="submit" class="btn btn-submit px-4">Submit Report</button>
-        </div>
-    </form>
+
+        <aside class="card-shell tips-card">
+            <div class="card-title">Before you submit</div>
+            <p class="text-muted">Including these details helps us resolve issues faster.</p>
+            <div class="tips-list">
+                <div class="tip-item">
+                    <i class="bi bi-receipt"></i>
+                    <div>Order ID and time placed.</div>
+                </div>
+                <div class="tip-item">
+                    <i class="bi bi-geo-alt"></i>
+                    <div>Delivery address or pickup location.</div>
+                </div>
+                <div class="tip-item">
+                    <i class="bi bi-camera"></i>
+                    <div>Photos if items are damaged or missing.</div>
+                </div>
+                <div class="tip-item">
+                    <i class="bi bi-clock-history"></i>
+                    <div>Any relevant times or updates.</div>
+                </div>
+            </div>
+        </aside>
+    </section>
+
+    <section class="report-list">
+        <div class="card-title mt-3">Your reports</div>
+
+        <% if (issues && issues.length) { %>
+            <% issues.forEach(issue => { %>
+                <% const status = (issue.status || 'new').toLowerCase(); %>
+                <div class="report-item">
+                    <div class="report-header">
+                        <div class="report-subject"><%= issue.subject %></div>
+                        <span class="status-badge status-<%= status %>"><%= status.replace('_',' ') %></span>
+                    </div>
+                    <div class="meta">
+                        <span><%= issue.created_at ? new Date(issue.created_at).toLocaleDateString("en-GB") : "" %></span>
+                        <span class="ms-2">Ticket #<%= issue.id %></span>
+                        <% if (issue.order_id) { %>
+                            <span class="ms-2">Order #<%= issue.order_id %></span>
+                        <% } %>
+                    </div>
+                    <% if (issue.address) { %>
+                        <div class="meta">Address: <%= issue.address %></div>
+                    <% } %>
+                    <div class="mt-2"><%= issue.description %></div>
+                    <% if (issue.image_url) { %>
+                        <div class="mt-3">
+                            <img src="<%= issue.image_url %>" alt="Issue photo" style="max-width:100%; border-radius:12px; border:1px solid #ead9c7;">
+                        </div>
+                    <% } %>
+
+                    <% if (issue.admin_reply) { %>
+                        <div class="reply-box">
+                            <strong>Admin reply:</strong>
+                            <div><%= issue.admin_reply %></div>
+                        </div>
+                    <% } %>
+                    <% if (issue.user_reply) { %>
+                        <div class="user-reply">
+                            <strong>Your reply:</strong>
+                            <div><%= issue.user_reply %></div>
+                        </div>
+                    <% } %>
+                    <% if (issue.admin_reply && status !== 'resolved') { %>
+                        <form method="POST" action="/report/<%= issue.id %>/reply" class="reply-form mt-3">
+                            <textarea name="reply" rows="3" placeholder="Reply to admin..." required></textarea>
+                            <div class="mt-2">
+                                <button type="submit" class="reply-btn">Send Reply</button>
+                            </div>
+                        </form>
+                    <% } %>
+                    <% if (status !== 'resolved') { %>
+                        <form method="POST" action="/report/<%= issue.id %>/resolve" class="mt-3">
+                            <button type="submit" class="resolve-btn">Mark as Resolved</button>
+                        </form>
+                    <% } %>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <div class="empty-state">
+                You have not submitted any reports yet. Create one above if you need help.
+            </div>
+        <% } %>
+    </section>
 </div>
 
-<% if (issues && issues.length) { %>
-    <div class="report-list">
-        <% issues.forEach(issue => { %>
-            <div class="report-item">
-                <h5><%= issue.subject %></h5>
-                <div class="meta">
-                    <span><%= issue.created_at ? new Date(issue.created_at).toLocaleDateString("en-GB") : "" %></span>
-                    <span class="ms-2">Status: <%= issue.status || 'new' %></span>
-                </div>
-                <div><%= issue.description %></div>
-                <% if (issue.admin_reply) { %>
-                    <div class="reply-box">
-                        <strong>Admin reply:</strong>
-                        <div><%= issue.admin_reply %></div>
-                    </div>
-                <% } %>
-                <% if (issue.user_reply) { %>
-                    <div class="user-reply">
-                        <strong>Your reply:</strong>
-                        <div><%= issue.user_reply %></div>
-                    </div>
-                <% } %>
-                <% if (issue.admin_reply && (issue.status || '').toLowerCase() !== 'resolved') { %>
-                    <form method="POST" action="/report/<%= issue.id %>/reply" class="reply-form mt-3">
-                        <textarea name="reply" rows="3" placeholder="Reply to admin..." required></textarea>
-                        <div class="mt-2">
-                            <button type="submit" class="reply-btn">Send Reply</button>
-                        </div>
-                    </form>
-                <% } %>
-                <% if ((issue.status || '').toLowerCase() !== 'resolved') { %>
-                    <form method="POST" action="/report/<%= issue.id %>/resolve" class="mt-3">
-                        <button type="submit" class="resolve-btn">Mark as Resolved</button>
-                    </form>
-                <% } %>
-            </div>
-        <% }) %>
-    </div>
-<% } %>
-
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-

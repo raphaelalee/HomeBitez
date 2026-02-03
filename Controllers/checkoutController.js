@@ -561,6 +561,9 @@ exports.renderReceipt = async (req, res) => {
   const stripeCapture = req.session?.stripeCapture || null;
   const latestOrderDbId = req.session?.latestOrderDbId || null;
   const paylaterPurchase = req.session?.paylaterPurchase || null;
+  if (latestOrderDbId) {
+    req.session.lastReceiptOrderId = latestOrderDbId;
+  }
 
   let cart = req.session?.cart || [];
   let prefs = req.session?.cartPrefs || {

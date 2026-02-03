@@ -32,6 +32,9 @@ async function ensureReportReplyColumns() {
                 email VARCHAR(150) NOT NULL,
                 subject VARCHAR(200) NOT NULL,
                 description TEXT NOT NULL,
+                order_id VARCHAR(50) NULL,
+                address VARCHAR(255) NULL,
+                image_url VARCHAR(255) NULL,
                 status ENUM('new','in_progress','resolved') DEFAULT 'new',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 admin_reply TEXT NULL,
@@ -56,6 +59,15 @@ async function ensureReportReplyColumns() {
     } catch (err) {}
     try {
         await db.query("ALTER TABLE report_messages ADD COLUMN user_reply_at DATETIME NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN order_id VARCHAR(50) NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN address VARCHAR(255) NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN image_url VARCHAR(255) NULL");
     } catch (err) {}
     reportColumnsEnsured = true;
 }
@@ -199,7 +211,7 @@ app.get('/report', (req, res) => {
 
     ensureReportReplyColumns().then(() => {
         return db.query(
-            "SELECT id, subject, description, status, created_at, admin_reply, replied_at, user_reply, user_reply_at FROM report_messages WHERE user_id = ? ORDER BY created_at DESC",
+            "SELECT id, subject, description, status, created_at, admin_reply, replied_at, user_reply, user_reply_at, order_id, address, image_url FROM report_messages WHERE user_id = ? ORDER BY created_at DESC",
             [userId]
         );
     }).then(([rows]) => {
@@ -207,6 +219,8 @@ app.get('/report', (req, res) => {
             success: req.flash('success'),
             error: req.flash('error'),
             userEmail,
+            userAddress: req.session.user?.address || req.session.cartPrefs?.address || '',
+            orderId: req.session.lastReceiptOrderId || '',
             issues: rows || []
         });
     }).catch(err => {
@@ -215,32 +229,40 @@ app.get('/report', (req, res) => {
             success: req.flash('success'),
             error: req.flash('error'),
             userEmail,
+            userAddress: req.session.user?.address || req.session.cartPrefs?.address || '',
+            orderId: req.session.lastReceiptOrderId || '',
             issues: []
         });
     });
 });
 
-app.post('/report', async (req, res) => {
+app.post('/report', upload.single('issueImage'), async (req, res) => {
     if (!req.session.user) {
         req.flash('error', 'Please log in to submit a report.');
         return res.redirect('/login');
     }
 
-    const { name, subject, description } = req.body;
+    const { name, subject, description, orderId, address } = req.body;
     const email = req.session.user.email || '';
+    const cleanOrderId = (orderId || '').trim();
+    const cleanAddress = (address || '').trim();
 
-    if (!name || !email || !subject || !description) {
-        req.flash('error', 'Please fill out all fields.');
+    if (!name || !email || !subject || !description || !cleanOrderId || !cleanAddress) {
+        req.flash('error', 'Please fill out all fields, including order ID and address.');
         return res.redirect('/report');
     }
 
     try {
+        const imageUrl = req.file ? `/images/${req.file.filename}` : null;
         await ReportModel.create({
             userId: req.session.user.id || null,
             name,
             email,
             subject,
-            description
+            description,
+            orderId: cleanOrderId,
+            address: cleanAddress,
+            imageUrl
         });
 
         req.flash('success', 'Report submitted successfully.');
@@ -891,7 +913,7 @@ app.get('/admin/issues', async (req, res) => {
         await ensureReportReplyColumns();
         const [rows] = await db.query(
             `SELECT rm.id, rm.name, rm.email, rm.subject, rm.description, rm.status, rm.created_at,
-                    rm.admin_reply, rm.replied_at, rm.user_reply, rm.user_reply_at, u.contact
+                    rm.admin_reply, rm.replied_at, rm.user_reply, rm.user_reply_at, rm.order_id, rm.address, rm.image_url, u.contact
              FROM report_messages rm
              LEFT JOIN users u ON u.id = rm.user_id
              ORDER BY rm.created_at DESC`
@@ -1050,7 +1072,7 @@ app.get('/user/profile', async (req, res) => {
   try {
     await ensureReportReplyColumns();
     const [rows] = await db.query(
-      "SELECT id, subject, description, status, created_at, admin_reply, replied_at, user_reply, user_reply_at FROM report_messages WHERE user_id = ? ORDER BY created_at DESC",
+      "SELECT id, subject, description, status, created_at, admin_reply, replied_at, user_reply, user_reply_at, order_id, address, image_url FROM report_messages WHERE user_id = ? ORDER BY created_at DESC",
       [userId]
     );
     userIssues = rows || [];
