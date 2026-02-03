@@ -15,6 +15,10 @@ async function ensureTable() {
       subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
       delivery_fee DECIMAL(10,2) NOT NULL DEFAULT 0,
       total DECIMAL(10,2) NOT NULL DEFAULT 0,
+      paylater_months INT NULL,
+      paylater_monthly DECIMAL(10,2) NULL,
+      paylater_paid DECIMAL(10,2) NULL,
+      paylater_remaining DECIMAL(10,2) NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `;
@@ -40,6 +44,46 @@ async function ensureTable() {
     }
   } catch (err) {
     console.error("ensureTable: add completed_at column failed:", err);
+  }
+
+  try {
+    const monthsExists = await columnExists("paylater_months");
+    if (!monthsExists) {
+      await db.execute("ALTER TABLE orders ADD COLUMN paylater_months INT NULL");
+      columnCache.paylater_months = true;
+    }
+  } catch (err) {
+    console.error("ensureTable: add paylater_months column failed:", err);
+  }
+
+  try {
+    const monthlyExists = await columnExists("paylater_monthly");
+    if (!monthlyExists) {
+      await db.execute("ALTER TABLE orders ADD COLUMN paylater_monthly DECIMAL(10,2) NULL");
+      columnCache.paylater_monthly = true;
+    }
+  } catch (err) {
+    console.error("ensureTable: add paylater_monthly column failed:", err);
+  }
+
+  try {
+    const paidExists = await columnExists("paylater_paid");
+    if (!paidExists) {
+      await db.execute("ALTER TABLE orders ADD COLUMN paylater_paid DECIMAL(10,2) NULL");
+      columnCache.paylater_paid = true;
+    }
+  } catch (err) {
+    console.error("ensureTable: add paylater_paid column failed:", err);
+  }
+
+  try {
+    const remainingExists = await columnExists("paylater_remaining");
+    if (!remainingExists) {
+      await db.execute("ALTER TABLE orders ADD COLUMN paylater_remaining DECIMAL(10,2) NULL");
+      columnCache.paylater_remaining = true;
+    }
+  } catch (err) {
+    console.error("ensureTable: add paylater_remaining column failed:", err);
   }
   tableEnsured = true;
 }
@@ -86,6 +130,10 @@ module.exports = {
       { logical: 'subtotal', candidates: ['subtotal', 'subTotal'], value: order.subtotal || 0},
       { logical: 'delivery_fee', candidates: ['delivery_fee', 'deliveryFee'], value: order.deliveryFee || 0},
       { logical: 'total', candidates: ['total', 'totalAmount', 'total_amount'], value: order.total || 0},
+      { logical: 'paylater_months', candidates: ['paylater_months', 'paylaterMonths'], value: order.paylaterMonths || null},
+      { logical: 'paylater_monthly', candidates: ['paylater_monthly', 'paylaterMonthly'], value: order.paylaterMonthly || null},
+      { logical: 'paylater_paid', candidates: ['paylater_paid', 'paylaterPaid'], value: order.paylaterPaid || null},
+      { logical: 'paylater_remaining', candidates: ['paylater_remaining', 'paylaterRemaining'], value: order.paylaterRemaining || null},
       { logical: 'status', candidates: ['status', 'order_status', 'state'], value: order.status || null},
       { logical: 'completed_at', candidates: ['completed_at', 'completedAt'], value: order.completedAt || null}
     ];
@@ -140,6 +188,10 @@ module.exports = {
       { alias: 'subtotal', candidates: ['subtotal', 'subTotal'] },
       { alias: 'delivery_fee', candidates: ['delivery_fee', 'deliveryFee'] },
       { alias: 'total', candidates: ['total', 'totalAmount', 'total_amount'] },
+      { alias: 'paylater_months', candidates: ['paylater_months', 'paylaterMonths'] },
+      { alias: 'paylater_monthly', candidates: ['paylater_monthly', 'paylaterMonthly'] },
+      { alias: 'paylater_paid', candidates: ['paylater_paid', 'paylaterPaid'] },
+      { alias: 'paylater_remaining', candidates: ['paylater_remaining', 'paylaterRemaining'] },
       { alias: 'created_at', candidates: ['created_at', 'createdAt'] },
       { alias: 'status', candidates: ['status', 'order_status', 'state'] },
       { alias: 'completed_at', candidates: ['completed_at', 'completedAt'] }
@@ -171,6 +223,10 @@ module.exports = {
       { alias: 'subtotal', candidates: ['subtotal', 'subTotal'] },
       { alias: 'delivery_fee', candidates: ['delivery_fee', 'deliveryFee'] },
       { alias: 'total', candidates: ['total', 'totalAmount', 'total_amount'] },
+      { alias: 'paylater_months', candidates: ['paylater_months', 'paylaterMonths'] },
+      { alias: 'paylater_monthly', candidates: ['paylater_monthly', 'paylaterMonthly'] },
+      { alias: 'paylater_paid', candidates: ['paylater_paid', 'paylaterPaid'] },
+      { alias: 'paylater_remaining', candidates: ['paylater_remaining', 'paylaterRemaining'] },
       { alias: 'created_at', candidates: ['created_at', 'createdAt'] },
       { alias: 'status', candidates: ['status', 'order_status', 'state'] },
       { alias: 'completed_at', candidates: ['completed_at', 'completedAt'] }
@@ -208,6 +264,10 @@ module.exports = {
       { alias: 'subtotal', candidates: ['subtotal', 'subTotal'] },
       { alias: 'delivery_fee', candidates: ['delivery_fee', 'deliveryFee'] },
       { alias: 'total', candidates: ['total', 'totalAmount', 'total_amount'] },
+      { alias: 'paylater_months', candidates: ['paylater_months', 'paylaterMonths'] },
+      { alias: 'paylater_monthly', candidates: ['paylater_monthly', 'paylaterMonthly'] },
+      { alias: 'paylater_paid', candidates: ['paylater_paid', 'paylaterPaid'] },
+      { alias: 'paylater_remaining', candidates: ['paylater_remaining', 'paylaterRemaining'] },
       { alias: 'created_at', candidates: ['created_at', 'createdAt'] },
       { alias: 'status', candidates: ['status', 'order_status', 'state'] },
       { alias: 'completed_at', candidates: ['completed_at', 'completedAt'] }
@@ -256,5 +316,50 @@ module.exports = {
     params.push(id);
     await db.execute(sql, params);
     return true;
+  },
+
+  async applyPaylaterPayment(userId, amount) {
+    await ensureTable();
+    if (!userId || !Number.isFinite(Number(amount)) || Number(amount) <= 0) return 0;
+
+    const userCol = await findExistingColumn(['user_id', 'userId', 'user']);
+    const statusCol = await findExistingColumn(['status', 'order_status', 'state']);
+    const remainingCol = await findExistingColumn(['paylater_remaining', 'paylaterRemaining']);
+    const paidCol = await findExistingColumn(['paylater_paid', 'paylaterPaid']);
+    const totalCol = await findExistingColumn(['total', 'totalAmount', 'total_amount']);
+    const idCol = await findExistingColumn(['id', 'order_id', 'orderId', 'ID']);
+
+    if (!userCol || !statusCol || !remainingCol || !paidCol || !idCol || !totalCol) return 0;
+
+    const [rows] = await db.query(
+      `SELECT ${idCol} AS id, ${remainingCol} AS remaining, ${paidCol} AS paid, ${totalCol} AS total
+       FROM orders
+       WHERE ${userCol} = ? AND ${statusCol} = ?
+       ORDER BY created_at ASC`,
+      [userId, 'paylater']
+    );
+
+    let remainingAmount = Number(amount);
+    let applied = 0;
+
+    for (const row of rows) {
+      if (remainingAmount <= 0) break;
+      const rowRemaining = Number((row.remaining ?? row.total) || 0);
+      if (rowRemaining <= 0) continue;
+      const pay = Math.min(remainingAmount, rowRemaining);
+      const newRemaining = Number((rowRemaining - pay).toFixed(2));
+      const newPaid = Number((Number(row.paid || 0) + pay).toFixed(2));
+      const newStatus = newRemaining <= 0 ? 'paid' : 'paylater';
+
+      await db.execute(
+        `UPDATE orders SET ${remainingCol} = ?, ${paidCol} = ?, ${statusCol} = ? WHERE ${idCol} = ?`,
+        [newRemaining, newPaid, newStatus, row.id]
+      );
+
+      remainingAmount = Number((remainingAmount - pay).toFixed(2));
+      applied = Number((applied + pay).toFixed(2));
+    }
+
+    return applied;
   }
 };

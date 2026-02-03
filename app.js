@@ -4,6 +4,7 @@ const flash = require('connect-flash');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 require("dotenv").config();
+const stripeService = require('./services/stripe');
 
 // Controllers
 const UsersController = require('./Controllers/usersController');
@@ -878,7 +879,7 @@ app.get('/user/profile', async (req, res) => {
 
     if ((!enrichedHistory || enrichedHistory.length === 0) && points > 0) {
       enrichedHistory.push({
-        date: '—',
+        date: 'ï¿½',
         desc: 'Existing balance',
         points,
         balanceAfter: points
@@ -910,14 +911,34 @@ app.get('/user/profile', async (req, res) => {
   let orders = [];
   try {
     const rawOrders = await OrdersModel.listByUser(userId, 50);
+    const timeZone = process.env.APP_TIMEZONE || "Asia/Singapore";
+    const normalizeStatus = (s) => s ? (s.charAt(0).toUpperCase() + s.slice(1)) : null;
+    const formatOrderDate = (value) => {
+      if (!value) return "-";
+      let d;
+      if (value instanceof Date) {
+        d = value;
+      } else if (typeof value === "string") {
+        const s = value.trim();
+        if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/.test(s)) {
+          d = new Date(s.replace(" ", "T") + "Z");
+        } else {
+          d = new Date(s);
+        }
+      } else {
+        d = new Date(value);
+      }
+      return d.toLocaleString("en-SG", { timeZone });
+    };
     orders = rawOrders.map(o => {
       const qty = (o.items || []).reduce((s, i) => s + Number(i.qty || i.quantity || 0), 0);
+      const derivedStatus = normalizeStatus(o.status) || (o.paypal_capture_id ? 'Paid' : 'Pending');
       return {
         orderId: o.paypal_order_id || `ORD-${o.id}`,
-        date: o.created_at ? new Date(o.created_at).toLocaleString() : '-',
+        date: formatOrderDate(o.created_at),
         qty,
         total: Number(o.total || 0),
-        status: o.paypal_capture_id ? 'Paid' : 'Pending'
+        status: derivedStatus
       };
     });
   } catch (err) {
@@ -1373,6 +1394,131 @@ app.post('/nets/complete', async (req, res) => {
         return res.status(500).json({ error: 'Failed to finalize NETS payment' });
     }
 });
+
+
+
+app.post('/stripe/create-checkout-session', async (req, res) => {
+  try {
+    const cart = req.session.cart || [];
+    if (!cart.length) {
+      return res.status(400).json({ error: 'Cart is empty' });
+    }
+
+    const items = cart.map((i) => ({
+      name: i.name,
+      price: Number(i.price || 0),
+      qty: Number(i.quantity || i.qty || 0)
+    }));
+
+    const subtotal = items.reduce((s, it) => s + (it.price * it.qty), 0);
+    const deliveryFee = Number(req.body.deliveryFee || 0);
+    const redeem = Math.min(subtotal, Number(req.session.cartRedeem?.amount || 0));
+    const redeemPoints = Number(req.session.cartRedeem?.points || 0);
+    const total = Number((subtotal + deliveryFee - redeem).toFixed(2));
+
+    req.session.stripePending = {
+      items,
+      subtotal,
+      deliveryFee,
+      total,
+      redeem,
+      redeemPoints,
+      prefs: req.session.cartPrefs || null,
+      createdAt: Date.now()
+    };
+
+    const session = await stripeService.createCheckoutSession({
+      // Use total as a single line item to avoid discount math issues
+      subtotal: total,
+      deliveryFee: 0,
+      successUrl: 'http://localhost:3000/stripe/success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'http://localhost:3000/checkout'
+    });
+
+    res.json({ id: session.id });
+  } catch (err) {
+    console.error('Stripe error:', err);
+    res.status(500).json({ error: 'Stripe session failed' });
+  }
+});
+
+app.get('/stripe/success', async (req, res) => {
+  try {
+    const sessionId = req.query.session_id;
+    if (!sessionId) return res.redirect('/checkout');
+
+    const session = await stripeService.retrieveCheckoutSession(sessionId);
+    if (!session || session.payment_status !== 'paid') {
+      return res.redirect('/checkout');
+    }
+
+    const pending = req.session.stripePending || {};
+    const items = pending.items || [];
+    const subtotal = Number(pending.subtotal || 0);
+    const deliveryFee = Number(pending.deliveryFee || 0);
+    const total = Number(pending.total || session.amount_total / 100 || 0);
+
+    const orderDbId = await OrdersModel.create({
+      userId: req.session.user ? req.session.user.id : null,
+      payerEmail: session.customer_details?.email || req.session.user?.email || null,
+      shippingName: pending.prefs?.name || req.session.user?.username || null,
+      items,
+      subtotal,
+      deliveryFee,
+      total,
+      status: "paid"
+    });
+
+    // Deduct redeemed points first
+    if (req.session.user && pending.redeemPoints) {
+      try {
+        const { balance, entry } = await UsersModel.addPoints(
+          req.session.user.id,
+          -Number(pending.redeemPoints),
+          `Redeem order ${orderDbId} (Stripe)`
+        );
+        req.session.user.points = balance;
+        req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0, 20);
+      } catch (err) {
+        console.error("Points redeem deduct failed (Stripe):", err);
+      }
+    }
+
+    // Award loyalty points
+    if (req.session.user && total > 0) {
+      try {
+        const earned = Math.floor(total);
+        const { balance, entry } = await UsersModel.addPoints(
+          req.session.user.id,
+          earned,
+          `Order ${orderDbId} (Stripe)`
+        );
+        req.session.user.points = balance;
+        req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0, 20);
+      } catch (err) {
+        console.error("Points award failed (Stripe):", err);
+      }
+    }
+
+    req.session.stripeCapture = {
+      sessionId,
+      paymentIntentId: session.payment_intent?.id || null,
+      payerEmail: session.customer_details?.email || null,
+      total,
+      status: session.payment_status
+    };
+
+    req.session.latestOrderDbId = orderDbId;
+    req.session.cartRedeem = null;
+    req.session.stripePending = null;
+
+    return res.redirect('/receipt');
+  } catch (err) {
+    console.error('Stripe success error:', err);
+    return res.redirect('/checkout');
+  }
+});
+
 
 /* -------------------- BUSINESS OWNER ROUTES -------------------- */
 const ownerRoutes = require("./Routes/bizownerRoutes");

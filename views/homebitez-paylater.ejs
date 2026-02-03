@@ -68,15 +68,26 @@
       <div>
         <div class="card-paylater p-3 mb-3">
           <div class="card-title"><i class="bi bi-calendar2-check"></i> Plan Details</div>
-          <% if (!planMonths || planMonths <= 0) { %>
+          <% if (!planCount || planCount <= 0) { %>
             <div class="text-muted">No active plan. Choose 3 or 6 months in checkout.</div>
             <div class="mt-3">
               <a href="/checkout" class="hb-btn hb-btn-outline">Go to Checkout</a>
             </div>
           <% } else { %>
-            <div class="summary-line d-flex justify-content-between"><span>Plan</span><span><strong><%= planMonths %> months</strong></span></div>
-            <div class="summary-line d-flex justify-content-between"><span>Monthly</span><span><strong>$<%= Number(monthly || 0).toFixed(2) %></strong></span></div>
+            <div class="summary-line d-flex justify-content-between"><span>Active Plans</span><span><strong><%= planCount %></strong></span></div>
+            <div class="summary-line d-flex justify-content-between"><span>Monthly (Total)</span><span><strong>$<%= Number(monthly || 0).toFixed(2) %></strong></span></div>
             <div class="summary-line d-flex justify-content-between"><span>Next Due</span><span><strong><%= nextDueDate ? new Date(nextDueDate).toLocaleDateString() : 'Paid' %></strong></span></div>
+            <div class="mt-2 text-muted" style="font-size:12px;">Includes all active PayLater orders.</div>
+            <div class="mt-2">
+              <ul class="list-group">
+                <% (planOrders || []).forEach(p => { %>
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><%= p.orderRef %> · <%= p.months %> months</span>
+                    <span>$<%= Number(p.total || 0).toFixed(2) %></span>
+                  </li>
+                <% }) %>
+              </ul>
+            </div>
           <% } %>
         </div>
 
@@ -88,7 +99,7 @@
             <% } else { %>
               <% schedule.forEach(item => { %>
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                  <span><%= new Date(item.dueDate).toLocaleDateString() %> - <%= item.status %></span>
+                  <span><%= item.orderRef %> · <%= new Date(item.dueDate).toLocaleDateString() %> - <%= item.status %></span>
                   <span>$<%= Number(item.amount || 0).toFixed(2) %></span>
                 </li>
               <% }) %>
@@ -100,16 +111,16 @@
       <div>
         <div class="card-paylater p-3 mb-3">
           <div class="card-title"><i class="bi bi-cash-coin"></i> Pay Installment</div>
-          <div class="text-muted mb-2" style="font-size:12px;">Pay the next installment with your wallet or NETS.</div>
+          <div class="text-muted mb-2" style="font-size:12px;">Pay the next installment with your wallet or PayPal.</div>
           <div class="d-grid gap-2">
             <form action="/paylater/pay-installment/wallet" method="POST">
               <button type="submit" class="hb-btn hb-btn-outline w-100" <%= outstanding <= 0 ? 'disabled' : '' %>>
                 <i class="bi bi-wallet2"></i> Pay Installment (Wallet)
               </button>
             </form>
-            <form action="/paylater/pay-installment/nets" method="POST">
+            <form action="/paylater/pay-installment/paypal" method="POST">
               <button type="submit" class="hb-btn hb-btn-outline w-100" <%= outstanding <= 0 ? 'disabled' : '' %>>
-                <i class="bi bi-qr-code-scan"></i> Pay Installment (NETS)
+                <i class="bi bi-paypal"></i> Pay Installment (PayPal)
               </button>
             </form>
           </div>
@@ -124,9 +135,9 @@
                 <i class="bi bi-wallet2"></i> Pay Early (Wallet)
               </button>
             </form>
-            <form action="/paylater/pay-early/nets" method="POST">
+            <form action="/paylater/pay-early/paypal" method="POST">
               <button type="submit" class="hb-btn w-100" <%= outstanding <= 0 ? 'disabled' : '' %>>
-                <i class="bi bi-qr-code-scan"></i> Pay Early (NETS)
+                <i class="bi bi-paypal"></i> Pay Early (PayPal)
               </button>
             </form>
           </div>

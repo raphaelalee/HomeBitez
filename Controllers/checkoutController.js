@@ -63,33 +63,75 @@ exports.renderCheckout = (req, res) => {
 /* =========================
    GET /paylater
 ========================= */
-exports.renderPayLater = (req, res) => {
+exports.renderPayLater = async (req, res) => {
   const creditLimit = 300.0;
   const walletBalance = 120.5;
-  const plan = req.session.paylaterPlan || null;
-  const outstanding = plan ? Number(plan.total || 0) : 120.0;
-  const availableCredit = Number((creditLimit - outstanding).toFixed(2));
-  const planMonths = plan ? Number(plan.months || 0) : 3;
-  const monthly = planMonths ? Number((outstanding / planMonths).toFixed(2)) : 0;
+  const userId = req.session?.user?.id || null;
   const today = new Date();
-  const nextDueDate = new Date(today);
-  nextDueDate.setDate(today.getDate() + 30);
 
-  const schedule = planMonths
-    ? [
-        { dueDate: nextDueDate, amount: monthly, status: "Due" },
-        {
-          dueDate: new Date(today.getFullYear(), today.getMonth() + 2, today.getDate()),
-          amount: monthly,
-          status: "Upcoming",
-        },
-        {
-          dueDate: new Date(today.getFullYear(), today.getMonth() + 3, today.getDate()),
-          amount: monthly,
-          status: "Upcoming",
-        },
-      ]
-    : [];
+  const addMonths = (date, months) => {
+    const d = new Date(date);
+    const day = d.getDate();
+    d.setMonth(d.getMonth() + months);
+    if (d.getDate() < day) d.setDate(0);
+    return d;
+  };
+
+  let planOrders = [];
+  let outstanding = 0;
+  let monthly = 0;
+  let schedule = [];
+  let nextDueDate = null;
+
+  try {
+    const rawOrders = await OrdersModel.listByUser(userId, 200);
+    planOrders = (rawOrders || [])
+      .filter(o => String(o.status || '').toLowerCase() === 'paylater')
+      .map(o => {
+        const total = Number(o.total || 0);
+        const months = Number(o.paylater_months || 0) || 3;
+        const monthlyAmt = Number(o.paylater_monthly || 0) || Number((total / months).toFixed(2));
+        const createdAt = o.created_at ? new Date(o.created_at) : new Date();
+        const paid = Number(o.paylater_paid || 0);
+        const remaining = Number(o.paylater_remaining || 0) || total;
+        return {
+          id: o.id,
+          orderRef: o.paypal_order_id || `ORD-${o.id}`,
+          total,
+          months,
+          monthly: monthlyAmt,
+          createdAt,
+          paid,
+          remaining
+        };
+      });
+
+    outstanding = planOrders.reduce((s, o) => s + Number(o.remaining || 0), 0);
+    monthly = planOrders.filter(o => o.remaining > 0).reduce((s, o) => s + o.monthly, 0);
+
+    for (const ord of planOrders) {
+      if (ord.remaining <= 0) continue;
+      const paidMonths = ord.monthly > 0 ? Math.floor((ord.paid || 0) / ord.monthly) : 0;
+      for (let i = paidMonths + 1; i <= ord.months; i++) {
+        const dueDate = addMonths(ord.createdAt, i);
+        schedule.push({
+          orderRef: ord.orderRef,
+          dueDate,
+          amount: ord.monthly,
+          status: dueDate <= today ? "Due" : "Upcoming"
+        });
+      }
+    }
+
+    schedule.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+    const upcoming = schedule.find(s => s.dueDate >= today);
+    nextDueDate = upcoming ? upcoming.dueDate : (schedule[0]?.dueDate || null);
+  } catch (err) {
+    console.error("PayLater load error:", err);
+  }
+
+  const availableCredit = Number((creditLimit - outstanding).toFixed(2));
+  const planCount = planOrders.length;
 
   const paylaterMessage = req.session.paylaterMessage || null;
   const paylaterError = req.session.paylaterError || null;
@@ -101,10 +143,11 @@ exports.renderPayLater = (req, res) => {
     outstanding,
     availableCredit,
     walletBalance,
-    planMonths,
     monthly,
     nextDueDate,
     schedule,
+    planOrders,
+    planCount,
     paylaterMessage,
     paylaterError,
   });
@@ -113,7 +156,7 @@ exports.renderPayLater = (req, res) => {
 /* =========================
    POST /paylater/choose
 ========================= */
-exports.choosePayLater = (req, res) => {
+exports.choosePayLater = async (req, res) => {
   const months = Number(req.body.months);
   if (![3, 6].includes(months)) {
     req.session.paylaterError = "Please select a valid PayLater plan.";
@@ -121,6 +164,10 @@ exports.choosePayLater = (req, res) => {
   }
 
   const cart = req.session.cart || [];
+  if (!cart.length) {
+    req.session.paylaterError = "Cart is empty.";
+    return res.redirect("/checkout");
+  }
   const prefs = req.session.cartPrefs || { mode: "pickup" };
   const subtotal = cart.reduce(
     (s, i) => s + Number(i.price || 0) * Number(i.quantity || i.qty || 0),
@@ -145,7 +192,178 @@ exports.choosePayLater = (req, res) => {
   req.session.paylaterPurchase = paylaterPlan;
   req.session.paylaterMessage = `PayLater plan set: ${months} months.`;
 
+  try {
+    const items = cart.map((i) => ({
+      name: i.name,
+      price: Number(i.price || 0),
+      qty: Number(i.quantity || i.qty || 0),
+    }));
+
+    const orderDbId = await OrdersModel.create({
+      userId: req.session.user ? req.session.user.id : null,
+      payerEmail: req.session.user?.email || null,
+      shippingName: prefs?.name || req.session.user?.username || null,
+      items,
+      subtotal,
+      deliveryFee,
+      total,
+      paylaterMonths: months,
+      paylaterMonthly: Number((total / months).toFixed(2)),
+      paylaterPaid: 0,
+      paylaterRemaining: total,
+      status: "paylater",
+    });
+
+    req.session.latestOrderDbId = orderDbId;
+  } catch (err) {
+    console.error("PayLater order create failed:", err);
+    req.session.paylaterError = "Failed to create PayLater order.";
+    return res.redirect("/checkout");
+  }
+
   return res.redirect("/receipt");
+};
+
+/* =========================
+   PAYLATER PAYMENTS (PAYPAL)
+========================= */
+exports.startPayLaterInstallmentPaypal = async (req, res) => {
+  try {
+    const userId = req.session?.user?.id || null;
+    if (!userId) return res.redirect("/login");
+
+    const rawOrders = await OrdersModel.listByUser(userId, 200);
+    const planOrders = (rawOrders || []).filter(o => String(o.status || '').toLowerCase() === 'paylater');
+
+    let monthlyTotal = 0;
+    for (const o of planOrders) {
+      const total = Number(o.total || 0);
+      const months = Number(o.paylater_months || 0) || 3;
+      const monthly = Number(o.paylater_monthly || 0) || Number((total / months).toFixed(2));
+      const remaining = Number(o.paylater_remaining || 0) || total;
+      if (remaining > 0) monthlyTotal += monthly;
+    }
+
+    if (!Number.isFinite(monthlyTotal) || monthlyTotal <= 0) {
+      req.session.paylaterError = "No outstanding PayLater installments.";
+      return res.redirect("/paylater");
+    }
+
+    req.session.paylaterPay = {
+      type: "installment",
+      amount: Number(monthlyTotal.toFixed(2))
+    };
+
+    return res.redirect("/paylater/paypal");
+  } catch (err) {
+    console.error("startPayLaterInstallmentPaypal error:", err);
+    req.session.paylaterError = "Failed to start PayLater installment payment.";
+    return res.redirect("/paylater");
+  }
+};
+
+exports.startPayLaterEarlyPaypal = async (req, res) => {
+  try {
+    const userId = req.session?.user?.id || null;
+    if (!userId) return res.redirect("/login");
+
+    const rawOrders = await OrdersModel.listByUser(userId, 200);
+    const planOrders = (rawOrders || []).filter(o => String(o.status || '').toLowerCase() === 'paylater');
+    const outstanding = planOrders.reduce((s, o) => {
+      const total = Number(o.total || 0);
+      const remaining = Number(o.paylater_remaining || 0) || total;
+      return s + Math.max(0, remaining);
+    }, 0);
+
+    if (!Number.isFinite(outstanding) || outstanding <= 0) {
+      req.session.paylaterError = "No outstanding PayLater balance.";
+      return res.redirect("/paylater");
+    }
+
+    req.session.paylaterPay = {
+      type: "early",
+      amount: Number(outstanding.toFixed(2))
+    };
+
+    return res.redirect("/paylater/paypal");
+  } catch (err) {
+    console.error("startPayLaterEarlyPaypal error:", err);
+    req.session.paylaterError = "Failed to start PayLater early payment.";
+    return res.redirect("/paylater");
+  }
+};
+
+exports.renderPayLaterPaypal = (req, res) => {
+  const pay = req.session.paylaterPay || null;
+  if (!pay || !Number.isFinite(Number(pay.amount)) || Number(pay.amount) <= 0) {
+    return res.redirect("/paylater");
+  }
+
+  res.render("paylater-paypal", {
+    amount: Number(pay.amount),
+    payType: pay.type,
+    paypalClientId: process.env.PAYPAL_CLIENT_ID,
+    paypalCurrency: process.env.PAYPAL_CURRENCY || "SGD"
+  });
+};
+
+exports.createPayLaterPaypalOrder = async (req, res) => {
+  try {
+    const pay = req.session.paylaterPay || null;
+    if (!pay || !Number.isFinite(Number(pay.amount)) || Number(pay.amount) <= 0) {
+      return res.status(400).json({ error: "Invalid PayLater amount" });
+    }
+
+    const shippingName =
+      (req.session.user && (req.session.user.username || req.session.user.name)) || null;
+
+    const order = await paypal.createOrder(Number(pay.amount), { shippingName });
+
+    req.session.paylaterPaypalPending = {
+      paypalOrderId: order.id,
+      amount: Number(pay.amount),
+      createdAt: Date.now(),
+      type: pay.type
+    };
+
+    return res.json({ id: order.id });
+  } catch (err) {
+    console.error("createPayLaterPaypalOrder error:", err);
+    return res.status(500).json({ error: "Failed to create PayLater PayPal order" });
+  }
+};
+
+exports.capturePayLaterPaypalOrder = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    if (!orderId) return res.status(400).json({ error: "Missing orderId" });
+
+    const capture = await paypal.captureOrder(orderId);
+    const pu = capture.purchase_units?.[0];
+    const cap = pu?.payments?.captures?.[0];
+
+    if (!cap || cap.status !== "COMPLETED") {
+      return res.status(400).json({ error: "PayPal payment not completed" });
+    }
+
+    const amount = Number(cap.amount?.value || req.session.paylaterPaypalPending?.amount || 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ error: "Invalid payment amount" });
+    }
+
+    if (req.session?.user?.id) {
+      await OrdersModel.applyPaylaterPayment(req.session.user.id, amount);
+    }
+
+    req.session.paylaterMessage = `PayLater payment received: $${amount.toFixed(2)}.`;
+    req.session.paylaterPay = null;
+    req.session.paylaterPaypalPending = null;
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("capturePayLaterPaypalOrder error:", err);
+    return res.status(500).json({ error: "Failed to capture PayLater PayPal order" });
+  }
 };
 
 /* =========================
@@ -247,6 +465,7 @@ exports.capturePaypalOrder = async (req, res) => {
       subtotal,
       deliveryFee: Number((total - subtotal).toFixed(2)),
       total,
+      status: "paid",
     });
 
     // Deduct redeemed points first
@@ -339,6 +558,7 @@ exports.requestNetsQr = async (req, res) => {
 ========================= */
 exports.renderReceipt = async (req, res) => {
   const paypalCapture = req.session?.paypalCapture || null;
+  const stripeCapture = req.session?.stripeCapture || null;
   const latestOrderDbId = req.session?.latestOrderDbId || null;
   const paylaterPurchase = req.session?.paylaterPurchase || null;
 
@@ -396,10 +616,28 @@ exports.renderReceipt = async (req, res) => {
   }));
 
   const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
-  const total = paylaterPurchase?.total || paypalCapture?.total || (subtotal - redeem);
+  const total = paylaterPurchase?.total || paypalCapture?.total || stripeCapture?.total || (subtotal - redeem);
   const deliveryFee = Number((total - subtotal).toFixed(2));
-  const paymentMethod = paylaterPurchase ? "PayLater" : (paypalCapture ? "PayPal" : "NETS / Other");
+  const paymentMethod = paylaterPurchase
+    ? "PayLater"
+    : (paypalCapture ? "PayPal" : (stripeCapture ? "Stripe" : "NETS / Other"));
   const fulfillment = prefs.mode === "delivery" ? "Delivery" : "Pickup";
+  const isPaid = !!(paypalCapture || stripeCapture || paylaterPurchase);
+  const paymentMeta = paypalCapture
+    ? {
+        refId: paypalCapture.orderId || null,
+        txnId: paypalCapture.captureId || null,
+        payerEmail: paypalCapture.payerEmail || null
+      }
+    : (stripeCapture ? {
+        refId: stripeCapture.sessionId || null,
+        txnId: stripeCapture.paymentIntentId || null,
+        payerEmail: stripeCapture.payerEmail || null
+      } : {
+        refId: null,
+        txnId: null,
+        payerEmail: null
+      });
 
   // hard reset session bits AFTER render
   req.session.cart = [];
@@ -421,12 +659,15 @@ exports.renderReceipt = async (req, res) => {
     deliveryFee,
     total,
     paypalCapture,       // <-- ALWAYS DEFINED (null or object)
+    stripeCapture,
     paylaterPlan: req.session?.paylaterPlan || null,
     latestOrderDbId,
     user: req.session.user || null,
     prefs,
     paymentMethod,
-    fulfillment
+    fulfillment,
+    paymentMeta,
+    isPaid
   });
 };
 
