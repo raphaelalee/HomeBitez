@@ -5,49 +5,226 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contact Us - HomeBitez</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
 <style>
+:root {
+    --ink: #2a2118;
+    --muted: #6f5c4c;
+    --cream: #fbf2e7;
+    --sunset: #f4c26b;
+    --amber: #d98b00;
+    --terracotta: #d86f3a;
+    --card: #ffffff;
+    --line: #ead9c7;
+}
+
 body {
-    background: #faefe5;
-    font-family: Arial, sans-serif;
+    background:
+        radial-gradient(1200px 500px at 10% -10%, #fff4df 0%, rgba(255, 244, 223, 0) 60%),
+        radial-gradient(900px 400px at 90% 0%, #ffe4c4 0%, rgba(255, 228, 196, 0) 55%),
+        var(--cream);
+    font-family: "Manrope", "Segoe UI", sans-serif;
+    color: var(--ink);
+}
+
+.contact-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 36px 20px 70px;
+}
+
+.contact-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin: 10px 0 30px;
+}
+
+.hero-content {
+    max-width: 640px;
+    animation: riseIn 0.6s ease both;
+}
+
+.hero-title {
+    font-family: "Fraunces", "Times New Roman", serif;
+    font-size: clamp(2rem, 3vw, 3rem);
+    font-weight: 800;
+    margin: 8px 0;
+}
+
+.hero-subtitle {
+    color: var(--muted);
+    font-size: 1.05rem;
+}
+
+.hero-badge {
+    background: linear-gradient(135deg, #ffe0ad, #ffd7a1);
+    border: 1px solid #f1c483;
+    padding: 12px 18px;
+    border-radius: 999px;
+    font-weight: 700;
+    color: #7a4c17;
+    box-shadow: 0 8px 18px rgba(122, 76, 23, 0.15);
+}
+
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: var(--terracotta);
+}
+
+.contact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
 }
 
 /* FORM CARD */
 .form-card {
-    background: white;
-    max-width: 700px;
-    margin: 40px auto 70px;
-    padding: 34px;
-    border-radius: 14px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    background: var(--card);
+    padding: 32px;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    box-shadow: 0 12px 30px rgba(44, 29, 12, 0.1);
+    animation: fadeIn 0.7s ease both;
 }
 
-/* TITLES */
+.form-card .form-control,
+.form-card textarea {
+    border-radius: 12px;
+    border: 1px solid #ead9c7;
+}
+
+.form-card .form-control:focus,
+.form-card textarea:focus {
+    border-color: #e1a84d;
+    box-shadow: 0 0 0 0.2rem rgba(225, 168, 77, 0.2);
+}
+
 .page-title {
     text-align: center;
+    font-weight: 800;
+    font-size: 1.75rem;
+    margin-bottom: 6px;
+}
+
+/* INFO CARD */
+.info-card {
+    background: linear-gradient(180deg, #fff7ea 0%, #fff2e1 100%);
+    border: 1px solid #f1d4ae;
+    padding: 28px;
+    border-radius: 18px;
+    box-shadow: 0 10px 20px rgba(44, 29, 12, 0.08);
+    animation: fadeIn 0.8s ease both;
+}
+
+.info-card h4 {
+    font-family: "Fraunces", "Times New Roman", serif;
     font-weight: 700;
+}
+
+.info-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    color: var(--muted);
+}
+
+.info-item i {
+    color: var(--terracotta);
+    font-size: 1.1rem;
+    margin-top: 2px;
+}
+
+.info-highlight {
+    background: white;
+    border: 1px dashed #e4b477;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-weight: 600;
+    color: #7a4c17;
+}
+
+/* FAQ */
+.faq-section {
+    margin-top: 36px;
+    background: white;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    padding: 26px;
+    box-shadow: 0 12px 24px rgba(44, 29, 12, 0.08);
+    animation: fadeIn 0.9s ease both;
+}
+
+.faq-title {
+    font-family: "Fraunces", "Times New Roman", serif;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.accordion-button {
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.accordion-button:not(.collapsed) {
+    background: #fff3df;
+    color: #7a4c17;
+}
+
+.accordion-body {
+    color: var(--muted);
 }
 
 /* BUTTONS */
 .btn-submit {
-    background: #dd9b00;
+    background: linear-gradient(135deg, var(--amber), var(--terracotta));
     color: white;
     border: none;
 }
 
+.btn-submit:hover {
+    filter: brightness(0.95);
+}
+
 .btn-back {
     background: none;
-    border: 1px solid #dd9b00;
-    color: #dd9b00;
+    border: 1px solid var(--amber);
+    color: var(--amber);
 }
 
 .btn-back:hover {
-    background: #dd9b00;
+    background: var(--amber);
     color: white;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes riseIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        scroll-behavior: auto !important;
+    }
 }
 </style>
 </head>
@@ -59,64 +236,180 @@ body {
   <%- include('partials/navbar-user') %>
 <% } %>
 
+<div class="contact-page">
+    <header class="contact-hero">
+        <div class="hero-content">
+            <span class="eyebrow">HomeBitez Support</span>
+            <h1 class="hero-title">We are here to help</h1>
+            <p class="hero-subtitle">
+                Send us a message and our team will get back to you with warm, fast support.
+            </p>
+        </div>
+        <div class="hero-badge">
+            Average reply time: under 4 hours
+        </div>
+    </header>
 
+    <section class="contact-grid">
+        <div class="form-card">
+            <h3 class="mb-3 page-title">Contact Us</h3>
+            <p class="text-muted text-center">
+                Tell us how we can help. We read every message.
+            </p>
 
-<div class="form-card">
-    <h3 class="mb-3 page-title">Contact Us</h3>
-    <p class="text-muted text-center">
-        Send us a message and we will get back to you as soon as possible.
-    </p>
+            <% if (error && error.length) { %>
+                <div class="alert alert-danger"><%= error %></div>
+            <% } %>
 
-    <% if (error && error.length) { %>
-        <div class="alert alert-danger"><%= error %></div>
-    <% } %>
+            <% if (success && success.length) { %>
+                <div class="alert alert-success"><%= success %></div>
+            <% } %>
 
-    <% if (success && success.length) { %>
-        <div class="alert alert-success"><%= success %></div>
-    <% } %>
+            <form action="/contact" method="POST" class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Name</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
 
-    <form action="/contact" method="POST" class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <input
+                        type="email"
+                        name="email"
+                        class="form-control"
+                        value="<%= userEmail || '' %>"
+                        <%= isLoggedIn ? 'readonly' : '' %>
+                        placeholder="Enter your email"
+                        required
+                    >
+                </div>
 
-        <div class="col-md-6">
-            <label class="form-label">Name</label>
-            <input type="text" name="name" class="form-control" required>
+                <div class="col-12">
+                    <label class="form-label">Message</label>
+                    <textarea
+                        name="message"
+                        rows="5"
+                        class="form-control"
+                        placeholder="Write your message..."
+                        required
+                    ></textarea>
+                </div>
+
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                    <a href="/" class="btn btn-back px-4">
+                        &larr; Back
+                    </a>
+
+                    <button type="submit" class="btn btn-submit px-4">
+                        Send Message
+                    </button>
+                </div>
+            </form>
         </div>
 
-        <div class="col-md-6">
-            <label class="form-label">Email</label>
-            <input
-                type="email"
-                name="email"
-                class="form-control"
-                value="<%= userEmail || '' %>"
-                <%= isLoggedIn ? 'readonly' : '' %>
-                placeholder="Enter your email"
-                required
-            >
+        <aside class="info-card">
+            <h4 class="mb-3">Quick Help</h4>
+            <div class="info-item">
+                <i class="bi bi-envelope-heart"></i>
+                <div>
+                    <div class="fw-bold text-dark">support@homebitez.com</div>
+                    <div>For order help and account questions.</div>
+                </div>
+            </div>
+            <div class="info-item">
+                <i class="bi bi-telephone"></i>
+                <div>
+                    <div class="fw-bold text-dark">+65 6123 4567</div>
+                    <div>Daily 10:00 AM to 10:00 PM (SGT).</div>
+                </div>
+            </div>
+            <div class="info-item">
+                <i class="bi bi-geo-alt"></i>
+                <div>
+                    <div class="fw-bold text-dark">HomeBitez HQ</div>
+                    <div>21 Fusionopolis Way, Singapore.</div>
+                </div>
+            </div>
+            <div class="info-item">
+                <i class="bi bi-clock"></i>
+                <div>
+                    <div class="fw-bold text-dark">Support hours</div>
+                    <div>Chat and email monitored every day.</div>
+                </div>
+            </div>
+            <div class="info-highlight">
+                Pro tip: For urgent delivery issues, include your order ID.
+            </div>
+        </aside>
+    </section>
+
+    <section class="faq-section">
+        <h3 class="faq-title">Frequently Asked Questions</h3>
+        <p class="text-muted mb-3">Quick answers before you send a message.</p>
+
+        <div class="accordion" id="contactFaq">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="faqOne">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseOne" aria-expanded="true" aria-controls="faqCollapseOne">
+                        How long does delivery usually take?
+                    </button>
+                </h2>
+                <div id="faqCollapseOne" class="accordion-collapse collapse show" aria-labelledby="faqOne" data-bs-parent="#contactFaq">
+                    <div class="accordion-body">
+                        Most orders arrive within 30 to 45 minutes, depending on distance and kitchen queue.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="faqTwo">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseTwo" aria-expanded="false" aria-controls="faqCollapseTwo">
+                        Can I change or cancel my order?
+                    </button>
+                </h2>
+                <div id="faqCollapseTwo" class="accordion-collapse collapse" aria-labelledby="faqTwo" data-bs-parent="#contactFaq">
+                    <div class="accordion-body">
+                        If the kitchen has not started preparing the order, we can help. Send your order ID as soon as possible.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="faqThree">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseThree" aria-expanded="false" aria-controls="faqCollapseThree">
+                        What payment methods do you support?
+                    </button>
+                </h2>
+                <div id="faqCollapseThree" class="accordion-collapse collapse" aria-labelledby="faqThree" data-bs-parent="#contactFaq">
+                    <div class="accordion-body">
+                        We accept cards, PayNow, and selected e-wallets. Payment options show at checkout.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="faqFour">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseFour" aria-expanded="false" aria-controls="faqCollapseFour">
+                        How do I report a missing or wrong item?
+                    </button>
+                </h2>
+                <div id="faqCollapseFour" class="accordion-collapse collapse" aria-labelledby="faqFour" data-bs-parent="#contactFaq">
+                    <div class="accordion-body">
+                        Contact us with your order ID and a quick description. We will make it right.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="faqFive">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseFive" aria-expanded="false" aria-controls="faqCollapseFive">
+                        Do you offer refunds?
+                    </button>
+                </h2>
+                <div id="faqCollapseFive" class="accordion-collapse collapse" aria-labelledby="faqFive" data-bs-parent="#contactFaq">
+                    <div class="accordion-body">
+                        Yes. If there is a verified issue, we can refund or issue credits based on the case.
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <div class="col-12">
-            <label class="form-label">Message</label>
-            <textarea
-                name="message"
-                rows="5"
-                class="form-control"
-                placeholder="Write your message..."
-                required
-            ></textarea>
-        </div>
-
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <a href="/" class="btn btn-back px-4">
-                ← Back
-            </a>
-
-            <button type="submit" class="btn btn-submit px-4">
-                Send Message
-            </button>
-        </div>
-
-    </form>
+    </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

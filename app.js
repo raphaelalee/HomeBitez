@@ -3,18 +3,100 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 require("dotenv").config();
+const stripeService = require('./services/stripe');
 
 // Controllers
 const UsersController = require('./Controllers/usersController');
 const ReportModel = require('./models/ReportModel');
 const ProductModel = require('./Models/ProductModel');
+const OrdersModel = require('./Models/OrdersModel');
+const UsersModel = require('./Models/UsersModel');
 
 // DB
 const db = require('./db');
 
 // NETS service (for QR)
 const nets = require("./services/nets");
+
+let reportColumnsEnsured = false;
+async function ensureReportReplyColumns() {
+    if (reportColumnsEnsured) return;
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS report_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NULL,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(150) NOT NULL,
+                subject VARCHAR(200) NOT NULL,
+                description TEXT NOT NULL,
+                order_id VARCHAR(50) NULL,
+                address VARCHAR(255) NULL,
+                image_url VARCHAR(255) NULL,
+                status ENUM('new','in_progress','resolved') DEFAULT 'new',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                admin_reply TEXT NULL,
+                replied_at DATETIME NULL,
+                replied_by INT NULL,
+                user_reply TEXT NULL,
+                user_reply_at DATETIME NULL
+            )
+        `);
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN admin_reply TEXT NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN replied_at DATETIME NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN replied_by INT NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN user_reply TEXT NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN user_reply_at DATETIME NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN order_id VARCHAR(50) NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN address VARCHAR(255) NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN image_url VARCHAR(255) NULL");
+    } catch (err) {}
+    reportColumnsEnsured = true;
+}
+
+let messagesTableEnsured = false;
+async function ensureMessagesTable() {
+    if (messagesTableEnsured) return;
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                senderId INT NOT NULL,
+                ownerId INT NULL,
+                message TEXT NOT NULL,
+                isRead TINYINT(1) DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_messages_sender FOREIGN KEY (senderId) REFERENCES users(id)
+            )
+        `);
+    } catch (err) {
+        console.error("ensureMessagesTable create failed:", err);
+    }
+    try {
+        await db.query("ALTER TABLE messages MODIFY ownerId INT NULL");
+    } catch (err) {
+        // ignore if column already nullable or missing
+    }
+    messagesTableEnsured = true;
+}
 
 // Initialize app
 const app = express();
@@ -44,6 +126,38 @@ app.use((req, res, next) => {
 
 app.use(flash());
 
+// Public routes allowed without login
+const publicPaths = [
+    '/',
+    '/menu',
+    '/contact',
+    '/report',
+    '/login',
+    '/register',
+    '/signup',
+    '/logout',
+    '/forgot-password',
+    '/reset-password',
+    '/about'
+];
+
+app.use((req, res, next) => {
+    const user = req.session.user;
+    const path = req.path;
+
+    // allow static assets and favicon (already handled, but keep explicit)
+    if (path.startsWith('/public') || path.startsWith('/images') || path === '/favicon.ico') {
+        return next();
+    }
+
+    const isPublic = publicPaths.some(p => path === p || path.startsWith(p + '/'));
+    if (!user && !isPublic) {
+        if (req.flash) req.flash('error', 'Please login or register to continue.');
+        return res.redirect('/login');
+    }
+    next();
+});
+
 // EJS setup
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -67,16 +181,21 @@ module.exports.upload = upload;
 
 // Home
 app.get('/', (req, res) => {
-    res.render('index');
+    res.render('index', { user: req.session.user || null });
 });
 
-// Logout
+// Logout route
 app.get('/logout', (req, res) => {
+  // If using express-session
   req.session.destroy(err => {
     if (err) {
-      return res.redirect('/user');
+      console.error('Error destroying session:', err);
+      return res.redirect('/'); // fallback to home
     }
-    res.redirect('/login');
+    // Clear the cookie (optional, if using cookies)
+    res.clearCookie('connect.sid'); 
+    // Redirect to homepage
+    res.redirect('/');
   });
 });
 
@@ -88,34 +207,63 @@ app.get('/report', (req, res) => {
         return res.redirect('/login');
     }
 
-    res.render('report', {
-        success: req.flash('success'),
-        error: req.flash('error'),
-        userEmail: req.session.user.email || ''
+    const userId = req.session.user.id;
+    const userEmail = req.session.user.email || '';
+
+    ensureReportReplyColumns().then(() => {
+        return db.query(
+            "SELECT id, subject, description, status, created_at, admin_reply, replied_at, user_reply, user_reply_at, order_id, address, image_url FROM report_messages WHERE user_id = ? ORDER BY created_at DESC",
+            [userId]
+        );
+    }).then(([rows]) => {
+        res.render('report', {
+            success: req.flash('success'),
+            error: req.flash('error'),
+            userEmail,
+            userAddress: req.session.user?.address || req.session.cartPrefs?.address || '',
+            orderId: req.session.lastReceiptOrderId || '',
+            issues: rows || []
+        });
+    }).catch(err => {
+        console.error("Report list error:", err);
+        res.render('report', {
+            success: req.flash('success'),
+            error: req.flash('error'),
+            userEmail,
+            userAddress: req.session.user?.address || req.session.cartPrefs?.address || '',
+            orderId: req.session.lastReceiptOrderId || '',
+            issues: []
+        });
     });
 });
 
-app.post('/report', async (req, res) => {
+app.post('/report', upload.single('issueImage'), async (req, res) => {
     if (!req.session.user) {
         req.flash('error', 'Please log in to submit a report.');
         return res.redirect('/login');
     }
 
-    const { name, subject, description } = req.body;
+    const { name, subject, description, orderId, address } = req.body;
     const email = req.session.user.email || '';
+    const cleanOrderId = (orderId || '').trim();
+    const cleanAddress = (address || '').trim();
 
-    if (!name || !email || !subject || !description) {
-        req.flash('error', 'Please fill out all fields.');
+    if (!name || !email || !subject || !description || !cleanOrderId || !cleanAddress) {
+        req.flash('error', 'Please fill out all fields, including order ID and address.');
         return res.redirect('/report');
     }
 
     try {
+        const imageUrl = req.file ? `/images/${req.file.filename}` : null;
         await ReportModel.create({
             userId: req.session.user.id || null,
             name,
             email,
             subject,
-            description
+            description,
+            orderId: cleanOrderId,
+            address: cleanAddress,
+            imageUrl
         });
 
         req.flash('success', 'Report submitted successfully.');
@@ -127,12 +275,163 @@ app.post('/report', async (req, res) => {
     }
 });
 
+// User mark report as resolved
+app.post('/report/:id/resolve', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please log in to continue.');
+        return res.redirect('/login');
+    }
+
+    const reportId = Number(req.params.id);
+    if (!Number.isFinite(reportId)) {
+        req.flash('error', 'Invalid report ID.');
+        return res.redirect('/report');
+    }
+
+    try {
+        await ensureReportReplyColumns();
+        await db.query(
+            "UPDATE report_messages SET status = 'resolved' WHERE id = ? AND user_id = ?",
+            [reportId, req.session.user.id]
+        );
+        req.flash('success', 'Issue marked as resolved.');
+    } catch (err) {
+        console.error('Report resolve error:', err);
+        req.flash('error', 'Failed to update issue status.');
+    }
+
+    return res.redirect('/report');
+});
+
+app.post('/report/:id/reply', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please log in to continue.');
+        return res.redirect('/login');
+    }
+
+    const reportId = Number(req.params.id);
+    const reply = (req.body.reply || '').trim();
+    if (!Number.isFinite(reportId) || !reply) {
+        req.flash('error', 'Reply cannot be empty.');
+        return res.redirect('/report');
+    }
+
+    try {
+        await ensureReportReplyColumns();
+        await db.query(
+            "UPDATE report_messages SET user_reply = ?, user_reply_at = NOW(), status = 'in_progress' WHERE id = ? AND user_id = ?",
+            [reply, reportId, req.session.user.id]
+        );
+        req.flash('success', 'Reply sent to admin.');
+    } catch (err) {
+        console.error('User reply error:', err);
+        req.flash('error', 'Failed to send reply.');
+    }
+
+    return res.redirect('/report');
+});
+
 // Auth
 app.get('/login', UsersController.showLogin);
 app.post('/login', UsersController.login);
 app.get('/register', UsersController.showRegister);
 app.post('/register', UsersController.register);
 app.post('/signup', UsersController.register);
+
+// Forgot password
+app.get('/forgot-password', (req, res) => {
+    res.render('forgot-password', {
+        success: req.flash('success'),
+        error: req.flash('error')
+    });
+});
+
+app.post('/forgot-password', async (req, res) => {
+    try {
+        const email = (req.body.email || '').trim().toLowerCase();
+        if (!email) {
+            req.flash('error', 'Please enter your email.');
+            return res.redirect('/forgot-password');
+        }
+
+        const user = await UsersModel.findByEmail(email);
+        // Always respond with success to avoid leaking accounts
+        if (!user) {
+            req.flash('success', 'If that email exists, a reset link has been sent.');
+            return res.redirect('/forgot-password');
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
+
+        await UsersModel.createPasswordReset(user.id, token, expiresAt);
+
+        const resetLink = `http://localhost:3000/reset-password?token=${token}`;
+        console.log('[ForgotPassword] Reset link:', resetLink);
+
+        req.flash('success', 'Reset link generated. Check console for the link (simulated email).');
+        return res.redirect('/forgot-password');
+    } catch (err) {
+        console.error('Forgot password error:', err);
+        req.flash('error', 'Failed to generate reset link.');
+        return res.redirect('/forgot-password');
+    }
+});
+
+app.get('/reset-password', async (req, res) => {
+    const token = (req.query.token || '').trim();
+    if (!token) {
+        req.flash('error', 'Invalid reset link.');
+        return res.redirect('/forgot-password');
+    }
+
+    const reset = await UsersModel.findValidPasswordReset(token);
+    if (!reset) {
+        req.flash('error', 'Reset link is invalid or expired.');
+        return res.redirect('/forgot-password');
+    }
+
+    return res.render('reset-password', {
+        token,
+        error: req.flash('error'),
+        success: req.flash('success')
+    });
+});
+
+app.post('/reset-password', async (req, res) => {
+    try {
+        const token = (req.body.token || '').trim();
+        const newPassword = (req.body.newPassword || '').trim();
+        const confirmPassword = (req.body.confirmPassword || '').trim();
+
+        if (!token || !newPassword || !confirmPassword) {
+            req.flash('error', 'Please fill in all fields.');
+            return res.redirect(`/reset-password?token=${encodeURIComponent(token)}`);
+        }
+
+        if (newPassword !== confirmPassword) {
+            req.flash('error', 'Passwords do not match.');
+            return res.redirect(`/reset-password?token=${encodeURIComponent(token)}`);
+        }
+
+        const reset = await UsersModel.findValidPasswordReset(token);
+        if (!reset) {
+            req.flash('error', 'Reset link is invalid or expired.');
+            return res.redirect('/forgot-password');
+        }
+
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await UsersModel.updatePassword(reset.user_id, hashed);
+        await UsersModel.markPasswordResetUsed(reset.id);
+
+        req.flash('success', 'Password reset successful. Please log in.');
+        return res.redirect('/login');
+    } catch (err) {
+        console.error('Reset password error:', err);
+        req.flash('error', 'Failed to reset password.');
+        return res.redirect('/forgot-password');
+    }
+});
 
 // Menu (requires login) - load products from DB and pass to view
 app.get('/menu', async (req, res) => {
@@ -168,7 +467,7 @@ app.get('/admin', async (req, res) => {
     let totalIssues = 0;
 
     try {
-        const [p] = await db.query("SELECT COUNT(*) AS total FROM products");
+        const [p] = await db.query("SELECT COUNT(*) AS total FROM product");
         totalProducts = p[0]?.total || 0;
 
         const [o] = await db.query("SELECT COUNT(*) AS total FROM orders");
@@ -190,8 +489,477 @@ app.get('/admin', async (req, res) => {
             totalProducts,
             totalIssues
         },
-        adminName: 'Admin'
+        adminName: req.session.user?.username || 'Admin'
     });
+});
+
+// Admin profile
+app.get('/admin/profile', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    try {
+        const userId = req.session.user.id;
+        const [rows] = await db.query("SELECT * FROM users WHERE id = ?", [userId]);
+        const user = rows && rows[0] ? rows[0] : req.session.user;
+        res.render('admin-profile', {
+            user,
+            success: req.flash('success'),
+            error: req.flash('error'),
+            adminName: req.session.user?.username || 'Admin'
+        });
+    } catch (err) {
+        console.error("Admin profile page error:", err);
+        req.flash('error', 'Failed to load profile.');
+        return res.redirect('/admin');
+    }
+});
+
+app.post('/admin/profile', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    try {
+        const userId = req.session.user.id;
+        const username = (req.body.username || '').trim();
+        const email = (req.body.email || '').trim();
+        const address = (req.body.address || '').trim();
+        const contact = (req.body.contact || '').trim();
+
+        await db.query(
+            "UPDATE users SET username=?, email=?, address=?, contact=? WHERE id=?",
+            [username, email, address, contact, userId]
+        );
+
+        // keep session in sync
+        if (req.session.user) {
+            req.session.user.username = username;
+            req.session.user.email = email;
+            req.session.user.address = address;
+            req.session.user.contact = contact;
+        }
+
+        req.flash('success', 'Profile updated successfully.');
+        return res.redirect('/admin/profile');
+    } catch (err) {
+        console.error("Admin profile update error:", err);
+        req.flash('error', 'Failed to update profile.');
+        return res.redirect('/admin/profile');
+    }
+});
+
+// Admin manage customers
+app.get('/admin/customers', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let customers = [];
+    try {
+        await UsersModel.ensurePointsColumn();
+        let rows = [];
+        try {
+            const [withPoints] = await db.query(
+                "SELECT id, username, email, contact, IFNULL(points, 0) AS points FROM users WHERE role = 'user' ORDER BY id ASC"
+            );
+            rows = withPoints;
+        } catch (err) {
+            const [fallback] = await db.query(
+                "SELECT id, username, email, contact FROM users WHERE role = 'user' ORDER BY id ASC"
+            );
+            rows = fallback.map(row => ({ ...row, points: 0 }));
+        }
+        customers = rows;
+    } catch (err) {
+        console.error("Admin customers error:", err);
+    }
+
+    res.render('admin-customers', {
+        customers,
+        adminName: req.session.user?.username || 'Admin'
+    });
+});
+
+// Admin inventory
+app.get('/admin/inventory', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let products = [];
+    try {
+        const [rows] = await db.query(
+            `SELECT p.id, p.product_name AS productName, p.image, p.description, p.quantity, p.price, p.owner_id,
+                    u.username AS businessName
+             FROM product p
+             LEFT JOIN users u ON u.id = p.owner_id
+             ORDER BY p.id ASC`
+        );
+        products = rows;
+    } catch (err) {
+        console.error("Admin inventory error:", err);
+    }
+
+    res.render('admin-inventory', {
+        products,
+        adminName: req.session.user?.username || 'Admin'
+    });
+});
+
+
+// Admin purchase records
+app.get('/admin/records', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let orders = [];
+    let records = [];
+
+    try {
+        orders = await OrdersModel.list(200);
+        const userIds = Array.from(
+            new Set(
+                (orders || [])
+                    .map(o => Number(o.user_id))
+                    .filter(id => Number.isFinite(id))
+            )
+        );
+
+        const userMap = new Map();
+        if (userIds.length) {
+            const [rows] = await db.query(
+                "SELECT id, username, email, contact FROM users WHERE id IN (?)",
+                [userIds]
+            );
+            (rows || []).forEach(r => userMap.set(Number(r.id), r));
+        }
+
+        records = (orders || []).map(o => {
+            const user = userMap.get(Number(o.user_id)) || {};
+            const items = Array.isArray(o.items)
+                ? o.items.map(it => {
+                    const qty = Number(it.qty || it.quantity || 0) || 0;
+                    const name = it.name || 'Item';
+                    return `${qty}x ${name}`;
+                  }).join(', ')
+                : '';
+
+            const status = o.status
+                ? String(o.status)
+                : (o.paypal_capture_id ? 'Completed' : 'Pending');
+
+            return {
+                id: o.id,
+                name: o.shipping_name || user.username || '-',
+                email: o.payer_email || user.email || '-',
+                contact: user.contact || '-',
+                items: items || '-',
+                status,
+                total: Number(o.total || 0),
+                createdAt: o.created_at || null
+            };
+        });
+    } catch (err) {
+        console.error("Admin records error:", err);
+    }
+
+    res.render('admin-records', {
+        records,
+        adminName: req.session.user?.username || 'Admin'
+    });
+});
+
+// Admin sales reports
+app.get('/admin/reports', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let totalRevenue = 0;
+    let totalOrders = 0;
+    let totalProducts = 0;
+    let averageOrderValue = 0;
+    let growthPercent = 0;
+    let dailySales = [];
+    let lowStock = [];
+    let recentOrders = [];
+    let salesByCategory = [];
+    let bestSellers = [];
+    let returningCustomers = [];
+
+    try {
+        // detect column names to support different schemas
+        const [colRows] = await db.query(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders'"
+        );
+        const colSet = new Set((colRows || []).map(r => (r.COLUMN_NAME || '').toLowerCase()));
+        const pick = (cands, fallback) => {
+            for (const c of cands) if (colSet.has(c.toLowerCase())) return c;
+            return fallback;
+        };
+        const totalCol = pick(['totalAmount', 'total', 'total_amount'], 'total');
+        const createdCol = pick(['created_at', 'createdAt'], 'created_at');
+        const userCol = pick(['user_id', 'userId', 'user'], 'user_id');
+        const itemsCol = pick(['items', 'order_items', 'orderItems'], null);
+
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const start7 = new Date(today);
+        start7.setDate(start7.getDate() - 6);
+        const startPrev7 = new Date(start7);
+        startPrev7.setDate(startPrev7.getDate() - 7);
+
+        // headline
+        const [[revRow]] = await db.query(`SELECT COALESCE(SUM(${totalCol}),0) AS revenue, COUNT(*) AS cnt FROM orders`);
+        totalRevenue = Number(revRow?.revenue || 0);
+        totalOrders = Number(revRow?.cnt || 0);
+        averageOrderValue = totalOrders ? totalRevenue / totalOrders : 0;
+
+        const [[prodRow]] = await db.query("SELECT COUNT(*) AS total FROM product");
+        totalProducts = Number(prodRow?.total || 0);
+
+        // week growth
+        const [[currentWeek]] = await db.query(
+            `SELECT COALESCE(SUM(${totalCol}),0) AS revenue FROM orders WHERE ${createdCol} >= ? AND ${createdCol} < ?`,
+            [start7, new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)]
+        );
+        const [[prevWeek]] = await db.query(
+            `SELECT COALESCE(SUM(${totalCol}),0) AS revenue FROM orders WHERE ${createdCol} >= ? AND ${createdCol} < ?`,
+            [startPrev7, start7]
+        );
+        const curRev = Number(currentWeek?.revenue || 0);
+        const prevRev = Number(prevWeek?.revenue || 0);
+        growthPercent = prevRev ? ((curRev - prevRev) / prevRev) * 100 : 0;
+
+        // daily sales last 7 days
+        const [dailyRows] = await db.query(
+            `SELECT DATE(${createdCol}) AS d, COALESCE(SUM(${totalCol}),0) AS revenue, COUNT(*) AS orders
+             FROM orders
+             WHERE ${createdCol} >= ? AND ${createdCol} < ?
+             GROUP BY d
+             ORDER BY d ASC`,
+            [start7, new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)]
+        );
+        const mapDaily = new Map();
+        (dailyRows || []).forEach(r => mapDaily.set(r.d.toISOString().slice(0,10), { revenue: Number(r.revenue || 0), orders: Number(r.orders || 0) }));
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(start7);
+            d.setDate(start7.getDate() + i);
+            const key = d.toISOString().slice(0,10);
+            const entry = mapDaily.get(key) || { revenue: 0, orders: 0 };
+            dailySales.push({ label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }), ...entry });
+        }
+
+        const [lowRows] = await db.query(
+            "SELECT id, product_name AS name, quantity FROM product WHERE quantity < 10 ORDER BY quantity ASC LIMIT 5"
+        );
+        lowStock = lowRows || [];
+
+        const [recentRows] = await db.query(
+            `SELECT o.id, o.${totalCol} AS totalAmount, o.${createdCol} AS createdAt, o.status, u.username,
+                    COALESCE(SUM(oi.quantity),0) AS items,
+                    ${itemsCol ? `o.${itemsCol} AS itemsJson` : 'NULL AS itemsJson'}
+             FROM orders o
+             LEFT JOIN order_items oi ON oi.orderId = o.id
+             LEFT JOIN users u ON u.id = o.${userCol}
+             GROUP BY o.id
+             ORDER BY o.${createdCol} DESC
+             LIMIT 5`
+        );
+        recentOrders = (recentRows || []).map(r => ({
+            id: r.id,
+            total: Number(r.totalAmount || 0),
+            date: r.createdAt,
+            items: (() => {
+                const fromJoin = Number(r.items || 0);
+                if (fromJoin > 0) return fromJoin;
+                if (r.itemsJson) {
+                    try {
+                        const arr = JSON.parse(r.itemsJson);
+                        return arr.reduce((s, it) => s + Number(it.qty || it.quantity || 0), 0);
+                    } catch (e) { return 0; }
+                }
+                return 0;
+            })(),
+            status: r.status || 'pending',
+            customer: r.username || 'Guest'
+        }));
+
+        const [catRows] = await db.query(
+            `SELECT p.category AS category, COALESCE(SUM(oi.quantity * oi.price),0) AS revenue
+             FROM order_items oi
+             JOIN product p ON p.id = oi.productId
+             GROUP BY p.category
+             ORDER BY revenue DESC`
+        );
+        salesByCategory = catRows || [];
+
+        const [bestRows] = await db.query(
+            `SELECT p.product_name AS name,
+                    SUM(oi.quantity) AS qty,
+                    SUM(oi.quantity * oi.price) AS revenue
+             FROM order_items oi
+             JOIN product p ON p.id = oi.productId
+             GROUP BY p.id
+             ORDER BY qty DESC
+             LIMIT 5`
+        );
+        bestSellers = bestRows || [];
+
+        const [retRows] = await db.query(
+            `SELECT u.username, COUNT(o.id) AS orders, COALESCE(SUM(o.${totalCol}),0) AS spend
+             FROM orders o
+             JOIN users u ON u.id = o.${userCol}
+             GROUP BY u.id
+             HAVING orders > 1
+             ORDER BY orders DESC, spend DESC
+             LIMIT 5`
+        );
+        returningCustomers = retRows || [];
+    } catch (err) {
+        console.error("Admin reports error:", err);
+    }
+
+    res.render('admin-reports', {
+        adminName: req.session.user?.username || 'Admin',
+        totalRevenue,
+        totalOrders,
+        totalProducts,
+        averageOrderValue,
+        growthPercent,
+        dailySales,
+        lowStock,
+        recentOrders,
+        salesByCategory,
+        bestSellers,
+        returningCustomers,
+        updatedAt: new Date().toLocaleString()
+    });
+});
+
+// Admin delete customer
+app.post('/admin/customers/:id/delete', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    const customerId = Number(req.params.id);
+    if (!Number.isFinite(customerId)) {
+        req.flash('error', 'Invalid customer ID.');
+        return res.redirect('/admin/customers');
+    }
+
+    try {
+        await db.query("DELETE FROM users WHERE id = ? AND role = 'user'", [customerId]);
+        req.flash('success', 'Customer account terminated.');
+    } catch (err) {
+        console.error("Admin delete customer error:", err);
+        req.flash('error', 'Failed to terminate account.');
+    }
+
+    return res.redirect('/admin/customers');
+});
+
+// Admin issues reported
+app.get('/admin/issues', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let issues = [];
+    try {
+        await ensureReportReplyColumns();
+        const [rows] = await db.query(
+            `SELECT rm.id, rm.name, rm.email, rm.subject, rm.description, rm.status, rm.created_at,
+                    rm.admin_reply, rm.replied_at, rm.user_reply, rm.user_reply_at, rm.order_id, rm.address, rm.image_url, u.contact
+             FROM report_messages rm
+             LEFT JOIN users u ON u.id = rm.user_id
+             ORDER BY rm.created_at DESC`
+        );
+        issues = rows;
+    } catch (err) {
+        console.error("Admin issues error:", err);
+    }
+
+    res.render('admin-issues', {
+        issues,
+        adminName: req.session.user?.username || 'Admin'
+    });
+});
+
+app.post('/admin/issues/:id/reply', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    const issueId = Number(req.params.id);
+    const reply = (req.body.reply || '').trim();
+    if (!Number.isFinite(issueId) || !reply) {
+        req.flash('error', 'Reply cannot be empty.');
+        return res.redirect('/admin/issues');
+    }
+
+    try {
+        await ensureReportReplyColumns();
+        await db.query(
+            "UPDATE report_messages SET admin_reply = ?, replied_at = NOW(), replied_by = ? WHERE id = ?",
+            [reply, req.session.user.id, issueId]
+        );
+        req.flash('success', 'Reply sent.');
+    } catch (err) {
+        console.error("Admin reply error:", err);
+        req.flash('error', 'Failed to send reply.');
+    }
+
+    return res.redirect('/admin/issues');
 });
 
 // Logout
@@ -208,12 +976,136 @@ app.get('/user/profile', async (req, res) => {
   const userId = req.session.user.id;
   let user = req.session.user;
 
-  // Optional: fetch extra data like points history from DB
-  const orders = []; // replace with real orders if you have
+  try {
+    await UsersModel.ensurePointsColumn();
+    await UsersModel.ensurePointsHistoryTable();
+    const userRows = await UsersModel.findById(userId);
+    const dbUser = Array.isArray(userRows) ? userRows[0] : userRows;
+    const points = await UsersModel.getPoints(userId);
+    let pointsHistory = await UsersModel.getPointsHistory(userId, 20);
+    // Compute running balance from oldest to newest
+    const computeWithBalance = (list) => {
+      let running = 0;
+      return (list || []).map(h => {
+        running += Number(h.points || 0);
+        return { ...h, balanceAfter: running };
+      });
+    };
+
+    let enrichedHistory = computeWithBalance(pointsHistory);
+
+    // If DB history is empty but session has recent entries (newest-first), compute from session copy
+    if ((!enrichedHistory || enrichedHistory.length === 0) && Array.isArray(req.session.user.pointsHistory) && req.session.user.pointsHistory.length) {
+      enrichedHistory = computeWithBalance((req.session.user.pointsHistory || []).slice().reverse());
+    }
+
+    if ((!enrichedHistory || enrichedHistory.length === 0) && points > 0) {
+      enrichedHistory.push({
+        date: '�',
+        desc: 'Existing balance',
+        points,
+        balanceAfter: points
+      });
+    }
+    // Show newest first
+    enrichedHistory = enrichedHistory.slice().reverse();
+    if (dbUser) {
+      user = {
+        ...user,
+        username: dbUser.username || user.username,
+        email: dbUser.email || user.email,
+        address: dbUser.address || user.address,
+        contact: dbUser.contact || user.contact,
+        avatar: dbUser.avatar || user.avatar || '/images/default-avatar.png',
+        points,
+        pointsHistory: enrichedHistory
+      };
+      req.session.user = user;
+    } else {
+      user = { ...user, points, pointsHistory: enrichedHistory };
+      req.session.user = user;
+    }
+  } catch (err) {
+    console.error('Profile points load error:', err);
+  }
+
+  // Pull recent orders for this user
+  let orders = [];
+  try {
+    const rawOrders = await OrdersModel.listByUser(userId, 50);
+    const timeZone = process.env.APP_TIMEZONE || "Asia/Singapore";
+    const normalizeStatus = (s) => s ? (s.charAt(0).toUpperCase() + s.slice(1)) : null;
+    const formatOrderDate = (value) => {
+      if (!value) return "-";
+      let d;
+      if (value instanceof Date) {
+        d = value;
+      } else if (typeof value === "string") {
+        const s = value.trim();
+        if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/.test(s)) {
+          d = new Date(s.replace(" ", "T") + "Z");
+        } else {
+          d = new Date(s);
+        }
+      } else {
+        d = new Date(value);
+      }
+      return d.toLocaleString("en-SG", { timeZone });
+    };
+    orders = rawOrders.map(o => {
+      const qty = (o.items || []).reduce((s, i) => s + Number(i.qty || i.quantity || 0), 0);
+      const derivedStatus = normalizeStatus(o.status) || (o.paypal_capture_id ? 'Paid' : 'Pending');
+      return {
+        orderId: o.paypal_order_id || `ORD-${o.id}`,
+        date: formatOrderDate(o.created_at),
+        qty,
+        total: Number(o.total || 0),
+        status: derivedStatus
+      };
+    });
+  } catch (err) {
+    console.error('profile history error:', err);
+    orders = [];
+  }
+
+  // Pull reported issues for this user
+  let userIssues = [];
+  try {
+    await ensureReportReplyColumns();
+    const [rows] = await db.query(
+      "SELECT id, subject, description, status, created_at, admin_reply, replied_at, user_reply, user_reply_at, order_id, address, image_url FROM report_messages WHERE user_id = ? ORDER BY created_at DESC",
+      [userId]
+    );
+    userIssues = rows || [];
+  } catch (err) {
+    console.error('profile issues load error:', err);
+    userIssues = [];
+  }
+
+  // Pull messages sent to this user (bizowner replies)
+  let userMessages = [];
+  try {
+    await ensureMessagesTable();
+    const [rows] = await db.query(
+      `SELECT m.id, m.senderId, m.ownerId, m.message, m.isRead, m.created_at,
+              u.username AS senderName, u.email AS senderEmail
+       FROM messages m
+       LEFT JOIN users u ON u.id = m.senderId
+       WHERE m.ownerId = ?
+       ORDER BY m.created_at DESC`,
+      [userId]
+    );
+    userMessages = rows || [];
+  } catch (err) {
+    console.error('profile messages load error:', err);
+    userMessages = [];
+  }
 
   res.render('userprofile', { 
       user, 
       orders,
+      userIssues,
+      userMessages,
       success: req.flash('success'),
       error: req.flash('error')
   });
@@ -276,9 +1168,11 @@ app.post('/contact', async (req, res) => {
     }
 
     try {
+        await ensureMessagesTable();
+        const ownerId = null; // unassigned; biz owners will still see it due to fallback logic
         await db.query(
-            'INSERT INTO messages (senderId, message, isRead, created_at) VALUES (?, ?, 0, NOW())',
-            [req.session.user.id, message]
+            'INSERT INTO messages (senderId, ownerId, message, isRead, created_at) VALUES (?, ?, ?, 0, NOW())',
+            [req.session.user.id, ownerId, message]
         );
 
         req.flash('success', 'Your message has been sent!');
@@ -450,11 +1344,17 @@ app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
 
     const interval = setInterval(async () => {
         try {
-            // If you have real check function:
-            // const status = await nets.checkStatus(txnRetrievalRef);
+            let status = netsStatusOverrides[txnRetrievalRef] || "PENDING";
 
-            // Sandbox placeholder. Use in-memory override for testing without simulator app
-            const status = netsStatusOverrides[txnRetrievalRef] || "PENDING";
+            // Prefer real NETS enquiry if available
+            if (status === "PENDING" && typeof nets.checkStatus === "function") {
+                try {
+                    const res = await nets.checkStatus(txnRetrievalRef);
+                    status = res?.status || status;
+                } catch (err) {
+                    console.error("NETS status check error:", err.message);
+                }
+            }
 
             if (status === "SUCCESS") {
                 console.log('SSE: reporting SUCCESS for', txnRetrievalRef);
@@ -618,6 +1518,27 @@ app.post('/nets/complete', async (req, res) => {
                 payerId: null,
                 capturedAt: Date.now(),
             };
+
+            // Award points for NETS payment (1 point per $1)
+            if (req.session.user && pending.amount) {
+                try {
+                    const UsersModel = require("./Models/UsersModel");
+                    // Deduct redeemed points first if any
+                    if (req.session.cartRedeem?.points) {
+                        const { balance, entry } = await UsersModel.addPoints(req.session.user.id, -Number(req.session.cartRedeem.points), `Redeem NETS ${pending.txnRetrievalRef || ''}`.trim());
+                        req.session.user.points = balance;
+                        req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);
+                    }
+
+                    const earned = Math.floor(Number(pending.amount)); // 1 pt = $1
+                    const { balance, entry } = await UsersModel.addPoints(req.session.user.id, earned, `NETS ${pending.txnRetrievalRef || ''}`.trim());
+                    req.session.user.points = balance;
+                    req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);
+                    req.session.cartRedeem = null;
+                } catch (err) {
+                    console.error("Points award failed (NETS):", err);
+                }
+            }
         }
 
         console.log('Finalizing NETS payment in session, pending=', pending);
@@ -630,6 +1551,131 @@ app.post('/nets/complete', async (req, res) => {
         return res.status(500).json({ error: 'Failed to finalize NETS payment' });
     }
 });
+
+
+
+app.post('/stripe/create-checkout-session', async (req, res) => {
+  try {
+    const cart = req.session.cart || [];
+    if (!cart.length) {
+      return res.status(400).json({ error: 'Cart is empty' });
+    }
+
+    const items = cart.map((i) => ({
+      name: i.name,
+      price: Number(i.price || 0),
+      qty: Number(i.quantity || i.qty || 0)
+    }));
+
+    const subtotal = items.reduce((s, it) => s + (it.price * it.qty), 0);
+    const deliveryFee = Number(req.body.deliveryFee || 0);
+    const redeem = Math.min(subtotal, Number(req.session.cartRedeem?.amount || 0));
+    const redeemPoints = Number(req.session.cartRedeem?.points || 0);
+    const total = Number((subtotal + deliveryFee - redeem).toFixed(2));
+
+    req.session.stripePending = {
+      items,
+      subtotal,
+      deliveryFee,
+      total,
+      redeem,
+      redeemPoints,
+      prefs: req.session.cartPrefs || null,
+      createdAt: Date.now()
+    };
+
+    const session = await stripeService.createCheckoutSession({
+      // Use total as a single line item to avoid discount math issues
+      subtotal: total,
+      deliveryFee: 0,
+      successUrl: 'http://localhost:3000/stripe/success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'http://localhost:3000/checkout'
+    });
+
+    res.json({ id: session.id });
+  } catch (err) {
+    console.error('Stripe error:', err);
+    res.status(500).json({ error: 'Stripe session failed' });
+  }
+});
+
+app.get('/stripe/success', async (req, res) => {
+  try {
+    const sessionId = req.query.session_id;
+    if (!sessionId) return res.redirect('/checkout');
+
+    const session = await stripeService.retrieveCheckoutSession(sessionId);
+    if (!session || session.payment_status !== 'paid') {
+      return res.redirect('/checkout');
+    }
+
+    const pending = req.session.stripePending || {};
+    const items = pending.items || [];
+    const subtotal = Number(pending.subtotal || 0);
+    const deliveryFee = Number(pending.deliveryFee || 0);
+    const total = Number(pending.total || session.amount_total / 100 || 0);
+
+    const orderDbId = await OrdersModel.create({
+      userId: req.session.user ? req.session.user.id : null,
+      payerEmail: session.customer_details?.email || req.session.user?.email || null,
+      shippingName: pending.prefs?.name || req.session.user?.username || null,
+      items,
+      subtotal,
+      deliveryFee,
+      total,
+      status: "paid"
+    });
+
+    // Deduct redeemed points first
+    if (req.session.user && pending.redeemPoints) {
+      try {
+        const { balance, entry } = await UsersModel.addPoints(
+          req.session.user.id,
+          -Number(pending.redeemPoints),
+          `Redeem order ${orderDbId} (Stripe)`
+        );
+        req.session.user.points = balance;
+        req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0, 20);
+      } catch (err) {
+        console.error("Points redeem deduct failed (Stripe):", err);
+      }
+    }
+
+    // Award loyalty points
+    if (req.session.user && total > 0) {
+      try {
+        const earned = Math.floor(total);
+        const { balance, entry } = await UsersModel.addPoints(
+          req.session.user.id,
+          earned,
+          `Order ${orderDbId} (Stripe)`
+        );
+        req.session.user.points = balance;
+        req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0, 20);
+      } catch (err) {
+        console.error("Points award failed (Stripe):", err);
+      }
+    }
+
+    req.session.stripeCapture = {
+      sessionId,
+      paymentIntentId: session.payment_intent?.id || null,
+      payerEmail: session.customer_details?.email || null,
+      total,
+      status: session.payment_status
+    };
+
+    req.session.latestOrderDbId = orderDbId;
+    req.session.cartRedeem = null;
+    req.session.stripePending = null;
+
+    return res.redirect('/receipt');
+  } catch (err) {
+    console.error('Stripe success error:', err);
+    return res.redirect('/checkout');
+  }
+});
+
 
 /* -------------------- BUSINESS OWNER ROUTES -------------------- */
 const ownerRoutes = require("./Routes/bizownerRoutes");
@@ -697,3 +1743,4 @@ const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+

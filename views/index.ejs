@@ -47,6 +47,11 @@
       background: none;
       cursor: pointer;
     }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
 
     /* ================= HERO ================= */
     .hero {
@@ -249,11 +254,29 @@
   <div class="logo">HomeBitez</div>
   <nav>
     <a href="/">Home</a>
+<<<<<<< HEAD
     <a href="/menu">Menu</a>
     <a href="/contact">Contact</a>
   </nav>
   <div class="header-actions">
     <button>Login</button>
+=======
+    <% if (user && user.role === 'admin') { %>
+      <a href="/admin">Admin Dashboard</a>
+    <% } else { %>
+      <a href="<%= user ? '/menu' : '/login' %>">Menu</a>
+      <a href="/about">About Us</a>
+      <a href="/contact">Contact Us</a>
+    <% } %>
+  </nav>
+  <div class="header-actions">
+    <a href="/login">
+      <button>Login</button>
+    </a>
+    <a href="/register">
+      <button>Sign Up</button>
+    </a>
+>>>>>>> 0758c772bd565a401281c5897923db09a12236c0
   </div>
 </header>
 
@@ -308,7 +331,7 @@
   <div>
     <h2>Get <span>50% Off</span> On Curry</h2>
     <p>Limited-time offer on one of our most popular dishes.</p>
-    <button class="btn-primary" onclick="location.href='/menu'">Order Now</button>
+    <button class="btn-primary" onclick="location.href='/login'">Order Now</button>
   </div>
 </section>
 

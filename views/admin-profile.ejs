@@ -1,0 +1,153 @@
+<%- include('partials/head', { title: 'Admin Profile - HomeBitez' }) %>
+<%- include('partials/navbar-admin') %>
+
+<style>
+  body{
+    background:#f6efe6;
+    color:#2a241e;
+    font-family: 'Sora','Segoe UI', Arial, sans-serif;
+  }
+  .profile-wrap{
+    max-width: 980px;
+    margin: 34px auto 60px;
+    padding: 0 22px;
+  }
+  .page-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  .page-title{
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color:#2a241e;
+  }
+  .page-sub{
+    margin-top: 6px;
+    color:#6f6256;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .card{
+    background:#fffaf3;
+    border: 1px solid #eadac6;
+    border-radius: 22px;
+    box-shadow: 0 14px 34px rgba(42, 36, 30, 0.10);
+    padding: 26px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 18px;
+    margin-top: 10px;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap: 8px;
+  }
+  label{
+    font-weight: 700;
+    font-size: 13px;
+    color:#2a241e;
+  }
+  input{
+    background:#fff;
+    border:1px solid #eadac6;
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-size: 14px;
+    outline:none;
+    transition: 0.15s ease;
+  }
+  input:focus{
+    border-color: rgba(213, 155, 45, 0.7);
+    box-shadow: 0 0 0 4px rgba(213, 155, 45, 0.16);
+  }
+  .actions{
+    margin-top: 18px;
+    display:flex;
+    justify-content:flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btn{
+    border:none;
+    border-radius: 999px;
+    padding: 11px 18px;
+    font-weight: 700;
+    cursor:pointer;
+    font-size: 14px;
+    transition: 0.15s ease;
+  }
+  .btn-primary{
+    background:#d59b2d;
+    color:#fff;
+    box-shadow: 0 10px 24px rgba(213, 155, 45, 0.22);
+  }
+  .btn-primary:hover{ background:#b97d18; transform: translateY(-1px); }
+  .btn-ghost{
+    background:transparent;
+    border:1px solid #eadac6;
+    color:#2a241e;
+  }
+  .btn-ghost:hover{ background:#f3e7d9; }
+  @media (max-width: 760px){
+    .grid{ grid-template-columns: 1fr; }
+    .page-title{ font-size: 22px; }
+    .actions{ justify-content: stretch; }
+    .btn{ width: 100%; }
+  }
+</style>
+
+<div class="profile-wrap">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Admin Profile</h1>
+      <div class="page-sub">
+        Keep your admin contact details updated for notifications and reports.
+      </div>
+    </div>
+
+    <a class="btn-ghost btn" href="/admin">
+      ← Back
+    </a>
+  </div>
+
+  <div class="card">
+    <form action="/admin/profile" method="POST">
+      <div class="grid">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" name="username" value="<%= user?.username || '' %>" required>
+        </div>
+
+        <div class="field">
+          <label>Email</label>
+          <input type="email" name="email" value="<%= user?.email || '' %>" required>
+        </div>
+
+        <div class="field">
+          <label>Address</label>
+          <input type="text" name="address" value="<%= user?.address || '' %>">
+        </div>
+
+        <div class="field">
+          <label>Contact</label>
+          <input type="text" name="contact" value="<%= user?.contact || '' %>">
+        </div>
+      </div>
+
+      <div class="actions">
+        <a class="btn btn-ghost" href="/admin">Cancel</a>
+        <button class="btn btn-primary" type="submit">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

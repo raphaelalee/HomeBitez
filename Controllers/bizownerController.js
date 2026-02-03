@@ -1,6 +1,7 @@
 const ProductModel = require("../Models/ProductModel");
 const db = require("../db");
 const OrdersModel = require("../Models/OrdersModel");
+const UsersModel = require("../Models/UsersModel");
 
 // -----------------------------
 // Helpers
@@ -20,6 +21,26 @@ function requireBizOwner(req, res) {
   return { ok: true, user };
 }
 
+function addPaymentMeta(order) {
+  const hasPaypal = !!(order.paypal_order_id || order.paypalOrderId);
+  const paymentMethod = hasPaypal ? "PayPal" : "Other";
+  const paymentRef = order.paypal_order_id || order.paypalOrderId || order.id || "-";
+  const paymentCapture = order.paypal_capture_id || order.paypalCaptureId || "-";
+  return { paymentMethod, paymentRef, paymentCapture };
+}
+
+function addOrderMeta(order) {
+  const payment = addPaymentMeta(order);
+  const statusRaw = order.status || order.order_status || order.state || null;
+  const fulfillmentStatus = statusRaw || (order.paypal_capture_id || order.paypalCaptureId ? "paid" : "pending");
+  const completedAt = order.completed_at || order.completedAt || null;
+  const deliveryFee = Number(order.delivery_fee || order.deliveryFee || 0);
+  const subtotal = Number(order.subtotal || order.subTotal || (order.total ? Number(order.total) - deliveryFee : 0));
+  const total = Number(order.total || order.totalAmount || order.total_amount || 0);
+  const fulfillmentMode = deliveryFee > 0 ? "Delivery" : "Pickup";
+  return { ...order, ...payment, fulfillmentStatus, completedAt, deliveryFee, subtotal, total, fulfillmentMode };
+}
+
 // ------------------------------------
 // DASHBOARD
 // ------------------------------------
@@ -31,21 +52,33 @@ exports.dashboard = async (req, res) => {
     const ownerId = guard.user.id;
 
     // If you want totals for ALL products, keep as-is.
-    // If you want totals per-owner, you'll need ownerId column on products table.
+    // If you want totals per-owner, you'll need ownerId column on product table.
     const [productCountRows] = await db.query(
-      "SELECT COUNT(*) AS total FROM products"
+      "SELECT COUNT(*) AS total FROM product"
     );
     const totalProducts = productCountRows?.[0]?.total ?? 0;
 
     const [stockRows] = await db.query(
-      "SELECT SUM(quantity) AS totalStocks FROM products"
+      "SELECT SUM(quantity) AS totalStocks FROM product"
     );
     const totalStocks = stockRows?.[0]?.totalStocks ?? 0;
 
-    const [revenueRows] = await db.query(
-      "SELECT SUM(totalAmount) AS revenue FROM orders"
-    );
-    const totalRevenue = revenueRows?.[0]?.revenue ?? 0;
+    let totalRevenue = 0;
+    try {
+      const [revenueRows] = await db.query(
+        "SELECT SUM(totalAmount) AS revenue FROM orders"
+      );
+      totalRevenue = revenueRows?.[0]?.revenue ?? 0;
+    } catch (err) {
+      try {
+        const [revenueRows] = await db.query(
+          "SELECT SUM(total) AS revenue FROM orders"
+        );
+        totalRevenue = revenueRows?.[0]?.revenue ?? 0;
+      } catch (err2) {
+        totalRevenue = 0;
+      }
+    }
 
     const [msgRows] = await db.query(
       "SELECT COUNT(*) AS unread FROM messages WHERE ownerId = ? AND isRead = 0",
@@ -92,20 +125,22 @@ exports.addProduct = async (req, res) => {
   if (!guard.ok) return;
 
   try {
-    let imageFilename = "default.png";
-    if (req.file) imageFilename = req.file.filename;
+        let imageFilename = "default.png";
+        if (req.file) imageFilename = req.file.filename;
 
-    const productName = (req.body.productName || "").trim();
-    const quantity = parseInt(req.body.quantity, 10);
-    const price = parseFloat(req.body.price);
+        const productName = (req.body.productName || "").trim();
+        const category = (req.body.category || "").trim();
+        const price = parseFloat(req.body.price);
+        const quantity = Math.max(0, parseInt(req.body.quantity, 10) || 0);
 
     if (!productName) return res.redirect("/bizowner/add");
-    if (!Number.isInteger(quantity) || quantity < 0) return res.redirect("/bizowner/add");
+    if (!category) return res.redirect("/bizowner/add");
     if (Number.isNaN(price) || price < 0) return res.redirect("/bizowner/add");
 
-    const product = { productName, quantity, price, image: imageFilename };
+    const product = { productName, category, price, image: imageFilename, quantity };
 
     await ProductModel.create(product);
+    req.flash("success", "Product added successfully.");
     return res.redirect("/bizowner/inventory");
   } catch (err) {
     console.error("Add product error:", err);
@@ -149,16 +184,17 @@ exports.updateProduct = async (req, res) => {
     if (req.file) imageFilename = req.file.filename;
 
     const productName = (req.body.productName || "").trim();
-    const quantity = parseInt(req.body.quantity, 10);
+    const category = (req.body.category || "").trim();
     const price = parseFloat(req.body.price);
 
     if (!productName) return res.redirect(`/bizowner/edit/${id}`);
-    if (!Number.isInteger(quantity) || quantity < 0) return res.redirect(`/bizowner/edit/${id}`);
+    if (!category) return res.redirect(`/bizowner/edit/${id}`);
     if (Number.isNaN(price) || price < 0) return res.redirect(`/bizowner/edit/${id}`);
 
-    const product = { productName, quantity, price, image: imageFilename };
+    const product = { productName, category, price, image: imageFilename };
 
     await ProductModel.update(id, product);
+    req.flash("success", "Product updated successfully.");
     return res.redirect("/bizowner/inventory");
   } catch (err) {
     console.error("Update product error:", err);
@@ -178,6 +214,7 @@ exports.deleteProduct = async (req, res) => {
     if (!Number.isInteger(id)) return res.redirect("/bizowner/inventory");
 
     await ProductModel.delete(id);
+    req.flash("success", "Product removed.");
     return res.redirect("/bizowner/inventory");
   } catch (err) {
     console.error("Delete product error:", err);
@@ -197,7 +234,11 @@ exports.profilePage = async (req, res) => {
     const [rows] = await db.query("SELECT * FROM users WHERE id = ?", [userId]);
     if (!rows || !rows[0]) return res.redirect("/bizowner");
 
-    return res.render("bizowner/profile", { user: rows[0] });
+    return res.render("bizowner/profile", { 
+      user: rows[0],
+      success: req.flash("success"),
+      error: req.flash("error")
+    });
   } catch (err) {
     console.error("Profile page error:", err);
     return res.status(500).send("Server error");
@@ -223,9 +264,11 @@ exports.updateProfile = async (req, res) => {
       [username, email, address, contact, userId]
     );
 
+    req.flash("success", "Profile saved.");
     return res.redirect("/bizowner/profile");
   } catch (err) {
     console.error("Update profile error:", err);
+    req.flash("error", "Failed to update profile.");
     return res.status(500).send("Server error");
   }
 };
@@ -240,20 +283,83 @@ exports.messagesPage = async (req, res) => {
   try {
     const ownerId = guard.user.id;
 
-    const [messages] = await db.query(
-      `SELECT m.*, u.username AS senderName 
-       FROM messages m 
-       JOIN users u ON m.senderId = u.id 
-       WHERE m.ownerId = ? 
-       ORDER BY m.created_at DESC`,
-      [ownerId]
-    );
+    // detect owner column on messages table (ownerId or owner_id). If none, show all messages.
+    let ownerCol = null;
+    try {
+      const [colRows] = await db.query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'messages' 
+         AND COLUMN_NAME IN ('ownerId','owner_id') LIMIT 1`
+      );
+      ownerCol = colRows && colRows[0] ? colRows[0].COLUMN_NAME : null;
+    } catch (err) {
+      console.error("messagesPage column detect error:", err);
+    }
 
-    return res.render("bizowner/messages", { messages });
+    let sql = `SELECT m.*, u.username AS senderName, u.email AS senderEmail
+               FROM messages m 
+               JOIN users u ON m.senderId = u.id `;
+    const params = [];
+    if (ownerCol) {
+      sql += `WHERE (m.${ownerCol} = ? OR m.${ownerCol} IS NULL) `;
+      params.push(ownerId);
+    }
+    sql += `ORDER BY m.created_at DESC`;
+
+    const [messages] = await db.query(sql, params);
+
+    // Mark these messages as read for this owner scope
+    try {
+      let updateSql = `UPDATE messages SET isRead = 1 `;
+      const updateParams = [];
+      if (ownerCol) {
+        updateSql += `WHERE ( ${ownerCol} = ? OR ${ownerCol} IS NULL )`;
+        updateParams.push(ownerId);
+      }
+      await db.query(updateSql, updateParams);
+    } catch (err) {
+      console.error("messagesPage mark read error:", err);
+    }
+
+    return res.render("bizowner/messages", { messages, success: req.flash("success"), error: req.flash("error") });
   } catch (err) {
     console.error("Messages page error:", err);
     return res.status(500).send("Server error");
   }
+};
+
+// Reply to a message (simple echo back to sender via new row)
+exports.replyMessage = async (req, res) => {
+  const guard = requireBizOwner(req, res);
+  if (!guard.ok) return;
+
+  try {
+    const { messageId, reply } = req.body;
+    if (!messageId || !reply) {
+      if (req.flash) req.flash("error", "Reply cannot be empty.");
+      return res.redirect("/bizowner/messages");
+    }
+
+    // fetch original sender
+    const [[orig]] = await db.query("SELECT senderId, ownerId FROM messages WHERE id = ?", [messageId]);
+    if (!orig) {
+      if (req.flash) req.flash("error", "Message not found.");
+      return res.redirect("/bizowner/messages");
+    }
+
+    // store reply as a new message from owner to sender (owner as senderId)
+    await db.query(
+      "INSERT INTO messages (senderId, ownerId, message, isRead, created_at) VALUES (?, ?, ?, 0, NOW())",
+      [guard.user.id, orig.senderId || null, reply]
+    );
+
+    if (req.flash) req.flash("success", "Reply sent.");
+  } catch (err) {
+    console.error("replyMessage error:", err);
+    if (req.flash) req.flash("error", "Failed to send reply.");
+  }
+
+  return res.redirect("/bizowner/messages");
 };
 
 // ------------------------------------
@@ -265,8 +371,21 @@ exports.ordersPage = async (req, res) => {
   if (!guard.ok) return;
 
   try {
+    await UsersModel.ensurePointsColumn();
     const orders = await OrdersModel.list(200);
-    return res.render("bizowner/orders", { orders });
+    const withMeta = (orders || []).map(addOrderMeta);
+
+    // Map user points for any user_id present
+    const userIds = Array.from(new Set(withMeta.map(o => o.user_id).filter(Boolean)));
+    let pointsMap = {};
+    if (userIds.length) {
+      const placeholders = userIds.map(() => '?').join(',');
+      const [rows] = await db.query(`SELECT id, points FROM users WHERE id IN (${placeholders})`, userIds);
+      pointsMap = Object.fromEntries((rows || []).map(r => [r.id, Number(r.points || 0)]));
+    }
+
+    const withPoints = withMeta.map(o => ({ ...o, customerPoints: pointsMap[o.user_id] || 0 }));
+    return res.render("bizowner/orders", { orders: withPoints });
   } catch (err) {
     console.error("Orders page error:", err);
     // Return stack for debugging locally
@@ -288,11 +407,44 @@ exports.orderDetailsPage = async (req, res) => {
     const order = await OrdersModel.getById(id);
     if (!order) return res.redirect("/bizowner/orders");
 
-    return res.render("bizowner/orderDetails", { order });
+    let payerEmail = order.payer_email || order.payerEmail || null;
+    if (order.user_id) {
+      try {
+        const userRows = await UsersModel.findById(order.user_id);
+        const user = Array.isArray(userRows) ? userRows[0] : userRows;
+        if (user && user.email) payerEmail = user.email;
+      } catch (err) {
+        console.error("fetch user email failed:", err);
+      }
+    }
+
+    return res.render("bizowner/orderDetails", { order: { ...addOrderMeta(order), payer_email: payerEmail } });
   } catch (err) {
     console.error("Order details error:", err);
     return res.status(500).send(`<pre>${(err && err.stack) ? err.stack : String(err)}</pre>`);
   }
+};
+
+// ------------------------------------
+// MARK ORDER COMPLETED
+// ------------------------------------
+exports.markOrderComplete = async (req, res) => {
+  const guard = requireBizOwner(req, res);
+  if (!guard.ok) return;
+
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) return res.redirect("/bizowner/orders");
+
+    await OrdersModel.updateStatus(id, "completed");
+    if (req.flash) req.flash("success", "Order marked as completed.");
+  } catch (err) {
+    console.error("markOrderComplete error:", err);
+    if (req.flash) req.flash("error", "Unable to mark order completed.");
+  }
+
+  const ref = req.headers.referer || "/bizowner/orders";
+  return res.redirect(ref.includes(`/bizowner/orders/${req.params.id}`) ? `/bizowner/orders/${req.params.id}` : "/bizowner/orders");
 };
 
 // ------------------------------------
@@ -309,7 +461,7 @@ exports.replenish = async (req, res) => {
     }
 
     await db.query(
-      "UPDATE products SET quantity = quantity + ? WHERE id = ?",
+      "UPDATE product SET quantity = quantity + ? WHERE id = ?",
       [quantityToAdd, id]
     );
 
@@ -322,13 +474,4 @@ exports.replenish = async (req, res) => {
   }
 };
 
-// ------------------------------------
-// OPTIONAL: replyMessage if needed
-// ------------------------------------
-exports.replyMessage = async (req, res) => {
-  const guard = requireBizOwner(req, res);
-  if (!guard.ok) return;
-
-  console.log("Reply received:", req.body.reply);
-  return res.redirect("/bizowner/messages");
-};
+// (Removed duplicate replyMessage stub)

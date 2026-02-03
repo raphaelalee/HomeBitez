@@ -1,6 +1,43 @@
 const User = require('../models/UsersModel');
+const CartModel = require('../Models/cartModels');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs'); // make sure bcryptjs is installed
+
+const LOGIN_LOCK_THRESHOLD = 5;
+const LOGIN_LOCK_MS = 5 * 60 * 1000;
+const loginAttempts = new Map();
+
+function getLoginKey(req, identifier) {
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  const id = (identifier || 'unknown').toLowerCase();
+  return `${id}|${ip}`;
+}
+
+function getAttemptState(key) {
+  const state = loginAttempts.get(key);
+  if (!state) return { count: 0, lockUntil: null };
+  if (state.lockUntil && Date.now() >= state.lockUntil) {
+    loginAttempts.delete(key);
+    return { count: 0, lockUntil: null };
+  }
+  return state;
+}
+
+function recordFailure(key) {
+  const state = getAttemptState(key);
+  const nextCount = (state.count || 0) + 1;
+  if (nextCount >= LOGIN_LOCK_THRESHOLD) {
+    const lockUntil = Date.now() + LOGIN_LOCK_MS;
+    loginAttempts.set(key, { count: nextCount, lockUntil });
+    return { locked: true, lockUntil };
+  }
+  loginAttempts.set(key, { count: nextCount, lockUntil: null });
+  return { locked: false };
+}
+
+function clearFailures(key) {
+  loginAttempts.delete(key);
+}
 
 // Helper: check plaintext or legacy hashes (MD5/SHA1)
 function passwordMatches(user, providedPassword) {
@@ -44,10 +81,20 @@ module.exports = {
   async login(req, res) {
     const identifier = (req.body.email || '').trim();
     const providedPassword = (req.body.password || '').trim();
+    const key = getLoginKey(req, identifier);
+    const attemptState = getAttemptState(key);
+
+    if (attemptState.lockUntil) {
+      const remainingMs = attemptState.lockUntil - Date.now();
+      const remainingMin = Math.max(1, Math.ceil(remainingMs / 60000));
+      req.flash('error', `Too many failed attempts. Try again in ${remainingMin} minute(s).`);
+      return res.redirect('/login');
+    }
 
     const user = await User.findByEmailOrUsername(identifier);
     if (!user) {
-      req.flash('error', 'Invalid email or password');
+      const r = recordFailure(key);
+      req.flash('error', r.locked ? 'Too many failed attempts. Locked for 5 minutes.' : 'Invalid email or password');
       return res.redirect('/login');
     }
 
@@ -67,9 +114,15 @@ module.exports = {
     }
 
     if (!match) {
-      req.flash('error', 'Invalid email or password');
+      const r = recordFailure(key);
+      req.flash('error', r.locked ? 'Too many failed attempts. Locked for 5 minutes.' : 'Invalid email or password');
       return res.redirect('/login');
     }
+    clearFailures(key);
+
+    // make sure points column exists and fetch points
+    await User.ensurePointsColumn();
+    const userPoints = Number(user.points || 0);
 
     // Save user session
     req.session.user = {
@@ -79,8 +132,21 @@ module.exports = {
       role: user.role,
       avatar: user.avatar || '/images/default-avatar.png',
       address: user.address || '',
-      contact: user.contact || ''
+      contact: user.contact || '',
+      points: userPoints
     };
+
+    try {
+      const cartRows = await CartModel.getByUserId(req.session.user.id);
+      req.session.cart = cartRows.map(r => ({
+        name: r.name,
+        price: Number(r.price || 0),
+        quantity: Number(r.quantity || 0),
+        image: r.image || ""
+      }));
+    } catch (err) {
+      console.error("Failed to load cart from DB:", err);
+    }
 
     // Redirect based on role
     if (user.role === 'biz_owner') return res.redirect('/bizowner');
@@ -93,31 +159,37 @@ module.exports = {
   },
 
   async register(req, res) {
-    const { username, email, contact, password, confirmPassword } = req.body;
+    try {
+      const { username, email, contact, password, confirmPassword } = req.body;
 
-    if (!username || !email || !contact || !password || !confirmPassword) {
-      req.flash('error', 'Please fill in all required fields.');
+      if (!username || !email || !contact || !password || !confirmPassword) {
+        req.flash('error', 'Please fill in all required fields.');
+        return res.redirect('/register');
+      }
+
+      if (password !== confirmPassword) {
+        req.flash('error', 'Passwords do not match.');
+        return res.redirect('/register');
+      }
+
+      const existingUser = await User.findByEmail(email);
+      if (existingUser) {
+        req.flash('error', 'Email is already registered');
+        return res.redirect('/register');
+      }
+
+      // Hash password before saving
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await User.create({ username, email, contact, password: hashedPassword, role: 'user' });
+
+      req.flash('success', 'Account created! You may log in now.');
+      return res.redirect('/login');
+    } catch (err) {
+      console.error('Register error:', err);
+      req.flash('error', 'Registration failed. Please try again.');
       return res.redirect('/register');
     }
-
-    if (password !== confirmPassword) {
-      req.flash('error', 'Passwords do not match.');
-      return res.redirect('/register');
-    }
-
-    const existingUser = await User.findByEmail(email);
-    if (existingUser) {
-      req.flash('error', 'Email is already registered');
-      return res.redirect('/register');
-    }
-
-    // Hash password before saving
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await User.create({ username, email, contact, password: hashedPassword, role: 'user' });
-
-    req.flash('success', 'Account created! You may log in now.');
-    return res.redirect('/login');
   },
 
   // Change password

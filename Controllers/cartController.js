@@ -1,7 +1,23 @@
+const CartModel = require("../Models/cartModels");
+const UsersModel = require("../Models/UsersModel");
+
+async function hydrateCartFromDb(req) {
+    if (!req.session.user) return;
+    if (req.session.cart && req.session.cart.length) return;
+    const rows = await CartModel.getByUserId(req.session.user.id);
+    req.session.cart = rows.map(r => ({
+        name: r.name,
+        price: Number(r.price || 0),
+        quantity: Number(r.quantity || 0),
+        image: r.image || ""
+    }));
+}
+
 module.exports = {
 
     // GET /cart
-    viewCart(req, res) {
+    async viewCart(req, res) {
+        await hydrateCartFromDb(req);
         const cart = req.session.cart || [];
 
         let subtotal = 0;
@@ -9,27 +25,42 @@ module.exports = {
             subtotal += item.price * item.quantity;
         });
 
+        const redeem = Math.min(subtotal, Number(req.session.cartRedeem?.amount || 0));
+
         // Preferences stored in session
         const prefs = req.session.cartPrefs || {
             cutlery: false,
             pickupDate: "",
-            pickupTime: ""
+            pickupTime: "",
+            mode: "pickup",
+            name: "",
+            address: "",
+            contact: "",
+            notes: ""
         };
 
-        res.render('carts', { cart, subtotal, prefs });
+        const availablePoints = req.session.user ? Number(req.session.user.points || 0) : 0;
+
+        res.render('carts', {
+            cart,
+            subtotal,
+            redeem,
+            totalAfterRedeem: Number((subtotal - redeem).toFixed(2)),
+            prefs,
+            availablePoints,
+            appliedPoints: Number(req.session.cartRedeem?.points || 0)
+        });
     },
 
     // POST /cart/add  (called by fetch)
-    addToCart(req, res) {
+    async addToCart(req, res) {
         const { name, price, qty, image } = req.body;
 
         if (!name || !price) {
             return res.status(400).json({ ok: false, error: "Missing item data" });
         }
 
-        if (!req.session.cart) {
-            req.session.cart = [];
-        }
+        if (!req.session.cart) req.session.cart = [];
 
         const cart = req.session.cart;
 
@@ -47,15 +78,46 @@ module.exports = {
         }
 
         req.session.cart = cart;
+        if (req.session.user) {
+            await CartModel.upsertItem(req.session.user.id, {
+                name,
+                price: parseFloat(price),
+                quantity: Number(qty || 1),
+                image: image || ""
+            });
+        }
 
         return res.json({ ok: true, cartCount: cart.length });
+    },
+
+    // POST /cart/redeem
+    async redeemPoints(req, res) {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+        await hydrateCartFromDb(req);
+        const cart = req.session.cart || [];
+        const subtotal = cart.reduce((s, i) => s + Number(i.price || 0) * Number(i.quantity || i.qty || 0), 0);
+        const available = Number(req.session.user.points || 0);
+        const points = Math.max(0, parseInt(req.body.points, 10) || 0);
+        const cappedPoints = Math.min(points, available);
+        // Redeem rate: 1 point = $0.10
+        const amount = Math.min(subtotal, cappedPoints * 0.10);
+
+        if (!cappedPoints || amount <= 0) {
+            req.session.cartRedeem = null;
+            return res.redirect('/cart');
+        }
+
+        req.session.cartRedeem = { points: cappedPoints, amount };
+        return res.redirect('/cart');
     },
 
     // POST /cart/update
     // Supports:
     //  A) { name, quantity }
     //  B) { name, action: "increase" | "decrease" }
-    updateItem(req, res) {
+    async updateItem(req, res) {
         const { name, quantity, action } = req.body;
 
         if (!req.session.cart) req.session.cart = [];
@@ -70,6 +132,13 @@ module.exports = {
                 }
                 return item;
             });
+
+            if (req.session.user) {
+                const updated = req.session.cart.find(i => i.name === name);
+                if (updated) {
+                    await CartModel.updateQuantity(req.session.user.id, name, updated.quantity);
+                }
+            }
 
             return res.json({ ok: true });
         }
@@ -89,32 +158,55 @@ module.exports = {
             return item;
         });
 
+        if (req.session.user) {
+            await CartModel.updateQuantity(req.session.user.id, name, q);
+        }
+
         return res.json({ ok: true });
     },
 
     // POST /cart/remove
-    removeItem(req, res) {
+    async removeItem(req, res) {
         const { name } = req.body;
 
         if (!req.session.cart) req.session.cart = [];
 
         req.session.cart = req.session.cart.filter(item => item.name !== name);
+        if (req.session.user) {
+            await CartModel.removeItem(req.session.user.id, name);
+        }
 
         return res.json({ ok: true });
     },
 
     // POST /cart/preferences
     savePreferences(req, res) {
-        const { cutlery, pickupDate, pickupTime } = req.body;
+        const { cutlery, pickupDate, pickupTime, mode, name, address, contact, notes } = req.body;
 
         if (!req.session.cartPrefs) {
-            req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "" };
+            req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", name: "", address: "", contact: "", notes: "" };
         }
 
         req.session.cartPrefs.cutlery = !!cutlery;
         req.session.cartPrefs.pickupDate = pickupDate || "";
         req.session.cartPrefs.pickupTime = pickupTime || "";
+        req.session.cartPrefs.mode = mode || "pickup";
+        req.session.cartPrefs.name = name || "";
+        req.session.cartPrefs.address = address || "";
+        req.session.cartPrefs.contact = contact || "";
+        req.session.cartPrefs.notes = notes || "";
 
+        return res.json({ ok: true });
+    },
+
+    // POST /cart/clear
+    async clearCart(req, res) {
+        req.session.cart = [];
+        req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", name: "", address: "", contact: "", notes: "" };
+        req.session.cartRedeem = null;
+        if (req.session.user) {
+            await CartModel.clearCart(req.session.user.id);
+        }
         return res.json({ ok: true });
     }
 };

@@ -9,6 +9,9 @@
   .page-sub { margin-top:6px; color:#6f6256; font-size:14px; line-height:1.4; }
   .back-link { display:inline-flex; align-items:center; gap:8px; text-decoration:none; color:#2a241e; font-weight:600; border:1px solid #eadac6; background:#fffaf3; padding:10px 14px; border-radius:999px; box-shadow:0 10px 24px rgba(42,36,30,0.08); transition:0.15s ease; }
   .back-link:hover { transform: translateY(-1px); background:#fff; }
+  .page-actions { display:flex; gap:10px; align-items:center; }
+  .logout-link { background:#fff3f3; border-color:#f0c1c1; color:#8f1d1d; }
+  .logout-link:hover { background:#ffe8e8; }
 
   .card { background:#fffaf3; border:1px solid #eadac6; border-radius:22px; box-shadow:0 14px 34px rgba(42,36,30,0.10); padding:26px; margin-bottom:30px; }
 
@@ -21,8 +24,8 @@
   .profile-info p { margin:4px 0; font-size:14px; color:#6f6256; }
 
   .profile-header { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; position: relative; }
-  .wallet-btn { margin-left: auto; }
-  .wallet-btn .btn { padding: 10px 22px; font-size: 16px; text-decoration: none; }
+  .wallet-btn { margin-left: auto; display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
+  .wallet-btn .btn { padding: 8px 16px; font-size: 14px; text-decoration: none; }
 
   /* Tabs */
   .tabs { display:flex; gap:10px; border-bottom:1px solid #ddd; margin-bottom:20px; }
@@ -65,9 +68,14 @@
   <div class="page-head">
     <div>
       <h1 class="page-title">My Profile</h1>
-      <div class="page-sub">Update your personal details to make ordering faster and smoother.</div>
+      <div class="page-sub">Keep your details fresh like your favorite meals! Update your info, track points, and make every HomeBitez order smooth and tasty.</div>
     </div>
-    <a class="back-link" href="/menu">← Back</a>
+    <div class="page-actions">
+      <a class="back-link" href="/menu">← Back</a>
+      <% if (user && user.role === 'admin') { %>
+        <a class="back-link logout-link" href="/logout">Logout</a>
+      <% } %>
+    </div>
   </div>
 
   <!-- Profile Header -->
@@ -83,7 +91,8 @@
       <p>Points: <strong><%= user?.points || 0 %></strong></p>
     </div>
     <div class="wallet-btn">
-        <a href="/digitalwallet" class="btn btn-primary">Digital Wallet</a>
+        <a href="/digitalwallet" class="btn btn-primary">Homebitez Wallet</a>
+        <a href="/paylater" class="btn btn-primary">HomeBitez PayLater</a>
     </div>
   </div>
 
@@ -99,6 +108,8 @@
   <div class="tabs">
     <div class="tab active" data-tab="profile">Profile</div>
     <div class="tab" data-tab="orders">Order History</div>
+    <div class="tab" data-tab="messages">Messages</div>
+    <div class="tab" data-tab="issues">Issues Reported</div>
     <div class="tab" data-tab="points">Points</div>
     <div class="tab" data-tab="settings">Settings</div>
   </div>
@@ -140,23 +151,31 @@
     <table>
       <thead>
         <tr>
-          <th>Order ID</th>
+          <th>Order #</th>
           <th>Date</th>
-          <th>Quantity</th>
-          <th>Total Amount</th>
+          <th>Qty</th>
+          <th>Total</th>
           <th>Status</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
-        <% (orders || []).forEach(order => { %>
+        <% if (!orders || orders.length === 0) { %>
           <tr>
-            <td><%= order.id %></td>
-            <td><%= order.date %></td>
-            <td><%= order.qty %></td>
-            <td>$<%= order.total.toFixed(2) %></td>
-            <td><%= order.status %></td>
+            <td colspan="6" style="text-align:center; color:#6f6256;">No orders yet.</td>
           </tr>
-        <% }) %>
+        <% } else { %>
+          <% orders.forEach(order => { %>
+            <tr>
+              <td style="font-weight:700;"><%= order.orderId %></td>
+              <td><%= order.date %></td>
+              <td><%= order.qty %></td>
+              <td>$<%= order.total.toFixed(2) %></td>
+              <td><%= order.status %></td>
+              <td><a href="/receipt" style="text-decoration:none; color:#d59b2d; font-weight:600;">View receipt</a></td>
+            </tr>
+          <% }) %>
+        <% } %>
       </tbody>
     </table>
   </div>
@@ -164,6 +183,10 @@
   <!-- Points Tab -->
   <div class="card tab-content" id="points" style="display:none;">
     <h3>Your Points</h3>
+    <p style="color:#6f6256; font-size:13px; margin:0 0 10px;">
+      Earn points every time you order on HomeBitez and redeem them for instant discounts on your next checkout.
+      It’s our way of saying thanks for supporting local food makers.
+    </p>
     <p>You currently have <strong><%= user?.points || 0 %></strong> points.</p>
     <% if (user?.pointsHistory?.length) { %>
       <table>
@@ -172,6 +195,7 @@
             <th>Date</th>
             <th>Description</th>
             <th>Points</th>
+            <th class="text-end">Balance after</th>
           </tr>
         </thead>
         <tbody>
@@ -179,13 +203,79 @@
             <tr>
               <td><%= item.date %></td>
               <td><%= item.desc %></td>
-              <td><%= item.points %></td>
+              <td>
+                <span style="color:<%= item.points >= 0 ? '#1b7a2e' : '#8f1d1d' %>; font-weight:700;">
+                  <%= item.points >= 0 ? '+' : '' %><%= item.points %>
+                </span>
+              </td>
+              <td class="text-end" style="font-weight:700;"><%= item.balanceAfter %></td>
             </tr>
           <% }) %>
         </tbody>
       </table>
     <% } else { %>
       <p>No points transactions yet.</p>
+    <% } %>
+  </div>
+
+  <!-- Issues Reported Tab -->
+  <div class="card tab-content" id="issues" style="display:none;">
+    <h3>Issues Reported</h3>
+    <% if (!userIssues || userIssues.length === 0) { %>
+      <p class="text-muted">No issues reported yet.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Admin Reply</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% userIssues.forEach(issue => { %>
+            <tr>
+              <td><strong><%= issue.subject || 'No subject' %></strong></td>
+              <td><%= issue.status || 'new' %></td>
+              <td><%= issue.created_at ? new Date(issue.created_at).toLocaleString() : '-' %></td>
+              <td><%= issue.admin_reply ? issue.admin_reply : '—' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <!-- Messages Tab -->
+  <div class="card tab-content" id="messages" style="display:none;">
+    <h3>Messages from Business Owners</h3>
+    <% if (!userMessages || userMessages.length === 0) { %>
+      <p class="text-muted">No messages yet.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr>
+            <th>From</th>
+            <th>Message</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% userMessages.forEach(msg => { %>
+            <tr>
+              <td>
+                <%= msg.senderName || 'Business Owner' %>
+                <% if (msg.senderEmail) { %>
+                  <span style="color:#6f6256; font-size:12px;">(<%= msg.senderEmail %>)</span>
+                <% } %>
+              </td>
+              <td><%= msg.message %></td>
+              <td><%= msg.created_at ? new Date(msg.created_at).toLocaleString() : '-' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
     <% } %>
   </div>
 
@@ -197,7 +287,7 @@
     <form action="/user/change-password" method="POST">
         <h5>Change Password</h5>
         <div class="grid">
-          <div class="field">
+          <div class="field" style="grid-column:1 / -1;">
               <label>Current Password</label>
               <input type="password" name="currentPassword" required>
           </div>

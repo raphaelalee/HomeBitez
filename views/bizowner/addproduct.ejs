@@ -57,7 +57,8 @@
 
         input[type="text"],
         input[type="number"],
-        input[type="file"] {
+        input[type="file"],
+        select {
             width: 100%;
             padding: 12px;
             margin-top: 6px;
@@ -65,6 +66,28 @@
             border: 1px solid #ccc;
             font-size: 14px;
             background: #fafafa;
+        }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            cursor: pointer;
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+
+        .select-wrapper::after {
+            content: "▾";
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #666;
+            font-size: 14px;
         }
 
         input[type="file"] {
@@ -134,16 +157,27 @@
             <label>Product Name</label>
             <input type="text" name="productName" required>
 
-            <label>Quantity</label>
-            <input type="number" name="quantity" required>
+            <label>Category</label>
+            <div class="select-wrapper">
+                <select name="category" required>
+                    <option value="" disabled selected>Select category</option>
+                    <option value="International">International</option>
+                    <option value="Local">Local</option>
+                    <option value="Dessert">Dessert</option>
+                    <option value="Sides">Sides</option>
+                    <option value="Beverage">Beverage</option>
+                </select>
+            </div>
 
             <label>Price (S$)</label>
             <input type="number" step="0.01" name="price" required>
 
+            <label>Quantity</label>
+            <input type="number" min="0" step="1" name="quantity" value="0" required>
+
             <label>Product Image</label>
             <input type="file" name="imageFile" accept="image/*" onchange="showPreview(event)" required>
 
-            <!-- LIVE IMAGE PREVIEW -->
             <img id="preview" class="image-preview">
 
             <button type="submit">Add Product</button>
@@ -160,5 +194,4 @@
     </script>
 
 </body>
-
 </html>

@@ -1,0 +1,85 @@
+<style>
+  .flash-toast {
+    position: fixed;
+    right: 18px;
+    top: 82px;
+    background: #fffdf9;
+    border: 1px solid #eadac6;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+    border-radius: 14px;
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 220px;
+    max-width: 320px;
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    z-index: 10000;
+    font-family: "Poppins", "Segoe UI", sans-serif;
+  }
+
+  .flash-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .flash-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 16px;
+    background: #d59b2d;
+    flex-shrink: 0;
+  }
+
+  .flash-toast.error .flash-badge {
+    background: #d9534f;
+  }
+
+  .flash-text {
+    color: #2a241e;
+    font-size: 14px;
+    line-height: 1.35;
+    font-weight: 600;
+  }
+</style>
+
+<div id="flashToast" class="flash-toast" role="status" aria-live="polite"></div>
+
+<script>
+  (() => {
+    const toastEl = document.getElementById("flashToast");
+    if (!toastEl) return;
+
+    const msgs = {
+      success: <%- JSON.stringify(typeof success !== "undefined" && success && success[0] ? success[0] : "") %>,
+      error: <%- JSON.stringify(typeof error !== "undefined" && error && error[0] ? error[0] : "") %>
+    };
+
+    function renderToast(message, type = "success") {
+      if (!message) return;
+      toastEl.className = "flash-toast" + (type === "error" ? " error" : "");
+      toastEl.innerHTML = `
+        <div class="flash-badge">
+          <i class="bi ${type === "error" ? "bi-x-lg" : "bi-check-lg"}"></i>
+        </div>
+        <div class="flash-text">${message}</div>
+      `;
+      toastEl.classList.add("show");
+      clearTimeout(window.__flashTimer);
+      window.__flashTimer = setTimeout(() => toastEl.classList.remove("show"), 2400);
+    }
+
+    window.pushFlash = renderToast;
+
+    if (msgs.error) renderToast(msgs.error, "error");
+    else if (msgs.success) renderToast(msgs.success, "success");
+  })();
+</script>

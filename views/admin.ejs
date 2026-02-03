@@ -34,40 +34,6 @@
       min-height: 100vh;
     }
 
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      background: var(--cream-deep);
-      box-shadow: 0 4px 12px rgba(20, 20, 20, 0.08);
-      padding: 18px 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .brand {
-      font-family: "Sniglet", cursive;
-      font-size: 30px;
-      font-weight: 900;
-      color: var(--accent);
-      text-decoration: none;
-      letter-spacing: 0.5px;
-    }
-
-    .nav-links a {
-      text-decoration: none;
-      color: var(--ink);
-      margin: 0 14px;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .welcome {
-      font-weight: 600;
-      font-size: 15px;
-    }
-
     .page {
       max-width: 1280px;
       margin: 48px auto 96px;
@@ -119,16 +85,6 @@
       overflow: hidden;
     }
 
-    .action-card::after {
-      content: "";
-      position: absolute;
-      top: 18px;
-      right: 18px;
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: rgba(240, 164, 0, 0.12);
-    }
 
     .action-title {
       font-size: 18px;
@@ -143,6 +99,7 @@
     }
 
     .action-btn {
+      display: inline-block;
       align-self: flex-start;
       background: var(--accent);
       color: #fff;
@@ -152,6 +109,7 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      text-decoration: none;
       transition: background 0.2s ease;
     }
 
@@ -159,14 +117,6 @@
       background: var(--accent-deep);
     }
 
-    .arrow {
-      position: absolute;
-      right: 20px;
-      top: 20px;
-      font-size: 18px;
-      color: var(--accent);
-      font-weight: 700;
-    }
 
     @media (max-width: 1100px) {
       .stats {
@@ -201,15 +151,7 @@
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">HomeBitez</a>
-    <nav class="nav-links">
-      <a href="/">Home</a>
-      <a href="/menu">Menu</a>
-      <a href="/report">Contact us</a>
-    </nav>
-    <div class="welcome">Welcome, <%= adminName %>!</div>
-  </header>
+  <%- include('partials/navbar-admin', { showAdminWelcome: true }) %>
 
   <main class="page">
     <section class="stats">
@@ -233,28 +175,24 @@
 
     <section class="actions">
       <article class="action-card">
-        <div class="arrow">→</div>
         <div class="action-title">Customer Details</div>
         <div class="action-desc">View and manage customer details, points and accounts.</div>
-        <button class="action-btn" type="button">Manage Customers</button>
+        <a class="action-btn" href="/admin/customers">Manage Customers</a>
       </article>
       <article class="action-card">
-        <div class="arrow">→</div>
         <div class="action-title">Purchase Records</div>
         <div class="action-desc">View all transaction history and order details.</div>
-        <button class="action-btn" type="button">View Records</button>
+        <a class="action-btn" href="/admin/records">View Records</a>
       </article>
       <article class="action-card">
-        <div class="arrow">→</div>
         <div class="action-title">Sales Reports</div>
         <div class="action-desc">View sales analytics and performance snapshots.</div>
-        <button class="action-btn" type="button">View Reports</button>
+        <a class="action-btn" href="/admin/reports">View Reports</a>
       </article>
       <article class="action-card">
-        <div class="arrow">→</div>
         <div class="action-title">Report Issues</div>
         <div class="action-desc">Handle customer complaints and reported issues.</div>
-        <button class="action-btn" type="button">View Issues</button>
+        <a class="action-btn" href="/admin/issues">View Issues</a>
       </article>
     </section>
   </main>

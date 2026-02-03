@@ -2,51 +2,79 @@
 <%- include('../partials/navbar-bizowner') %>
 
 <style>
-  body { background: #f6efe6; color:#2a241e; }
-  .page-title { margin:22px 40px; font-size:18px; color:#6f6256; }
-  .card-wrap { padding: 0 40px 40px; }
-  .orders-card { background:#fffaf3; border:1px solid #eadac6; border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(42,36,30,0.06); }
-  table { width:100%; border-collapse:collapse; margin-top:10px; }
-  th, td { padding:12px 10px; text-align:left; }
-  thead th { font-weight:700; color:#6f6256; border-bottom:1px solid #eadac6; }
-  tbody tr { background:white; border-bottom:1px solid #f1e9df; }
-  .btn-view { background:#d59b2d; color:white; padding:8px 12px; border-radius:999px; text-decoration:none; }
+  body { background: #faefe5; color:#2a241e; }
+  .orders-wrap { max-width: 1100px; margin: 26px auto 60px; padding: 0 18px; }
+  .orders-card { background:#fffdf8; border:1px solid #f1dfbb; border-radius:16px; box-shadow:0 10px 24px rgba(0,0,0,0.06); padding:18px; }
+  h2 { font-weight:900; margin:0 0 14px; }
+  table { width:100%; border-collapse:collapse; }
+  thead th { background:#f7eedf; padding:12px 10px; font-weight:800; color:#2f2a24; border-color:#f1dfbb; }
+  tbody td { padding:12px 10px; border-color:#f1dfbb; }
+  tbody tr:nth-child(every) {}
+  .status-pill{
+    display:inline-flex; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700; text-transform:capitalize;
+  }
+  .paid{ background:#e6f6e9; color:#1b7a2e; }
+  .pending{ background:#fff4dc; color:#8c6a00; }
+  .completed{ background:#e9e7ff; color:#3f3ba6; }
+  .btn-view{
+    border:1px solid #dd9b00;
+    color:#dd9b00;
+    border-radius:10px;
+    padding:6px 12px;
+    font-weight:700;
+    text-decoration:none;
+    font-family: inherit;
+    background: transparent;
+  }
+  .btn-view:hover{ background:#dd9b00; color:white; }
 </style>
 
-<div class="page-title">Orders</div>
-<div class="card-wrap">
+<div class="orders-wrap">
+  <h2>Orders</h2>
   <div class="orders-card">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Order (PayPal)</th>
-          <th>Payer</th>
-          <th>Items</th>
-          <th class="text-end">Total</th>
-          <th class="text-end">Date</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if (!orders || (orders && orders.length === 0)) { %>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead>
           <tr>
-            <td colspan="7" class="text-center" style="padding:36px 12px; color:#6f6256;">No orders found yet. Once customers checkout, orders will appear here.</td>
+            <th>Order #</th>
+            <th>Date</th>
+            <th class="text-end">Total</th>
+            <th class="text-end">Customer Points</th>
+            <th>Status</th>
+            <th class="text-end">Action</th>
           </tr>
-        <% } else { %>
-          <% (orders || []).forEach(o => { %>
+        </thead>
+        <tbody>
+          <% if (!orders || orders.length === 0) { %>
             <tr>
-              <td><%= o.id %></td>
-              <td><%= o.paypal_order_id || '-' %></td>
-              <td><%= o.payer_email || '-' %></td>
-              <td><%= (o.items || []).length %></td>
-              <td class="text-end">$<%= Number(o.total||0).toFixed(2) %></td>
-              <td class="text-end"><%= new Date(o.created_at).toLocaleString() %></td>
-              <td class="text-end"><a class="btn-view" href="/bizowner/orders/<%= o.id %>">View</a></td>
+              <td colspan="5" class="text-center text-muted py-4">No orders found.</td>
             </tr>
-          <% }) %>
-        <% } %>
-      </tbody>
-    </table>
+          <% } else { %>
+            <% orders.forEach(o => { 
+              const orderNum = o.paypal_order_id || `ORD-${o.id}`;
+              const statusKey = (o.fulfillmentStatus || '').toLowerCase();
+              const statusLabel = statusKey === 'completed' ? 'Completed' : (statusKey === 'paid' ? 'Paid' : 'Pending');
+              const statusClass = statusKey === 'completed' ? 'completed' : (statusKey === 'paid' ? 'paid' : 'pending');
+            %>
+              <tr>
+                <td style="font-weight:700;"><%= orderNum %></td>
+                <td><%= o.created_at ? new Date(o.created_at).toLocaleString() : '-' %></td>
+                <td class="text-end">$<%= Number(o.total||0).toFixed(2) %></td>
+                <td class="text-end"><%= Number(o.customerPoints || 0) %></td>
+                <td><span class="status-pill <%= statusClass %>"><%= statusLabel %></span></td>
+                <td class="text-end">
+                  <a class="btn-view" href="/bizowner/orders/<%= o.id %>">View</a>
+                  <% if (statusKey !== 'completed') { %>
+                    <form action="/bizowner/orders/<%= o.id %>/complete" method="POST" style="display:inline;" onsubmit="return confirm('Mark this order as completed?');">
+                      <button type="submit" class="btn-view" style="margin-left:6px;">Complete</button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>

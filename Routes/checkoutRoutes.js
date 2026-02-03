@@ -7,6 +7,15 @@ const checkoutController = require("../controllers/checkoutController");
 // Checkout page
 router.get("/checkout", checkoutController.renderCheckout);
 
+// PayLater page
+router.get("/paylater", checkoutController.renderPayLater);
+router.post("/paylater/choose", checkoutController.choosePayLater);
+router.post("/paylater/pay-installment/paypal", checkoutController.startPayLaterInstallmentPaypal);
+router.post("/paylater/pay-early/paypal", checkoutController.startPayLaterEarlyPaypal);
+router.get("/paylater/paypal", checkoutController.renderPayLaterPaypal);
+router.post("/paylater/paypal/create-order", checkoutController.createPayLaterPaypalOrder);
+router.post("/paylater/paypal/capture-order", checkoutController.capturePayLaterPaypalOrder);
+
 // Receipt page
 router.get("/receipt", checkoutController.renderReceipt);
 

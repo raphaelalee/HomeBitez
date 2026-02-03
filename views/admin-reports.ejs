@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Reports - HomeBitez</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --cream: #fff5ea;
+      --cream-deep: #fde8cf;
+      --card: #fffaf3;
+      --ink: #2a241e;
+      --muted: #6f6256;
+      --accent: #d59b2d;
+      --accent-strong: #b97d18;
+      --line: #eadac6;
+      --shadow: 0 12px 28px rgba(42,36,30,0.10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Sora', 'Inter', sans-serif;
+      background: linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
+      color: var(--ink);
+    }
+    main {
+      max-width: 1180px;
+      margin: 26px auto 64px;
+      padding: 0 24px;
+      display: grid;
+      gap: 18px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    .stat-value { font-size: 22px; font-weight: 700; margin-top: 6px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .kpi { display: flex; justify-content: space-between; align-items: center; }
+    .pill {
+      background: rgba(213,155,45,0.12);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .pill.danger { background: rgba(201,42,42,0.10); color: #c92a2a; }
+    .pill.amber { background: rgba(245,159,0,0.14); color: #f59f00; }
+    .flex {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .chart-wrap { height: 260px; }
+    .list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+    .list-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fffdf9;
+    }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .bar-track {
+      flex: 1;
+      height: 8px;
+      background: #eef2f7;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2f9e44, #7ccf6a);
+    }
+    @media (max-width: 900px) {
+      main { padding: 0 18px; }
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar-admin') %>
+
+  <main>
+    <section class="grid-3">
+      <div class="card">
+        <div class="muted">Total Products</div>
+        <div class="stat-value"><%= totalProducts %></div>
+      </div>
+      <div class="card">
+        <div class="muted">Total Revenue</div>
+        <div class="stat-value">S$ <%= totalRevenue.toFixed(2) %></div>
+      </div>
+      <div class="card">
+        <div class="muted">Total Orders</div>
+        <div class="stat-value"><%= totalOrders %></div>
+      </div>
+      <div class="card">
+        <div class="muted">Avg Order Value</div>
+        <div class="stat-value">S$ <%= averageOrderValue.toFixed(2) %></div>
+      </div>
+      <div class="card">
+        <div class="muted">Growth vs last 7 days</div>
+        <div class="stat-value"><%= growthPercent.toFixed(1) %>%</div>
+        <div class="pill <%= growthPercent < 0 ? 'danger' : 'amber' %>">
+          <%= growthPercent < 0 ? 'Down' : 'Up' %>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="kpi">
+        <h2>Daily sales (last 7 days)</h2>
+        <div class="muted">Updated <%= updatedAt %></div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </section>
+
+    <section class="flex">
+      <div class="card" style="flex:2; min-width:320px;">
+        <h2>Recent orders</h2>
+        <ul class="list">
+          <% if (!recentOrders.length) { %>
+            <li class="muted">No orders yet.</li>
+          <% } else { %>
+            <% recentOrders.forEach(o => { %>
+              <li class="list-item">
+                <div>
+                  <strong>ORD-<%= o.id %></strong><br>
+                  <span class="muted"><%= new Date(o.date).toLocaleString() %> · <%= o.items %> items</span>
+                </div>
+                <div style="text-align:right;">
+                  <div>S$ <%= o.total.toFixed(2) %></div>
+                  <div class="muted"><%= o.customer %></div>
+                </div>
+              </li>
+            <% }) %>
+          <% } %>
+        </ul>
+      </div>
+
+      <div class="card" style="flex:1; min-width:260px;">
+        <h2>Low stock alerts</h2>
+        <ul class="list">
+          <% if (!lowStock.length) { %>
+            <li class="muted">No low stock items 🎉</li>
+          <% } else { %>
+            <% lowStock.forEach(p => { %>
+              <li class="list-item">
+                <div><strong><%= p.name %></strong></div>
+                <div class="pill danger"><%= p.quantity %> left</div>
+              </li>
+            <% }) %>
+          <% } %>
+        </ul>
+      </div>
+    </section>
+
+    <section class="flex">
+      <div class="card" style="flex:1; min-width:300px;">
+        <h2>Sales by category</h2>
+        <ul class="list">
+          <% if (!salesByCategory.length) { %>
+            <li class="muted">No category sales yet.</li>
+          <% } else { 
+               const maxCat = Math.max(...salesByCategory.map(c => Number(c.revenue || 0)), 1);
+             %>
+            <% salesByCategory.forEach(c => { 
+                 const pct = Math.min(100, (Number(c.revenue || 0) / maxCat) * 100);
+            %>
+              <li class="bar-row">
+                <div style="width:110px;"><%= c.category || 'Uncategorized' %></div>
+                <div class="bar-track"><div class="bar-fill" style="width:<%= pct %>%"></div></div>
+                <div style="width:80px; text-align:right;">S$ <%= Number(c.revenue || 0).toFixed(2) %></div>
+              </li>
+            <% }) %>
+          <% } %>
+        </ul>
+      </div>
+
+      <div class="card" style="flex:1; min-width:260px;">
+        <h2>Best sellers</h2>
+        <ul class="list">
+          <% if (!bestSellers.length) { %>
+            <li class="muted">No best seller data yet.</li>
+          <% } else { %>
+            <% bestSellers.forEach(item => { %>
+              <li class="list-item">
+                <div>
+                  <strong><%= item.name %></strong><br>
+                  <span class="muted"><%= item.qty %> sold</span>
+                </div>
+                <div class="pill amber">S$ <%= Number(item.revenue || 0).toFixed(2) %></div>
+              </li>
+            <% }) %>
+          <% } %>
+        </ul>
+      </div>
+
+      <div class="card" style="flex:1; min-width:260px;">
+        <h2>Returning customers</h2>
+        <ul class="list">
+          <% if (!returningCustomers.length) { %>
+            <li class="muted">No returning customers yet.</li>
+          <% } else { %>
+            <% returningCustomers.forEach(c => { %>
+              <li class="list-item">
+                <div>
+                  <strong><%= c.username %></strong><br>
+                  <span class="muted"><%= c.orders %> orders</span>
+                </div>
+                <div class="pill">S$ <%= Number(c.spend || 0).toFixed(2) %></div>
+              </li>
+            <% }) %>
+          <% } %>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const ctx = document.getElementById('dailyChart');
+      if (!ctx) return;
+      const labels = <%- JSON.stringify(dailySales.map(d => d.label)) %>;
+      const revenue = <%- JSON.stringify(dailySales.map(d => Number(d.revenue || 0))) %>;
+      const orders = <%- JSON.stringify(dailySales.map(d => Number(d.orders || 0))) %>;
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Revenue (S$)',
+              data: revenue,
+              borderColor: '#2f9e44',
+              backgroundColor: 'rgba(47,158,68,0.12)',
+              borderWidth: 3,
+              tension: 0.35,
+              fill: true
+            },
+            {
+              label: 'Orders',
+              data: orders,
+              borderColor: '#0b7285',
+              backgroundColor: 'rgba(11,114,133,0.12)',
+              borderDash: [6,3],
+              borderWidth: 2,
+              tension: 0.35,
+              fill: false,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          plugins: { legend: { display: true } },
+          scales: {
+            y: { beginAtZero: true },
+            y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }
+          },
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

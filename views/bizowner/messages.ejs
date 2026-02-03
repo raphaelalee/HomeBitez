@@ -7,6 +7,7 @@
     <!-- Bootstrap & Icons (optional if navbar uses Bootstrap icons) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/bizowner-theme.css">
 
     <style>
         body {
@@ -23,22 +24,52 @@
             color: #444;
             font-weight: 600;
             text-align: center;
-            max-width: 900px;
+            max-width: 1100px;
+        }
+
+        .message-list {
+            max-width: 1100px;
+            margin: 0 auto 40px;
+            padding: 0 18px;
+            display: grid;
+            gap: 14px;
         }
 
         /* MESSAGE CARD */
         .message-card {
-            background: white;
-            margin: 20px auto;
-            padding: 20px;
+            background: #fff;
+            padding: 16px 18px;
             border-radius: 14px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.07);
-            max-width: 900px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+            border: 1px solid #f0e4d4;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .message-header{
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:10px;
+            flex-wrap:wrap;
         }
 
         .sender {
-            font-weight: 600;
-            color: #333;
+            font-weight: 700;
+            color: #2d2a26;
+            display:flex;
+            gap:8px;
+            align-items:center;
+        }
+
+        .email-pill{
+            background:#fff6d7;
+            color:#8b6a00;
+            border-radius:999px;
+            padding:4px 10px;
+            font-size:12px;
+            border:1px solid #f1dfbb;
         }
 
         .date {
@@ -47,28 +78,46 @@
         }
 
         .message-text {
-            margin-top: 10px;
+            margin-top: 2px;
             font-size: 15px;
             color: #555;
+            line-height:1.5;
         }
 
-        .reply-btn {
-            margin-top: 12px;
-            padding: 8px 16px;
-            background: #f4b400;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
+        .meta-row{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
+            flex-wrap:wrap;
         }
 
-        /* OPTIONAL: Adjust spacing for small screens */
+        .tag{
+            font-size:11px;
+            color:#6b6b6b;
+        }
+
+        .copy-btn{
+            border:none;
+            background:transparent;
+            color:#dd9b00;
+            cursor:pointer;
+            font-weight:700;
+            display:flex;
+            align-items:center;
+            gap:6px;
+        }
+
+        .empty-state{
+            margin: 40px auto;
+            font-size: 16px;
+            color: #777;
+            max-width: 900px;
+            text-align:center;
+        }
+
         @media (max-width: 768px) {
-            .page-title, .message-card {
-                margin-left: 15px;
-                margin-right: 15px;
-            }
+            .message-card{padding:14px;}
         }
     </style>
 </head>
@@ -78,27 +127,52 @@
   <!-- INCLUDE BIZOWNER NAVBAR -->
   <%- include('../partials/navbar-bizowner') %>
 
+  <% if (typeof success !== 'undefined' && success && success.length) { %>
+    <div class="alert alert-success text-center m-3"><%= success %></div>
+  <% } %>
+  <% if (typeof error !== 'undefined' && error && error.length) { %>
+    <div class="alert alert-danger text-center m-3"><%= error %></div>
+  <% } %>
+
   <!-- PAGE TITLE -->
   <div class="page-title">Customer Messages</div>
 
   <!-- NO MESSAGES -->
   <% if (messages.length === 0) { %>
-    <div style="margin: 40px auto; font-size: 16px; color: #777; max-width: 900px; text-align:center;">
-        No customer messages yet.
-    </div>
+    <div class="empty-state">No customer messages yet.</div>
   <% } %>
 
   <!-- MESSAGES -->
-  <% messages.forEach(m => { %>
-    <div class="message-card">
-        <div class="sender">From: <%= m.senderName %></div>
-        <div class="date"><%= m.created_at.toLocaleString() %></div>
+  <div class="message-list">
+    <% messages.forEach(m => { %>
+      <div class="message-card">
+        <div class="message-header">
+          <div class="sender">
+            <i class="bi bi-person-circle" style="color:#dd9b00;"></i>
+            <span><%= m.senderName %></span>
+            <% if (m.senderEmail) { %>
+              <span class="email-pill"><%= m.senderEmail %></span>
+            <% } %>
+          </div>
+          <div class="date"><%= m.created_at.toLocaleString() %></div>
+        </div>
         <div class="message-text"><%= m.message %></div>
-
-        <!-- Reply button (optional) -->
-        <!-- <button class="reply-btn">Reply</button> -->
-    </div>
-  <% }) %>
+        <div class="meta-row">
+          <span class="tag">Status: <%= m.isRead ? 'read' : 'unread' %></span>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <form action="/bizowner/messages/reply" method="POST" class="d-flex" style="gap:6px; align-items:center;">
+              <input type="hidden" name="messageId" value="<%= m.id %>">
+              <input name="reply" class="form-control form-control-sm" placeholder="Quick reply" required style="min-width:180px;">
+              <button class="btn btn-sm btn-warning text-white" type="submit">Send</button>
+            </form>
+            <button class="copy-btn" onclick="navigator.clipboard.writeText(`<%= m.message.replace(/`/g,'\\`') %>`); this.textContent='Copied'; setTimeout(()=>this.textContent='Copy text',1200);">
+              <i class="bi bi-clipboard"></i> Copy text
+            </button>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
 
 </body>
 </html>
