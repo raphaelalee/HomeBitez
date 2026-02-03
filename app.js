@@ -1686,38 +1686,63 @@ app.use("/bizowner", ownerRoutes);
 /* -------------------- DIGITAL WALLET -------------------- */
 
 // GET /digitalwallet
-app.get('/digitalwallet', (req, res) => {
-  if (!req.user) {
-    return res.redirect('/login'); // redirect if not logged in
-  }
+app.get('/digitalwallet', async (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
 
-  const redirect = req.query.redirect || '/';
-  res.render('digitalwallet', {
-    user: req.user,
-    redirect
-  });
+  const redirect = req.query.redirect || '/checkout';
+  const [rows] = await db.promise().query(
+    "SELECT wallet_balance FROM users WHERE id=?",
+    [req.session.user.id]
+  );
+
+  const balance = rows[0].wallet_balance;
+
+  res.render('digitalwallet', { balance, redirect });
 });
 
 // POST /digitalwallet/use
-app.post('/digitalwallet/use', (req, res) => {
-  if (!req.user) {
-    return res.json({ success: false, error: 'User not logged in' });
-  }
+app.post('/digitalwallet/use', async (req, res) => {
+  if (!req.session.user) return res.json({ success: false, error: 'Not logged in' });
 
   const total = parseFloat(req.body.total);
-  if (isNaN(total) || total <= 0) {
-    return res.json({ success: false, error: 'Invalid total amount' });
+  if (isNaN(total) || total <= 0) return res.json({ success: false, error: 'Invalid total' });
+
+  const [rows] = await db.promise().query(
+    "SELECT wallet_balance FROM users WHERE id=?",
+    [req.session.user.id]
+  );
+
+  const balance = rows[0].wallet_balance;
+
+  if (balance >= total) {
+    await db.promise().query(
+      "UPDATE users SET wallet_balance = wallet_balance - ? WHERE id=?",
+      [total, req.session.user.id]
+    );
+    return res.json({ success: true, newBalance: balance - total });
   }
 
-  if ((req.user.wallet || 0) >= total) {
-    // Deduct wallet (replace with DB update in real app)
-    req.user.wallet -= total;
-
-    return res.json({ success: true, newBalance: req.user.wallet });
-  } else {
-    return res.json({ success: false, error: 'Insufficient wallet balance' });
-  }
+  const needed = (total - balance).toFixed(2);
+  return res.json({ success: false, error: 'Insufficient balance', needed });
 });
+
+// POST /digitalwallet/topup
+app.post('/digitalwallet/topup', async (req, res) => {
+  if (!req.session.user) return res.status(401).json({ success: false });
+
+  const amount = parseFloat(req.body.amount);
+  if (isNaN(amount) || amount <= 0) return res.status(400).json({ success: false, error: 'Invalid amount' });
+
+  await db.promise().query(
+    "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
+    [amount, req.session.user.id]
+  );
+
+  // After top-up, redirect back to the original page
+  res.json({ success: true, redirect: req.body.redirect || '/checkout' });
+});
+
+
 
 // Example checkout page
 app.get('/checkout', (req, res) => {

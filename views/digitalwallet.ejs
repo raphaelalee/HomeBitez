@@ -1,108 +1,78 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Digital Wallet</title>
   <style>
-    * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
-    body { margin: 0; background: #f7efe5; display: flex; justify-content: center; padding: 24px; }
-    .phone { width: 360px; background: #fdf2df; border-radius: 24px; padding: 20px; }
-    .hidden { display: none; }
-    .wallet-card { background: #f1a545; border-radius: 16px; padding: 20px; color: #fff; margin-bottom: 16px; }
-    .wallet-card h2 { margin: 0 0 8px; font-size: 18px; }
-    .balance { font-size: 22px; font-weight: bold; }
-    .actions { display: flex; gap: 12px; margin-bottom: 16px; }
-    .action-btn { flex: 1; background: #fff; border-radius: 12px; padding: 14px; font-weight: bold; border: none; cursor: pointer; }
-    .list-item, .method { background: #fff; border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; margin-bottom: 12px; cursor: pointer; }
-    .input { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 16px; font-size: 16px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background: #fff6eb;
+      text-align: center;
+    }
+
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      width: 400px;
+      margin: auto;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    input, button {
+      padding: 10px;
+      margin-top: 15px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      background: #f4b400;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
   </style>
 </head>
-
 <body>
-<div class="phone">
 
-  <!-- HOME -->
-  <div id="home">
-    <div class="wallet-card">
-      <h2>HomeBitez Wallet</h2>
-      <div class="balance" id="balance">$<%= balance.toFixed(2) %></div>
-    </div>
-    <div class="actions">
-      <button class="action-btn" onclick="go('topup')">Top up</button>
-      <button class="action-btn" onclick="go('transfer')">Transfer</button>
-    </div>
+  <div class="card">
+    <h2>Your Wallet Balance</h2>
+    <h1>$<%= balance.toFixed(2) %></h1>
+
+    <h3>Top Up Wallet</h3>
+    <input type="number" id="amount" placeholder="Enter amount" min="1" step="0.01">
+    <button onclick="topUp()">Top Up</button>
   </div>
-
-  <!-- TOP UP -->
-  <div id="topup" class="hidden">
-    <div class="list-item" onclick="go('home')">← Back</div>
-    <input id="amount" class="input" type="number" placeholder="Enter amount" />
-    <div class="method" onclick="confirmTopUp()">Confirm Top Up ›</div>
-  </div>
-
-  <!-- TRANSFER -->
-  <div id="transfer" class="hidden">
-    <div class="list-item" onclick="go('home')">← Back</div>
-    <input id="tRecipient" class="input" type="text" placeholder="Recipient username or ID" />
-    <input id="tAmount" class="input" type="number" placeholder="Enter amount" />
-    <div class="method" onclick="confirmTransfer()">TRANSFER ›</div>
-  </div>
-
-</div>
 
 <script>
-  var balance = <%- JSON.stringify(balance) %>;
-
-  function go(screen) {
-    ['home', 'topup', 'transfer'].forEach(id =>
-      document.getElementById(id).classList.add('hidden')
-    );
-    document.getElementById(screen).classList.remove('hidden');
+function topUp() {
+  const amount = parseFloat(document.getElementById('amount').value);
+  if (!amount || amount <= 0) {
+    alert("Enter valid amount");
+    return;
   }
 
-  function confirmTopUp() {
-    const amount = parseFloat(document.getElementById('amount').value);
-    if (!isFinite(amount) || amount <= 0) return alert('Enter valid amount');
+  // Get redirect page from query string, default to checkout
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirect = urlParams.get('redirect') || '/checkout';
 
-    fetch('/digitalwallet/topup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        balance += amount;
-        document.getElementById('balance').innerText = `$${balance.toFixed(2)}`;
-        alert('Top up successful');
-        go('home');
-      } else alert(data.error);
-    });
-  }
-
-  function confirmTransfer() {
-    const recipient = document.getElementById('tRecipient').value.trim();
-    const amount = parseFloat(document.getElementById('tAmount').value);
-
-    if (!recipient || !isFinite(amount) || amount <= 0) return alert('Invalid input');
-    if (amount > balance) return alert('Insufficient balance');
-
-    fetch('/digitalwallet/transfer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipient, amount })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        balance -= amount;
-        document.getElementById('balance').innerText = `$${balance.toFixed(2)}`;
-        alert('Transfer successful');
-        go('home');
-      } else alert(data.error);
-    });
-  }
+  fetch('/digitalwallet/topup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount, redirect })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      alert("Top up successful!");
+      window.location.href = data.redirect; // automatically redirect back
+    } else {
+      alert(data.error || "Top up failed");
+    }
+  });
+}
 </script>
+
 </body>
 </html>
