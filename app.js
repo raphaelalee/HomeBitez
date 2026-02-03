@@ -122,6 +122,7 @@ const publicPaths = [
     '/report',
     '/login',
     '/register',
+    '/signup',
     '/logout',
     '/forgot-password',
     '/reset-password',

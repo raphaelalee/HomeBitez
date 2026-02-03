@@ -159,31 +159,37 @@ module.exports = {
   },
 
   async register(req, res) {
-    const { username, email, contact, password, confirmPassword } = req.body;
+    try {
+      const { username, email, contact, password, confirmPassword } = req.body;
 
-    if (!username || !email || !contact || !password || !confirmPassword) {
-      req.flash('error', 'Please fill in all required fields.');
+      if (!username || !email || !contact || !password || !confirmPassword) {
+        req.flash('error', 'Please fill in all required fields.');
+        return res.redirect('/register');
+      }
+
+      if (password !== confirmPassword) {
+        req.flash('error', 'Passwords do not match.');
+        return res.redirect('/register');
+      }
+
+      const existingUser = await User.findByEmail(email);
+      if (existingUser) {
+        req.flash('error', 'Email is already registered');
+        return res.redirect('/register');
+      }
+
+      // Hash password before saving
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await User.create({ username, email, contact, password: hashedPassword, role: 'user' });
+
+      req.flash('success', 'Account created! You may log in now.');
+      return res.redirect('/login');
+    } catch (err) {
+      console.error('Register error:', err);
+      req.flash('error', 'Registration failed. Please try again.');
       return res.redirect('/register');
     }
-
-    if (password !== confirmPassword) {
-      req.flash('error', 'Passwords do not match.');
-      return res.redirect('/register');
-    }
-
-    const existingUser = await User.findByEmail(email);
-    if (existingUser) {
-      req.flash('error', 'Email is already registered');
-      return res.redirect('/register');
-    }
-
-    // Hash password before saving
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await User.create({ username, email, contact, password: hashedPassword, role: 'user' });
-
-    req.flash('success', 'Account created! You may log in now.');
-    return res.redirect('/login');
   },
 
   // Change password
