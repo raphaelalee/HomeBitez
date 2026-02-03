@@ -251,7 +251,6 @@ function showToast(message, isError = false) {
         window.pushFlash(message, isError ? "error" : "success");
         return;
     }
-    // fallback if flash partial not loaded
     alert(message);
 }
 
