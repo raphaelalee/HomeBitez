@@ -117,6 +117,45 @@ module.exports = {
         `;
         await db.execute(query, [hashedPassword, id]);
         return true;
+    },
+
+    async ensurePasswordResetTable() {
+        const sql = `
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                token VARCHAR(128) NOT NULL,
+                expires_at DATETIME NOT NULL,
+                used TINYINT(1) DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_token (token),
+                INDEX idx_user (user_id)
+            )`;
+        await db.execute(sql);
+    },
+
+    async createPasswordReset(userId, token, expiresAt) {
+        await this.ensurePasswordResetTable();
+        await db.execute(
+            "INSERT INTO password_resets (user_id, token, expires_at, used) VALUES (?, ?, ?, 0)",
+            [userId, token, expiresAt]
+        );
+        return true;
+    },
+
+    async findValidPasswordReset(token) {
+        await this.ensurePasswordResetTable();
+        const [rows] = await db.execute(
+            "SELECT * FROM password_resets WHERE token = ? AND used = 0 AND expires_at > NOW() LIMIT 1",
+            [token]
+        );
+        return rows && rows[0] ? rows[0] : null;
+    },
+
+    async markPasswordResetUsed(id) {
+        await this.ensurePasswordResetTable();
+        await db.execute("UPDATE password_resets SET used = 1 WHERE id = ?", [id]);
+        return true;
     }
 
 };

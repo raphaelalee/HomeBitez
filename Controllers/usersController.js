@@ -3,6 +3,42 @@ const CartModel = require('../Models/cartModels');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs'); // make sure bcryptjs is installed
 
+const LOGIN_LOCK_THRESHOLD = 5;
+const LOGIN_LOCK_MS = 5 * 60 * 1000;
+const loginAttempts = new Map();
+
+function getLoginKey(req, identifier) {
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  const id = (identifier || 'unknown').toLowerCase();
+  return `${id}|${ip}`;
+}
+
+function getAttemptState(key) {
+  const state = loginAttempts.get(key);
+  if (!state) return { count: 0, lockUntil: null };
+  if (state.lockUntil && Date.now() >= state.lockUntil) {
+    loginAttempts.delete(key);
+    return { count: 0, lockUntil: null };
+  }
+  return state;
+}
+
+function recordFailure(key) {
+  const state = getAttemptState(key);
+  const nextCount = (state.count || 0) + 1;
+  if (nextCount >= LOGIN_LOCK_THRESHOLD) {
+    const lockUntil = Date.now() + LOGIN_LOCK_MS;
+    loginAttempts.set(key, { count: nextCount, lockUntil });
+    return { locked: true, lockUntil };
+  }
+  loginAttempts.set(key, { count: nextCount, lockUntil: null });
+  return { locked: false };
+}
+
+function clearFailures(key) {
+  loginAttempts.delete(key);
+}
+
 // Helper: check plaintext or legacy hashes (MD5/SHA1)
 function passwordMatches(user, providedPassword) {
   if (!user) return false;
@@ -45,10 +81,20 @@ module.exports = {
   async login(req, res) {
     const identifier = (req.body.email || '').trim();
     const providedPassword = (req.body.password || '').trim();
+    const key = getLoginKey(req, identifier);
+    const attemptState = getAttemptState(key);
+
+    if (attemptState.lockUntil) {
+      const remainingMs = attemptState.lockUntil - Date.now();
+      const remainingMin = Math.max(1, Math.ceil(remainingMs / 60000));
+      req.flash('error', `Too many failed attempts. Try again in ${remainingMin} minute(s).`);
+      return res.redirect('/login');
+    }
 
     const user = await User.findByEmailOrUsername(identifier);
     if (!user) {
-      req.flash('error', 'Invalid email or password');
+      const r = recordFailure(key);
+      req.flash('error', r.locked ? 'Too many failed attempts. Locked for 5 minutes.' : 'Invalid email or password');
       return res.redirect('/login');
     }
 
@@ -68,9 +114,11 @@ module.exports = {
     }
 
     if (!match) {
-      req.flash('error', 'Invalid email or password');
+      const r = recordFailure(key);
+      req.flash('error', r.locked ? 'Too many failed attempts. Locked for 5 minutes.' : 'Invalid email or password');
       return res.redirect('/login');
     }
+    clearFailures(key);
 
     // make sure points column exists and fetch points
     await User.ensurePointsColumn();

@@ -474,13 +474,4 @@ exports.replenish = async (req, res) => {
   }
 };
 
-// ------------------------------------
-// OPTIONAL: replyMessage if needed
-// ------------------------------------
-exports.replyMessage = async (req, res) => {
-  const guard = requireBizOwner(req, res);
-  if (!guard.ok) return;
-
-  console.log("Reply received:", req.body.reply);
-  return res.redirect("/bizowner/messages");
-};
+// (Removed duplicate replyMessage stub)

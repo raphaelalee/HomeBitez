@@ -3,6 +3,7 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 require("dotenv").config();
 const stripeService = require('./services/stripe');
 
@@ -121,7 +122,10 @@ const publicPaths = [
     '/report',
     '/login',
     '/register',
-    '/logout'
+    '/logout',
+    '/forgot-password',
+    '/reset-password',
+    '/about'
 ];
 
 app.use((req, res, next) => {
@@ -310,6 +314,101 @@ app.post('/login', UsersController.login);
 app.get('/register', UsersController.showRegister);
 app.post('/register', UsersController.register);
 app.post('/signup', UsersController.register);
+
+// Forgot password
+app.get('/forgot-password', (req, res) => {
+    res.render('forgot-password', {
+        success: req.flash('success'),
+        error: req.flash('error')
+    });
+});
+
+app.post('/forgot-password', async (req, res) => {
+    try {
+        const email = (req.body.email || '').trim().toLowerCase();
+        if (!email) {
+            req.flash('error', 'Please enter your email.');
+            return res.redirect('/forgot-password');
+        }
+
+        const user = await UsersModel.findByEmail(email);
+        // Always respond with success to avoid leaking accounts
+        if (!user) {
+            req.flash('success', 'If that email exists, a reset link has been sent.');
+            return res.redirect('/forgot-password');
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
+
+        await UsersModel.createPasswordReset(user.id, token, expiresAt);
+
+        const resetLink = `http://localhost:3000/reset-password?token=${token}`;
+        console.log('[ForgotPassword] Reset link:', resetLink);
+
+        req.flash('success', 'Reset link generated. Check console for the link (simulated email).');
+        return res.redirect('/forgot-password');
+    } catch (err) {
+        console.error('Forgot password error:', err);
+        req.flash('error', 'Failed to generate reset link.');
+        return res.redirect('/forgot-password');
+    }
+});
+
+app.get('/reset-password', async (req, res) => {
+    const token = (req.query.token || '').trim();
+    if (!token) {
+        req.flash('error', 'Invalid reset link.');
+        return res.redirect('/forgot-password');
+    }
+
+    const reset = await UsersModel.findValidPasswordReset(token);
+    if (!reset) {
+        req.flash('error', 'Reset link is invalid or expired.');
+        return res.redirect('/forgot-password');
+    }
+
+    return res.render('reset-password', {
+        token,
+        error: req.flash('error'),
+        success: req.flash('success')
+    });
+});
+
+app.post('/reset-password', async (req, res) => {
+    try {
+        const token = (req.body.token || '').trim();
+        const newPassword = (req.body.newPassword || '').trim();
+        const confirmPassword = (req.body.confirmPassword || '').trim();
+
+        if (!token || !newPassword || !confirmPassword) {
+            req.flash('error', 'Please fill in all fields.');
+            return res.redirect(`/reset-password?token=${encodeURIComponent(token)}`);
+        }
+
+        if (newPassword !== confirmPassword) {
+            req.flash('error', 'Passwords do not match.');
+            return res.redirect(`/reset-password?token=${encodeURIComponent(token)}`);
+        }
+
+        const reset = await UsersModel.findValidPasswordReset(token);
+        if (!reset) {
+            req.flash('error', 'Reset link is invalid or expired.');
+            return res.redirect('/forgot-password');
+        }
+
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await UsersModel.updatePassword(reset.user_id, hashed);
+        await UsersModel.markPasswordResetUsed(reset.id);
+
+        req.flash('success', 'Password reset successful. Please log in.');
+        return res.redirect('/login');
+    } catch (err) {
+        console.error('Reset password error:', err);
+        req.flash('error', 'Failed to reset password.');
+        return res.redirect('/forgot-password');
+    }
+});
 
 // Menu (requires login) - load products from DB and pass to view
 app.get('/menu', async (req, res) => {
@@ -877,9 +976,44 @@ app.get('/user/profile', async (req, res) => {
     orders = [];
   }
 
+  // Pull reported issues for this user
+  let userIssues = [];
+  try {
+    await ensureReportReplyColumns();
+    const [rows] = await db.query(
+      "SELECT id, subject, description, status, created_at, admin_reply, replied_at, user_reply, user_reply_at FROM report_messages WHERE user_id = ? ORDER BY created_at DESC",
+      [userId]
+    );
+    userIssues = rows || [];
+  } catch (err) {
+    console.error('profile issues load error:', err);
+    userIssues = [];
+  }
+
+  // Pull messages sent to this user (bizowner replies)
+  let userMessages = [];
+  try {
+    await ensureMessagesTable();
+    const [rows] = await db.query(
+      `SELECT m.id, m.senderId, m.ownerId, m.message, m.isRead, m.created_at,
+              u.username AS senderName, u.email AS senderEmail
+       FROM messages m
+       LEFT JOIN users u ON u.id = m.senderId
+       WHERE m.ownerId = ?
+       ORDER BY m.created_at DESC`,
+      [userId]
+    );
+    userMessages = rows || [];
+  } catch (err) {
+    console.error('profile messages load error:', err);
+    userMessages = [];
+  }
+
   res.render('userprofile', { 
       user, 
       orders,
+      userIssues,
+      userMessages,
       success: req.flash('success'),
       error: req.flash('error')
   });

@@ -132,14 +132,16 @@
         <h4>Welcome Back!</h4>
         <p>Sign in with your email and password</p>
 
-
+        <% if (error && error.length > 0) { %>
+            <div class="alert alert-danger"><%= error %></div>
+        <% } %>
 
         <form action="/login" method="POST">
             <input type="email" name="email" placeholder="Your Email" class="form-control mb-3" required />
             <input type="password" name="password" placeholder="Your Password" class="form-control mb-3" required />
 
             <div class="text-end mb-3">
-                <a href="#">Forgot password?</a>
+                <a href="/forgot-password">Forgot password?</a>
             </div>
 
             <button class="login-btn">Login</button>

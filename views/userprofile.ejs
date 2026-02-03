@@ -68,7 +68,7 @@
   <div class="page-head">
     <div>
       <h1 class="page-title">My Profile</h1>
-      <div class="page-sub">Update your personal details to make ordering faster and smoother.</div>
+      <div class="page-sub">Keep your details fresh like your favorite meals! Update your info, track points, and make every HomeBitez order smooth and tasty.</div>
     </div>
     <div class="page-actions">
       <a class="back-link" href="/menu">← Back</a>
@@ -108,6 +108,8 @@
   <div class="tabs">
     <div class="tab active" data-tab="profile">Profile</div>
     <div class="tab" data-tab="orders">Order History</div>
+    <div class="tab" data-tab="messages">Messages</div>
+    <div class="tab" data-tab="issues">Issues Reported</div>
     <div class="tab" data-tab="points">Points</div>
     <div class="tab" data-tab="settings">Settings</div>
   </div>
@@ -216,6 +218,67 @@
     <% } %>
   </div>
 
+  <!-- Issues Reported Tab -->
+  <div class="card tab-content" id="issues" style="display:none;">
+    <h3>Issues Reported</h3>
+    <% if (!userIssues || userIssues.length === 0) { %>
+      <p class="text-muted">No issues reported yet.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Admin Reply</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% userIssues.forEach(issue => { %>
+            <tr>
+              <td><strong><%= issue.subject || 'No subject' %></strong></td>
+              <td><%= issue.status || 'new' %></td>
+              <td><%= issue.created_at ? new Date(issue.created_at).toLocaleString() : '-' %></td>
+              <td><%= issue.admin_reply ? issue.admin_reply : '—' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <!-- Messages Tab -->
+  <div class="card tab-content" id="messages" style="display:none;">
+    <h3>Messages from Business Owners</h3>
+    <% if (!userMessages || userMessages.length === 0) { %>
+      <p class="text-muted">No messages yet.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr>
+            <th>From</th>
+            <th>Message</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% userMessages.forEach(msg => { %>
+            <tr>
+              <td>
+                <%= msg.senderName || 'Business Owner' %>
+                <% if (msg.senderEmail) { %>
+                  <span style="color:#6f6256; font-size:12px;">(<%= msg.senderEmail %>)</span>
+                <% } %>
+              </td>
+              <td><%= msg.message %></td>
+              <td><%= msg.created_at ? new Date(msg.created_at).toLocaleString() : '-' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
   <!-- Settings Tab -->
   <div class="card tab-content" id="settings" style="display:none;">
     <h3>Account Settings</h3>
@@ -224,7 +287,7 @@
     <form action="/user/change-password" method="POST">
         <h5>Change Password</h5>
         <div class="grid">
-          <div class="field">
+          <div class="field" style="grid-column:1 / -1;">
               <label>Current Password</label>
               <input type="password" name="currentPassword" required>
           </div>
