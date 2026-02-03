@@ -208,8 +208,8 @@
             <div class="text-muted">Payment Receipt</div>
             <div class="status-flow">
               <div class="status-step done">pending</div>
-              <div class="status-step done">paid</div>
-              <div class="status-step <%= paypalCapture ? 'done' : '' %>">fulfilled</div>
+              <div class="status-step <%= isPaid ? 'done' : '' %>">paid</div>
+              <div class="status-step <%= isPaid ? 'done' : '' %>">fulfilled</div>
             </div>
           </div>
         </div>
@@ -218,8 +218,8 @@
           <div><strong>Receipt</strong></div>
           <div>Order #: <strong><%= latestOrderDbId || 'N/A' %></strong></div>
           <div>Payment: <strong><%= paymentMethod %></strong></div>
-          <div>Order ID: <strong><%= paypalCapture?.orderId || '-' %></strong></div>
-          <div>Capture ID: <strong><%= paypalCapture?.captureId || '-' %></strong></div>
+          <div>Payment Ref: <strong><%= paymentMeta?.refId || '-' %></strong></div>
+          <div>Txn ID: <strong><%= paymentMeta?.txnId || '-' %></strong></div>
           <div class="text-muted" style="margin-top:6px;">
             Issued: <%= new Date().toLocaleString() %>
           </div>
@@ -233,7 +233,7 @@
             <div class="section-title"><i class="bi bi-person-circle"></i> Bill to</div>
             <div style="font-weight:800;"><%= (user && (user.username || user.name)) || 'Guest' %></div>
             <div class="text-muted" style="font-size:13px;">
-              <%= paypalCapture && paypalCapture.payerEmail ? paypalCapture.payerEmail : (user?.email || 'Email not provided') %>
+              <%= paymentMeta && paymentMeta.payerEmail ? paymentMeta.payerEmail : (user?.email || 'Email not provided') %>
             </div>
             <div class="pill">Payment: <%= paymentMethod %></div>
             <% if (paymentMethod === 'PayLater' && paylaterPlan) { %>

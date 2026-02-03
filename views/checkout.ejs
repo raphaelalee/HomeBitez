@@ -477,6 +477,22 @@
           <div class="alert alert-warning mb-0"><%= paylaterError %></div>
         </div>
       <% } %>
+        <!-- STRIPE CARD PAYMENT -->
+        <div class="hb-card">
+          <div class="hb-card-title">
+            <i class="bi bi-credit-card-2-front"></i>
+            Pay with Stripe
+            <span class="hb-pill">secure</span>
+          </div>
+
+          <div class="text-muted" style="font-size:12px;">
+            Secure credit / debit card payment.
+          </div>
+
+          <button id="stripeBtn" class="hb-btn w-100 mt-2">
+            <i class="bi bi-credit-card"></i> Stripe
+          </button>
+        </div>
 
     </div>
 
@@ -633,6 +649,41 @@
 
     window.validateFulfillment = validateFulfillment;
   </script>
+
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    const stripe = Stripe('<%= process.env.STRIPE_PUBLISHABLE_KEY %>');
+
+    const stripeBtn = document.getElementById('stripeBtn');
+
+    if (stripeBtn) {
+      stripeBtn.addEventListener('click', async () => {
+
+        // Validate pickup/delivery first
+        if (typeof window.validateFulfillment === "function" && !window.validateFulfillment()) {
+          return;
+        }
+
+        const res = await fetch('/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subtotal: <%= subtotal.toFixed(2) %>,
+            deliveryFee: currentDeliveryFeeNum
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.id) {
+          stripe.redirectToCheckout({ sessionId: data.id });
+        } else {
+          alert('Stripe payment failed.');
+        }
+      });
+    }
+  </script>
+
 
 </body>
 </html>
