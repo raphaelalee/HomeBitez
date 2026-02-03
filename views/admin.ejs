@@ -34,40 +34,6 @@
       min-height: 100vh;
     }
 
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      background: var(--cream-deep);
-      box-shadow: 0 4px 12px rgba(20, 20, 20, 0.08);
-      padding: 18px 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .brand {
-      font-family: "Sniglet", cursive;
-      font-size: 30px;
-      font-weight: 900;
-      color: var(--accent);
-      text-decoration: none;
-      letter-spacing: 0.5px;
-    }
-
-    .nav-links a {
-      text-decoration: none;
-      color: var(--ink);
-      margin: 0 14px;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .welcome {
-      font-weight: 600;
-      font-size: 15px;
-    }
-
     .page {
       max-width: 1280px;
       margin: 48px auto 96px;
@@ -185,16 +151,7 @@
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/admin">HomeBitez</a>
-    <nav class="nav-links">
-      <a href="/">Home</a>
-      <a href="/admin">Admin Dashboard</a>
-      <a href="/admin/inventory">Inventory</a>
-      <a href="/admin/profile">Profile</a>
-    </nav>
-    <div class="welcome">Welcome, <%= adminName %>!</div>
-  </header>
+  <%- include('partials/navbar-admin', { showAdminWelcome: true }) %>
 
   <main class="page">
     <section class="stats">

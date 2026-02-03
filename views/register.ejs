@@ -119,6 +119,9 @@
         <h4>Create Your Account!</h4>
         <p>Fill in the form to get started</p>
 
+        <% if (error && error.length > 0) { %>
+            <div class="alert alert-danger"><%= error %></div>
+        <% } %>
 
         <form action="/signup" method="POST">
             <input type="text" name="username" placeholder="Username" class="form-control mb-3" required>

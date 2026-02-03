@@ -1,4 +1,4 @@
-<link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
 <style>
@@ -60,6 +60,19 @@
   }
   .navbar-admin .icons a:hover { color: #f4b400; border-color: #f4b400; }
 
+  .admin-welcome {
+    max-width: 1200px;
+    margin: 12px auto 0;
+    padding: 0 60px;
+    font-weight: 600;
+    font-size: 15px;
+    color: #6b5d4a;
+  }
+
+  @media (max-width: 768px) {
+    .admin-welcome { padding: 0 28px; }
+  }
+
   @media (max-width: 768px) {
     .navbar-admin { flex-direction: column; align-items: flex-start; padding: 16px 28px; gap: 10px; }
     .navbar-admin .links { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -82,5 +95,9 @@
     <a href="/logout" title="Logout"><i class="bi bi-box-arrow-right"></i></a>
   </div>
 </div>
+
+<% if ((typeof showAdminWelcome !== "undefined" && showAdminWelcome) && typeof adminName !== "undefined" && adminName) { %>
+  <div class="admin-welcome">Welcome back, <%= adminName %>!</div>
+<% } %>
 
 <%- include('./flash') %>
