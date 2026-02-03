@@ -505,6 +505,75 @@ app.get('/admin/inventory', async (req, res) => {
     });
 });
 
+
+// Admin purchase records
+app.get('/admin/records', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let orders = [];
+    let records = [];
+
+    try {
+        orders = await OrdersModel.list(200);
+        const userIds = Array.from(
+            new Set(
+                (orders || [])
+                    .map(o => Number(o.user_id))
+                    .filter(id => Number.isFinite(id))
+            )
+        );
+
+        const userMap = new Map();
+        if (userIds.length) {
+            const [rows] = await db.query(
+                "SELECT id, username, email, contact FROM users WHERE id IN (?)",
+                [userIds]
+            );
+            (rows || []).forEach(r => userMap.set(Number(r.id), r));
+        }
+
+        records = (orders || []).map(o => {
+            const user = userMap.get(Number(o.user_id)) || {};
+            const items = Array.isArray(o.items)
+                ? o.items.map(it => {
+                    const qty = Number(it.qty || it.quantity || 0) || 0;
+                    const name = it.name || 'Item';
+                    return `${qty}x ${name}`;
+                  }).join(', ')
+                : '';
+
+            const status = o.status
+                ? String(o.status)
+                : (o.paypal_capture_id ? 'Completed' : 'Pending');
+
+            return {
+                id: o.id,
+                name: o.shipping_name || user.username || '-',
+                email: o.payer_email || user.email || '-',
+                contact: user.contact || '-',
+                items: items || '-',
+                status,
+                total: Number(o.total || 0),
+                createdAt: o.created_at || null
+            };
+        });
+    } catch (err) {
+        console.error("Admin records error:", err);
+    }
+
+    res.render('admin-records', {
+        records,
+        adminName: req.session.user?.username || 'Admin'
+    });
+});
+
 // Admin sales reports
 app.get('/admin/reports', async (req, res) => {
     if (!req.session.user) {

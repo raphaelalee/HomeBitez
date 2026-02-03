@@ -1,0 +1,224 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeBitez - Purchase Records</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #fff5ea;
+      --cream-deep: #fde8cf;
+      --card: #ffffff;
+      --ink: #1d1d1d;
+      --muted: #6c6c6c;
+      --accent: #f0a400;
+      --accent-deep: #e38f00;
+      --line: rgba(20, 20, 20, 0.12);
+      --shadow: 0 12px 28px rgba(20, 20, 20, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Sora", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #fff1de 0%, transparent 60%),
+        linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 34px auto 96px;
+      padding: 0 28px;
+    }
+
+    .page-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 18px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .page-title {
+      font-size: 26px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    .search {
+      min-width: 260px;
+      max-width: 420px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .search input {
+      border: none;
+      outline: none;
+      width: 100%;
+      font-size: 14px;
+      background: transparent;
+    }
+
+    .table-card {
+      background: var(--card);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+      font-size: 13px;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .badge.completed { background: #2f9e44; }
+    .badge.pending { background: #f59f00; }
+    .badge.refunded { background: #c92a2a; }
+
+    .empty {
+      text-align: center;
+      padding: 26px 0 30px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    @media (max-width: 700px) {
+      .page { padding: 0 18px; }
+      .page-head { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar-admin') %>
+
+  <main class="page">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">View Records</h1>
+        <div class="subtle">All Transactions (<%= records.length %>)</div>
+      </div>
+      <label class="search">
+        <span>Search</span>
+        <input id="recordSearch" type="search" placeholder="Search by transaction no, name, or email" />
+      </label>
+    </div>
+
+    <section class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Transaction No.</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Number</th>
+            <th>Items</th>
+            <th>Status</th>
+            <th>Total</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!records.length) { %>
+            <tr>
+              <td class="empty" colspan="8">No purchase records found.</td>
+            </tr>
+          <% } %>
+          <% records.forEach(r => { %>
+            <%
+              const statusText = (r.status || 'Pending').toString();
+              const key = statusText.toLowerCase();
+              const badgeClass = key.includes('refund') ? 'refunded' : (key.includes('pending') ? 'pending' : 'completed');
+              const dateText = r.createdAt ? new Date(r.createdAt).toLocaleString() : '-';
+              const searchText = [
+                r.id,
+                r.name,
+                r.email,
+                r.contact,
+                r.items,
+                r.status
+              ].filter(Boolean).join(' ').toLowerCase();
+            %>
+            <tr data-search="<%= searchText %>">
+              <td><%= r.id %></td>
+              <td><%= r.name %></td>
+              <td><%= r.email %></td>
+              <td><%= r.contact %></td>
+              <td><%= r.items %></td>
+              <td><span class="badge <%= badgeClass %>"><%= statusText %></span></td>
+              <td>S$ <%= Number(r.total || 0).toFixed(2) %></td>
+              <td><%= dateText %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const input = document.getElementById('recordSearch');
+      const rows = Array.from(document.querySelectorAll('tbody tr[data-search]'));
+      if (!input) return;
+      input.addEventListener('input', () => {
+        const q = input.value.trim().toLowerCase();
+        rows.forEach(row => {
+          const hay = row.getAttribute('data-search') || '';
+          row.style.display = hay.includes(q) ? '' : 'none';
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
