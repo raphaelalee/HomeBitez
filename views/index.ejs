@@ -54,25 +54,49 @@
       align-items: center;
       justify-content: center;
       padding: 60px;
-      gap: 60px;
+      gap: 80px;
     }
 
+    /* UPDATED IMAGE STACK */
     .hero-images {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 15px;
+      position: relative;
+      width: 420px;
+      height: 360px;
     }
 
     .hero-images img {
-      width: 180px;
-      height: 180px;
+      position: absolute;
+      width: 240px;
+      height: 170px;
       object-fit: cover;
       border-radius: 14px;
     }
 
+    /* Top-left image */
+    .hero-images img:nth-child(1) {
+      top: 0;
+      left: 0;
+      z-index: 2;
+    }
+
+    /* Middle-right image */
+    .hero-images img:nth-child(2) {
+      top: 60px;
+      left: 160px;
+      z-index: 3;
+    }
+
+    /* Bottom-left image */
+    .hero-images img:nth-child(3) {
+      top: 180px;
+      left: 0;
+      z-index: 1;
+    }
+
     .hero-text h1 {
-      font-size: 36px;
+      font-size: 38px;
       margin-bottom: 15px;
+      line-height: 1.2;
     }
 
     .hero-text span {
@@ -202,6 +226,10 @@
         text-align: center;
       }
 
+      .hero-images {
+        transform: scale(0.9);
+      }
+
       .steps {
         grid-template-columns: repeat(2, 1fr);
       }
@@ -221,31 +249,27 @@
   <div class="logo">HomeBitez</div>
   <nav>
     <a href="/">Home</a>
-    <a href="/login">Menu</a>
-    <a href="/about">About Us</a>
-    <a href="/contact">Contact Us</a>
+    <a href="/menu">Menu</a>
+    <a href="/contact">Contact</a>
   </nav>
   <div class="header-actions">
-    <a href="/login">
-      <button>Login</button>
-    </a>
+    <button>Login</button>
   </div>
 </header>
 
 <section class="hero">
   <div class="hero-images">
-    <img src="https://images.unsplash.com/photo-1604908177522-4029c4b53b9f">
+    <img src="https://thumbs.dreamstime.com/z/french-fries-salads-pastries-sesame-seeds-black-table-food-333701115.jpg?w=992">
     <img src="https://images.unsplash.com/photo-1551218808-94e220e084d2">
-    <img src="https://images.unsplash.com/photo-1589308078055-9189c0f5f9b4">
-    <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd">
+    <img src="https://images.pexels.com/photos/1343504/pexels-photo-1343504.jpeg?cs=srgb&dl=pexels-alisha-mishra-1343504.jpg&fm=jpg">
   </div>
 
   <div class="hero-text">
-    <h1>Discover <span>Homemade</span> Flavors From Singapore’s Heartlands</h1>
+    <h1>Discover <span>Homemade</span><br>Flavors From<br>Singapore’s Heartlands</h1>
     <p>
-      Support local home chefs and enjoy freshly prepared meals made with care.
+      Support local home chefs and enjoy freshly prepared meals made with care and heart.
     </p>
-    <button class="btn-primary" onclick="location.href='/login'">Order Food</button>
+    <button class="btn-primary" onclick="location.href='/menu'">Order Food</button>
   </div>
 </section>
 
@@ -280,7 +304,7 @@
 </section>
 
 <section class="offer">
-  <img src="https://images.unsplash.com/photo-1604908554160-7d0a41f7f96c">
+  <img src="https://cdn.pixabay.com/photo/2022/06/07/20/52/curry-7249247_1280.jpg">
   <div>
     <h2>Get <span>50% Off</span> On Curry</h2>
     <p>Limited-time offer on one of our most popular dishes.</p>

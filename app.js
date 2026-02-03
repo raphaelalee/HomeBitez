@@ -638,20 +638,59 @@ app.use("/bizowner", ownerRoutes);
 // Debug routes were removed per request
 
 /* -------------------- DIGITAL WALLET -------------------- */
+
+// GET /digitalwallet
 app.get('/digitalwallet', (req, res) => {
-    if (!req.session.user) {
-        req.flash('error', 'Please login to view your digital wallet.');
-        return res.redirect('/login');
-    }
+  if (!req.user) {
+    return res.redirect('/login'); // redirect if not logged in
+  }
 
-    const balance = 120.50;
-    const transactions = [
-        { date: '2026-01-10', description: 'Top-up', amount: 50, type: 'Credit' },
-        { date: '2026-01-12', description: 'Purchase: Chicken Curry', amount: 8.60, type: 'Debit' }
-    ];
-
-    res.render('digitalwallet', { balance, transactions });
+  const redirect = req.query.redirect || '/';
+  res.render('digitalwallet', {
+    user: req.user,
+    redirect
+  });
 });
+
+// POST /digitalwallet/use
+app.post('/digitalwallet/use', (req, res) => {
+  if (!req.user) {
+    return res.json({ success: false, error: 'User not logged in' });
+  }
+
+  const total = parseFloat(req.body.total);
+  if (isNaN(total) || total <= 0) {
+    return res.json({ success: false, error: 'Invalid total amount' });
+  }
+
+  if ((req.user.wallet || 0) >= total) {
+    // Deduct wallet (replace with DB update in real app)
+    req.user.wallet -= total;
+
+    return res.json({ success: true, newBalance: req.user.wallet });
+  } else {
+    return res.json({ success: false, error: 'Insufficient wallet balance' });
+  }
+});
+
+// Example checkout page
+app.get('/checkout', (req, res) => {
+  if (!req.user) {
+    return res.redirect('/login');
+  }
+
+  const total = 25.00; // replace with actual cart total
+  res.render('checkout', { user: req.user, total });
+});
+
+// Start server
+app.listen(3000, () => {
+  console.log('Server running on http://localhost:3000');
+});
+
+
+
+
 
 /* -------------------- SERVER -------------------- */
 const PORT = 3000;

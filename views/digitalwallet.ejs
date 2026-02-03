@@ -2,125 +2,107 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Digital Wallet</title>
   <style>
     * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
     body { margin: 0; background: #f7efe5; display: flex; justify-content: center; padding: 24px; }
     .phone { width: 360px; background: #fdf2df; border-radius: 24px; padding: 20px; }
     .hidden { display: none; }
-
     .wallet-card { background: #f1a545; border-radius: 16px; padding: 20px; color: #fff; margin-bottom: 16px; }
     .wallet-card h2 { margin: 0 0 8px; font-size: 18px; }
     .balance { font-size: 22px; font-weight: bold; }
-
     .actions { display: flex; gap: 12px; margin-bottom: 16px; }
     .action-btn { flex: 1; background: #fff; border-radius: 12px; padding: 14px; font-weight: bold; border: none; cursor: pointer; }
-
-    .list-item { background: #fff; border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; margin-bottom: 12px; cursor: pointer; }
-    .transactions { background: #fff; border-radius: 12px; padding: 16px; height: 160px; color: #999; }
-
-    .header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-weight: bold; }
-    .back { cursor: pointer; font-size: 18px; }
-
-    .method { background: #fff; border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; margin-bottom: 12px; cursor: pointer; }
+    .list-item, .method { background: #fff; border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; margin-bottom: 12px; cursor: pointer; }
     .input { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 16px; font-size: 16px; }
-
-    .confirm-card { background: #fff; border-radius: 16px; padding: 20px; }
-    .confirm-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
-    .confirm-btn { width: 100%; padding: 14px; border-radius: 20px; background: #f1a545; border: none; color: #fff; font-weight: bold; cursor: pointer; }
   </style>
 </head>
+
 <body>
 <div class="phone">
 
   <!-- HOME -->
   <div id="home">
     <div class="wallet-card">
-      <h2>homebitez wallet</h2>
-      <div class="balance" id="balance">$50.00</div>
+      <h2>HomeBitez Wallet</h2>
+      <div class="balance" id="balance">$<%= balance.toFixed(2) %></div>
     </div>
     <div class="actions">
       <button class="action-btn" onclick="go('topup')">Top up</button>
       <button class="action-btn" onclick="go('transfer')">Transfer</button>
     </div>
-    <div class="list-item"><span>Spend & Balance Limits</span><span>›</span></div>
-    <div class="transactions">Wallet Transactions</div>
   </div>
 
   <!-- TOP UP -->
   <div id="topup" class="hidden">
-    <div class="header"><span class="back" onclick="go('home')">←</span>Top Up</div>
+    <div class="list-item" onclick="go('home')">← Back</div>
     <input id="amount" class="input" type="number" placeholder="Enter amount" />
-    <div class="method" onclick="selectMethod('Linked Bank')">Linked Bank Account ›</div>
-    <div class="method" onclick="selectMethod('Card')">Credit / Debit Card ›</div>
-    <div class="method" onclick="selectMethod('PayNow')">PayNow ›</div>
-  </div>
-
-  <!-- CONFIRM -->
-  <div id="confirm" class="hidden">
-    <div class="header"><span class="back" onclick="go('topup')">←</span>Confirm</div>
-    <div class="confirm-card">
-      <div class="confirm-row"><span>Method</span><span id="cMethod"></span></div>
-      <div class="confirm-row"><span>Amount</span><span id="cAmount"></span></div>
-      <div class="confirm-row"><span>Total</span><span id="cTotal"></span></div>
-      <button class="confirm-btn" onclick="confirmTopUp()">CONFIRM</button>
-    </div>
+    <div class="method" onclick="confirmTopUp()">Confirm Top Up ›</div>
   </div>
 
   <!-- TRANSFER -->
   <div id="transfer" class="hidden">
-    <div class="header"><span class="back" onclick="go('home')">←</span>Transfer</div>
+    <div class="list-item" onclick="go('home')">← Back</div>
     <input id="tRecipient" class="input" type="text" placeholder="Recipient username or ID" />
     <input id="tAmount" class="input" type="number" placeholder="Enter amount" />
-    <div class="method" onclick="selectTransferMethod('Linked Bank')">Linked Bank Account ›</div>
-    <div class="method" onclick="selectTransferMethod('Card')">Credit / Debit Card ›</div>
-    <button class="confirm-btn" onclick="confirmTransfer()">TRANSFER</button>
+    <div class="method" onclick="confirmTransfer()">TRANSFER ›</div>
   </div>
 
 </div>
 
 <script>
-  let balance = 50.0;
-  let method = '';
+  var balance = <%- JSON.stringify(balance) %>;
 
   function go(screen) {
-    ['home','topup','confirm','transfer'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.add('hidden');
-    });
+    ['home', 'topup', 'transfer'].forEach(id =>
+      document.getElementById(id).classList.add('hidden')
+    );
     document.getElementById(screen).classList.remove('hidden');
   }
 
   function confirmTopUp() {
     const amount = parseFloat(document.getElementById('amount').value);
-    if (!isFinite(amount) || amount <= 0) { alert('Invalid amount'); go('topup'); return; }
-    balance += amount;
-    document.getElementById('balance').innerText = `$${balance.toFixed(2)}`;
-    alert('Top up successful');
-    document.getElementById('amount').value = '';
-    go('home');
+    if (!isFinite(amount) || amount <= 0) return alert('Enter valid amount');
+
+    fetch('/digitalwallet/topup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        balance += amount;
+        document.getElementById('balance').innerText = `$${balance.toFixed(2)}`;
+        alert('Top up successful');
+        go('home');
+      } else alert(data.error);
+    });
   }
 
-    // Transfer functions
-    function selectTransferMethod(m) {
-      method = m;
-      alert('Method selected: ' + m);
-    }
+  function confirmTransfer() {
+    const recipient = document.getElementById('tRecipient').value.trim();
+    const amount = parseFloat(document.getElementById('tAmount').value);
 
-    function confirmTransfer() {
-      const recipient = document.getElementById('tRecipient').value.trim();
-      const amount = parseFloat(document.getElementById('tAmount').value);
-      if (!recipient) { alert('Please enter a recipient'); return; }
-      if (!isFinite(amount) || amount <= 0) { alert('Please enter a valid amount'); return; }
-      if (amount > balance) { alert('Insufficient balance'); return; }
-      balance -= amount;
-      document.getElementById('balance').innerText = `$${balance.toFixed(2)}`;
-      alert(`Transferred $${amount.toFixed(2)} to ${recipient}`);
-      document.getElementById('tRecipient').value = '';
-      document.getElementById('tAmount').value = '';
-      go('home');
-    }
+    if (!recipient || !isFinite(amount) || amount <= 0) return alert('Invalid input');
+    if (amount > balance) return alert('Insufficient balance');
+
+    fetch('/digitalwallet/transfer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient, amount })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        balance -= amount;
+        document.getElementById('balance').innerText = `$${balance.toFixed(2)}`;
+        alert('Transfer successful');
+        go('home');
+      } else alert(data.error);
+    });
+  }
 </script>
 </body>
 </html>
