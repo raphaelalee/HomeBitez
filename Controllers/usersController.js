@@ -3,6 +3,11 @@ const CartModel = require('../Models/cartModels');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs'); // make sure bcryptjs is installed
 
+function generateTwoFactorCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+
 const LOGIN_LOCK_THRESHOLD = 5;
 const LOGIN_LOCK_MS = 5 * 60 * 1000;
 const loginAttempts = new Map();
@@ -133,8 +138,26 @@ module.exports = {
       avatar: user.avatar || '/images/default-avatar.png',
       address: user.address || '',
       contact: user.contact || '',
-      points: userPoints
+      points: userPoints,
+      twoFactorVerified: false
     };
+
+    // Issue phone 2FA first, then email 2FA after phone is verified
+    const phoneCode = generateTwoFactorCode();
+    req.session.twoFactor = {
+      stage: 'phone',
+      phone: { code: phoneCode, expiresAt: Date.now() + 5 * 60 * 1000 },
+      email: { code: null, expiresAt: null },
+      phoneVerified: false,
+      emailVerified: false
+    };
+
+    if (user.role === 'biz_owner') req.session.post2faRedirect = '/bizowner';
+    else if (user.role === 'admin') req.session.post2faRedirect = '/admin';
+    else req.session.post2faRedirect = '/menu';
+
+    req.flash('success', `Demo code: ${phoneCode}`);
+    console.log('2FA phone code for', user.email || user.username, ':', phoneCode);
 
     try {
       const cartRows = await CartModel.getByUserId(req.session.user.id);
@@ -148,10 +171,8 @@ module.exports = {
       console.error("Failed to load cart from DB:", err);
     }
 
-    // Redirect based on role
-    if (user.role === 'biz_owner') return res.redirect('/bizowner');
-    if (user.role === 'admin') return res.redirect('/admin');
-    return res.redirect('/menu');
+    // Redirect to 2FA verification (phone first)
+    return res.redirect('/2fa/phone');
   },
 
   showRegister(req, res) {
