@@ -1,0 +1,201 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeBitez | Account Verification</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --accent: #1d4ed8;
+      --accent-deep: #1e40af;
+      --border: #e5e7eb;
+      --shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top, #d7dde7 0%, #eef1f5 45%, #f6f7f9 100%);
+      font-family: "Sora", sans-serif;
+      color: var(--ink);
+    }
+
+    .card {
+      width: min(520px, 92vw);
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 32px 36px 30px;
+      text-align: center;
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 0 0 8px;
+    }
+
+    .desc {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    .contact {
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .code-row {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin: 20px 0 16px;
+    }
+
+    .code-row input {
+      height: 54px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      text-align: center;
+      font-size: 20px;
+      font-weight: 700;
+      outline: none;
+      background: #f9fafb;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .code-row input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+      background: #ffffff;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+
+    .btn:hover { background: var(--accent-deep); }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .resend {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .flash {
+      font-size: 13px;
+      margin: 8px 0 0;
+    }
+
+    .flash.error { color: #b91c1c; }
+    .flash.success { color: #047857; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="eyebrow">Account Verification</div>
+    <h1>Verify your account</h1>
+    <p class="desc">
+      To keep your account secure, please enter the one-time code sent to
+      <span class="contact"><%= maskedEmail %></span> and
+      <span class="contact"><%= maskedPhone %></span>.
+    </p>
+
+    <form action="/2fa/verify" method="POST" id="codeForm">
+      <input type="hidden" name="code" id="fullCode" />
+      <div class="code-row">
+        <input inputmode="numeric" maxlength="1" autocomplete="one-time-code" />
+        <input inputmode="numeric" maxlength="1" />
+        <input inputmode="numeric" maxlength="1" />
+        <input inputmode="numeric" maxlength="1" />
+        <input inputmode="numeric" maxlength="1" />
+        <input inputmode="numeric" maxlength="1" />
+      </div>
+      <button class="btn" type="submit">Verify</button>
+    </form>
+
+    <% if (demoCode) { %>
+      <div class="hint">Demo code: <strong><%= demoCode %></strong></div>
+    <% } %>
+
+    <form action="/2fa/resend" method="POST">
+      <button class="resend" type="submit">Resend code</button>
+    </form>
+
+    <% if (error && error.length) { %>
+      <div class="flash error"><%= error[0] %></div>
+    <% } %>
+    <% if (success && success.length) { %>
+      <div class="flash success"><%= success[0] %></div>
+    <% } %>
+  </main>
+
+  <script>
+    (() => {
+      const inputs = Array.from(document.querySelectorAll('.code-row input'));
+      const hidden = document.getElementById('fullCode');
+
+      function syncCode() {
+        hidden.value = inputs.map(i => i.value.trim()).join('');
+      }
+
+      inputs.forEach((input, idx) => {
+        input.addEventListener('input', (e) => {
+          input.value = input.value.replace(/\D/g, '').slice(0, 1);
+          if (input.value && inputs[idx + 1]) inputs[idx + 1].focus();
+          syncCode();
+        });
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && !input.value && inputs[idx - 1]) {
+            inputs[idx - 1].focus();
+          }
+        });
+      });
+
+      document.getElementById('codeForm').addEventListener('submit', () => {
+        syncCode();
+      });
+    })();
+  </script>
+</body>
+</html>

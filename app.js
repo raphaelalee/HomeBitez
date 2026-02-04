@@ -135,6 +135,53 @@ app.use((req, res, next) => {
 
 app.use(flash());
 
+function generateTwoFactorCode() {
+    return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function maskEmail(email) {
+    if (!email || typeof email !== 'string' || !email.includes('@')) return '-';
+    const parts = email.split('@');
+    const name = parts[0];
+    const domain = parts.slice(1).join('@');
+    if (name.length <= 2) return name[0] + "***@" + domain;
+    return name[0] + "***" + name[name.length - 1] + "@" + domain;
+}
+
+function maskPhone(phone) {
+    if (!phone) return '-';
+    const digits = String(phone).replace(/\D/g, '');
+    if (digits.length <= 3) return '***' + digits;
+    return '*'.repeat(Math.max(0, digits.length - 3)) + digits.slice(-3);
+}
+
+function issueTwoFactor(req, stage) {
+    const code = generateTwoFactorCode();
+    if (!req.session.twoFactor) {
+        req.session.twoFactor = {
+            stage: stage || 'phone',
+            phone: { code: null, expiresAt: null },
+            email: { code: null, expiresAt: null },
+            phoneVerified: false,
+            emailVerified: false
+        };
+    }
+
+    const expiresAt = Date.now() + 5 * 60 * 1000;
+    if (stage === 'email') {
+        req.session.twoFactor.email = { code, expiresAt };
+        req.session.twoFactor.stage = 'email';
+    } else {
+        req.session.twoFactor.phone = { code, expiresAt };
+        req.session.twoFactor.stage = 'phone';
+    }
+
+    req.flash('success', `Demo code: ${code}`);
+    console.log('2FA ' + stage + ' code for', req.session.user?.email || req.session.user?.username, ':', code);
+    return code;
+}
+
+
 // Public routes allowed without login
 const publicPaths = [
     '/',
@@ -165,6 +212,21 @@ app.use((req, res, next) => {
         return res.redirect('/login');
     }
     next();
+});
+
+// Two-factor gate
+app.use((req, res, next) => {
+    const user = req.session.user;
+    const path = req.path;
+
+    if (!user || user.twoFactorVerified) return next();
+    if (path.startsWith('/2fa') || path.startsWith('/logout')) return next();
+    if (path.startsWith('/public') || path.startsWith('/images') || path === '/favicon.ico') return next();
+
+    const tf = req.session.twoFactor || {};
+    if (!tf.phoneVerified) return res.redirect('/2fa/phone');
+    if (!tf.emailVerified) return res.redirect('/2fa/email');
+    return res.redirect('/2fa/phone');
 });
 
 // EJS setup
@@ -347,99 +409,111 @@ app.get('/register', UsersController.showRegister);
 app.post('/register', UsersController.register);
 app.post('/signup', UsersController.register);
 
-// Forgot password
-app.get('/forgot-password', (req, res) => {
-    res.render('forgot-password', {
-        success: req.flash('success'),
-        error: req.flash('error')
-    });
-});
 
-app.post('/forgot-password', async (req, res) => {
-    try {
-        const email = (req.body.email || '').trim().toLowerCase();
-        if (!email) {
-            req.flash('error', 'Please enter your email.');
-            return res.redirect('/forgot-password');
-        }
+// 2FA verification (phone first, then email)
+app.get('/2fa/phone', (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
 
-        const user = await UsersModel.findByEmail(email);
-        // Always respond with success to avoid leaking accounts
-        if (!user) {
-            req.flash('success', 'If that email exists, a reset link has been sent.');
-            return res.redirect('/forgot-password');
-        }
-
-        const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
-
-        await UsersModel.createPasswordReset(user.id, token, expiresAt);
-
-        const resetLink = `http://localhost:3000/reset-password?token=${token}`;
-        console.log('[ForgotPassword] Reset link:', resetLink);
-
-        req.flash('success', 'Reset link generated. Check console for the link (simulated email).');
-        return res.redirect('/forgot-password');
-    } catch (err) {
-        console.error('Forgot password error:', err);
-        req.flash('error', 'Failed to generate reset link.');
-        return res.redirect('/forgot-password');
-    }
-});
-
-app.get('/reset-password', async (req, res) => {
-    const token = (req.query.token || '').trim();
-    if (!token) {
-        req.flash('error', 'Invalid reset link.');
-        return res.redirect('/forgot-password');
+    const tf = req.session.twoFactor || {};
+    const phone = tf.phone || {};
+    if (!phone.code || (phone.expiresAt && Date.now() > phone.expiresAt)) {
+        issueTwoFactor(req, 'phone');
     }
 
-    const reset = await UsersModel.findValidPasswordReset(token);
-    if (!reset) {
-        req.flash('error', 'Reset link is invalid or expired.');
-        return res.redirect('/forgot-password');
-    }
-
-    return res.render('reset-password', {
-        token,
+    res.render('2fa-phone', {
         error: req.flash('error'),
-        success: req.flash('success')
+        success: req.flash('success'),
+        maskedPhone: maskPhone(req.session.user.contact),
+        maskedEmail: maskEmail(req.session.user.email)
     });
 });
 
-app.post('/reset-password', async (req, res) => {
-    try {
-        const token = (req.body.token || '').trim();
-        const newPassword = (req.body.newPassword || '').trim();
-        const confirmPassword = (req.body.confirmPassword || '').trim();
+app.post('/2fa/phone/verify', (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
 
-        if (!token || !newPassword || !confirmPassword) {
-            req.flash('error', 'Please fill in all fields.');
-            return res.redirect(`/reset-password?token=${encodeURIComponent(token)}`);
-        }
+    const submitted = String(req.body.code || '').replace(/\s/g, '');
+    const tf = req.session.twoFactor || {};
+    const phone = tf.phone || {};
 
-        if (newPassword !== confirmPassword) {
-            req.flash('error', 'Passwords do not match.');
-            return res.redirect(`/reset-password?token=${encodeURIComponent(token)}`);
-        }
-
-        const reset = await UsersModel.findValidPasswordReset(token);
-        if (!reset) {
-            req.flash('error', 'Reset link is invalid or expired.');
-            return res.redirect('/forgot-password');
-        }
-
-        const hashed = await bcrypt.hash(newPassword, 10);
-        await UsersModel.updatePassword(reset.user_id, hashed);
-        await UsersModel.markPasswordResetUsed(reset.id);
-
-        req.flash('success', 'Password reset successful. Please log in.');
-        return res.redirect('/login');
-    } catch (err) {
-        console.error('Reset password error:', err);
-        req.flash('error', 'Failed to reset password.');
-        return res.redirect('/forgot-password');
+    if (!phone.code) {
+        req.flash('error', 'Verification code not found. Please resend.');
+        return res.redirect('/2fa/phone');
     }
+
+    if (phone.expiresAt && Date.now() > phone.expiresAt) {
+        req.flash('error', 'Code expired. Please resend.');
+        return res.redirect('/2fa/phone');
+    }
+
+    if (submitted != String(phone.code)) {
+        req.flash('error', 'Invalid code. Please try again.');
+        return res.redirect('/2fa/phone');
+    }
+
+    req.session.twoFactor.phoneVerified = true;
+    issueTwoFactor(req, 'email');
+    return res.redirect('/2fa/email');
+});
+
+app.post('/2fa/phone/resend', (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    issueTwoFactor(req, 'phone');
+    return res.redirect('/2fa/phone');
+});
+
+app.get('/2fa/email', (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+
+    const tf = req.session.twoFactor || {};
+    if (!tf.phoneVerified) return res.redirect('/2fa/phone');
+
+    const email = tf.email || {};
+    if (!email.code || (email.expiresAt && Date.now() > email.expiresAt)) {
+        issueTwoFactor(req, 'email');
+    }
+
+    res.render('2fa-email', {
+        error: req.flash('error'),
+        success: req.flash('success'),
+        maskedPhone: maskPhone(req.session.user.contact),
+        maskedEmail: maskEmail(req.session.user.email)
+    });
+});
+
+app.post('/2fa/email/verify', (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+
+    const submitted = String(req.body.code || '').replace(/\s/g, '');
+    const tf = req.session.twoFactor || {};
+    const email = tf.email || {};
+
+    if (!email.code) {
+        req.flash('error', 'Verification code not found. Please resend.');
+        return res.redirect('/2fa/email');
+    }
+
+    if (email.expiresAt && Date.now() > email.expiresAt) {
+        req.flash('error', 'Code expired. Please resend.');
+        return res.redirect('/2fa/email');
+    }
+
+    if (submitted != String(email.code)) {
+        req.flash('error', 'Invalid code. Please try again.');
+        return res.redirect('/2fa/email');
+    }
+
+    req.session.twoFactor.emailVerified = true;
+    req.session.user.twoFactorVerified = true;
+    req.session.twoFactor = null;
+    const redirectTo = req.session.post2faRedirect || '/menu';
+    req.session.post2faRedirect = null;
+    return res.redirect(redirectTo);
+});
+
+app.post('/2fa/email/resend', (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    issueTwoFactor(req, 'email');
+    return res.redirect('/2fa/email');
 });
 
 // Menu (requires login) - load products from DB and pass to view
