@@ -1,11 +1,16 @@
 // controllers/checkoutController.js
-// HomeBitez – Checkout (PayPal)
+// HomeBitez – Checkout (PayPal + NETS)
 
 const paypal = require("../services/paypal");
+const nets = require("../services/nets");
 const OrdersModel = require("../Models/OrdersModel");
 const CartModel = require("../Models/cartModels");
 const UsersModel = require("../Models/UsersModel");
 const db = require("../db");
+
+// NETS sandbox txn id (keep yours)
+const NETS_TXN_ID =
+  "sandbox_nets|m|8ff8e5b6-d43e-4786-8ac5-7accf8c5bd9b";
 
 const NORMAL_DELIVERY_FEE = 2.5;
 const URGENT_DELIVERY_FEE = 6;
@@ -828,11 +833,89 @@ exports.capturePaypalOrder = async (req, res) => {
 
 /* =========================
   /* =========================
-   GET /receipt
-========================= */
+     POST /nets-qr/request
+  ========================= */
+  exports.requestNetsQr = async (req, res) => {
+    try {
+      const cartTotal = Number(req.body.cartTotal);
+      const cart = getSelectedCartItems(req.session);
+      if (!cart.length) {
+        return res.render("netsQrFail", {
+          title: "Error",
+          errorMsg: "No selected items to checkout.",
+        });
+      }
+      const subtotal = cart.reduce(
+        (s, i) => s + Number(i.price || 0) * Number(i.quantity || i.qty || 0),
+        0
+      );
+      const { redeemPoints } = getRedeemForSubtotal(req.session, subtotal);
+
+      console.log("NETS QR request:", {
+        cartTotal,
+        subtotal,
+        redeemPoints,
+        cartItems: Array.isArray(cart) ? cart.length : 0,
+        userId: req.session?.user?.id || null,
+        txnId: NETS_TXN_ID,
+      });
+
+      if (!Number.isFinite(cartTotal) || cartTotal <= 0) {
+        return res.render("netsQrFail", {
+          title: "Error",
+          errorMsg: "Invalid cart total",
+        });
+      }
+
+      const qrData = await nets.requestNetsQr(cartTotal, NETS_TXN_ID);
+      console.log("NETS QR response:", qrData);
+      const txnRetrievalRef =
+        qrData?.txn_retrieval_ref ||
+        qrData?.txnRetrievalRef ||
+        qrData?.txn_ref ||
+        null;
+
+      console.log("NETS QR refs:", {
+        txnRetrievalRef,
+        responseCode: qrData?.response_code || null,
+        txnStatus: qrData?.txn_status ?? null,
+      });
+
+      if (nets.isQrSuccess(qrData)) {
+        req.session.netsPending = {
+          amount: cartTotal,
+          redeemPoints,
+          txnRetrievalRef,
+          createdAt: Date.now(),
+        };
+
+        return res.render("netsQr", {
+          qrCodeUrl: `data:image/png;base64,${qrData.qr_code}`,
+          txnRetrievalRef,
+          total: cartTotal,
+        });
+      }
+
+      return res.render("netsQrFail", {
+        title: "Error",
+        errorMsg: qrData.error_message || "NETS QR failed",
+      });
+    } catch (err) {
+      console.error("NETS QR error:", err);
+      return res.render("netsQrFail", {
+        title: "Error",
+        errorMsg: "NETS server error",
+      });
+    }
+  };
+
+  /* =========================
+     GET /receipt
+  ========================= */
 exports.renderReceipt = async (req, res) => {
-  const paypalCapture = req.session?.paypalCapture || null;
-  const stripeCapture = req.session?.stripeCapture || null;
+    const paypalCapture = req.session?.paypalCapture || null;
+    const stripeCapture = req.session?.stripeCapture || null;
+    const netsCapture = req.session?.netsCapture || null;
   const latestOrderDbId = req.session?.latestOrderDbId || null;
   const paylaterPurchase = req.session?.paylaterPurchase || null;
   if (latestOrderDbId) {
@@ -894,39 +977,57 @@ exports.renderReceipt = async (req, res) => {
   }));
 
   const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
-  const total = paylaterPurchase?.total || paypalCapture?.total || stripeCapture?.total || (subtotal - redeem);
+    const total =
+      paylaterPurchase?.total ||
+      paypalCapture?.total ||
+      stripeCapture?.total ||
+      netsCapture?.total ||
+      (subtotal - redeem);
   const deliveryFee = Number((total - subtotal).toFixed(2));
-  const paymentMethod = paylaterPurchase
-    ? "PayLater"
-    : (paypalCapture ? "PayPal" : (stripeCapture ? "Stripe" : "Other"));
+    const paymentMethod = paylaterPurchase
+      ? "PayLater"
+      : (paypalCapture
+        ? "PayPal"
+        : (stripeCapture
+          ? "Stripe"
+          : (netsCapture ? "NETS" : "Other")));
   const fulfillment = prefs.mode === "delivery"
     ? (getDeliveryTypeFromPrefs(prefs) === "urgent" ? "Urgent Delivery" : "Normal Delivery")
     : "Pickup";
-  const isPaid = !!(paypalCapture || stripeCapture || paylaterPurchase);
-  const paymentMeta = paypalCapture
-    ? {
-        refId: paypalCapture.orderId || null,
-        txnId: paypalCapture.captureId || null,
-        payerEmail: paypalCapture.payerEmail || null
-      }
-    : (stripeCapture ? {
-        refId: stripeCapture.sessionId || null,
-        txnId: stripeCapture.paymentIntentId || null,
-        payerEmail: stripeCapture.payerEmail || null
-      } : {
-        refId: null,
-        txnId: null,
-        payerEmail: null
-      });
+    const isPaid = !!(paypalCapture || stripeCapture || netsCapture || paylaterPurchase);
+    const paymentMeta = paypalCapture
+      ? {
+          refId: paypalCapture.orderId || null,
+          txnId: paypalCapture.captureId || null,
+          payerEmail: paypalCapture.payerEmail || null
+        }
+      : (stripeCapture
+        ? {
+            refId: stripeCapture.sessionId || null,
+            txnId: stripeCapture.paymentIntentId || null,
+            payerEmail: stripeCapture.payerEmail || null
+          }
+        : (netsCapture
+          ? {
+              refId: netsCapture.txnRetrievalRef || null,
+              txnId: netsCapture.txnId || null,
+              payerEmail: null
+            }
+          : {
+              refId: null,
+              txnId: null,
+              payerEmail: null
+            }));
 
-  if (isPaid) {
-    // Finalize purchase: decrement product inventory and clear purchased cart items.
-    await decrementPurchasedProductInventory(items);
-    await removePurchasedItemsFromCart(req, items);
-    req.session.latestOrderDbId = null;
-    req.session.paylaterPurchase = null;
-    req.session.cartRedeem = null;
-  }
+    if (isPaid) {
+      // Finalize purchase: decrement product inventory and clear purchased cart items.
+      await decrementPurchasedProductInventory(items);
+      await removePurchasedItemsFromCart(req, items);
+      req.session.latestOrderDbId = null;
+      req.session.paylaterPurchase = null;
+      req.session.netsCapture = null;
+      req.session.cartRedeem = null;
+    }
 
   res.render("receipt", {
     brand: "HomeBitez",

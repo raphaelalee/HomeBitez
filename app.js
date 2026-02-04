@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 require("dotenv").config();
 const stripeService = require('./services/stripe');
+const nets = require("./services/nets");
 const paypal = require('@paypal/checkout-server-sdk');
 
 const environment = new paypal.core.SandboxEnvironment(
@@ -1566,10 +1567,93 @@ const chatbotRoutes = require("./Routes/chatbotRoutes");
 app.use(chatbotRoutes);
 
 
-/**
- * GET /debug/session
- * Dev helper: return limited session contents for debugging.
- */
+/* -------------------- NETS QR -------------------- */
+app.get("/nets-qr/fail", (req, res) => {
+    res.render("netsQrFail", { errorMsg: "Payment failed. Please try again." });
+});
+
+app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    const txnRetrievalRef = req.params.txnRetrievalRef;
+    if (!txnRetrievalRef) {
+        res.write(`data: ${JSON.stringify({ error: true })}\n\n`);
+        return res.end();
+    }
+
+    const interval = setInterval(async () => {
+        try {
+            const result = await nets.checkStatus(txnRetrievalRef);
+            const status = result?.status || "PENDING";
+
+            if (status === "SUCCESS") {
+                res.write(`data: ${JSON.stringify({ success: true })}\n\n`);
+                clearInterval(interval);
+                return res.end();
+            }
+
+            if (status === "FAIL") {
+                res.write(`data: ${JSON.stringify({ fail: true })}\n\n`);
+                clearInterval(interval);
+                return res.end();
+            }
+
+            res.write(`data: ${JSON.stringify({ pending: true })}\n\n`);
+        } catch (err) {
+            res.write(`data: ${JSON.stringify({ pending: true })}\n\n`);
+        }
+    }, 5000);
+
+    req.on("close", () => {
+        clearInterval(interval);
+    });
+});
+
+app.post("/nets/complete-fail", (req, res) => {
+    try {
+        if (req.session) {
+            req.session.netsPending = null;
+            req.session.netsCapture = null;
+        }
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error("nets/complete-fail error:", err);
+        return res.status(500).json({ error: "Failed to finalize NETS fail" });
+    }
+});
+
+app.post("/nets/complete", async (req, res) => {
+    try {
+        const pending = req.session ? req.session.netsPending : null;
+        if (!pending) {
+            return res.status(400).json({ error: "No pending NETS payment" });
+        }
+
+        if (req.session) {
+            req.session.netsCapture = {
+                total: Number(pending.amount) || 0,
+                txnRetrievalRef: pending.txnRetrievalRef || null,
+                txnId: pending.txnRef || null,
+                status: "COMPLETED",
+                capturedAt: Date.now(),
+            };
+            req.session.cartRedeem = null;
+            req.session.netsPending = null;
+        }
+
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error("nets/complete error:", err);
+        return res.status(500).json({ error: "Failed to finalize NETS payment" });
+    }
+});
+
+  /**
+   * GET /debug/session
+   * Dev helper: return limited session contents for debugging.
+   */
 app.get('/debug/session', (req, res) => {
     try {
         const sess = req.session || {};

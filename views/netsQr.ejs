@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeBitez - NETS QR</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #faefe5;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 20px auto 40px;
+      padding: 0 16px;
+    }
+    .title {
+      text-align: center;
+      font-family: 'Sniglet', system-ui, sans-serif;
+      font-size: 26px;
+      margin: 12px 0 4px;
+    }
+    .sub {
+      text-align: center;
+      color: #6b6b6b;
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+    }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      border: 1px solid #eee;
+    }
+    .qr-box {
+      border: 1px solid #eee;
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 260px;
+    }
+    .qr-box img {
+      width: 100%;
+      max-width: 320px;
+      height: auto;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: #fff7e3;
+      border: 1px solid #ffe2a6;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #7a5a00;
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      word-break: break-all;
+    }
+    .btn-hb {
+      padding: 10px 16px;
+      background: #dd9b00;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-outline {
+      background: #fff;
+      color: #dd9b00;
+      border: 1px solid #dd9b00;
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar-user') %>
+
+  <div class="wrap">
+    <div class="title">Pay with NETS QR</div>
+    <div class="sub">Scan and pay. We’ll auto-detect payment status.</div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong>Scan the QR code</strong>
+          <span class="status-pill">NETS QR</span>
+        </div>
+        <div class="qr-box">
+          <img src="<%= qrCodeUrl %>" alt="NETS QR Code">
+        </div>
+        <div class="mt-3 d-flex gap-2 flex-wrap">
+          <a class="btn-hb btn-outline" href="/checkout">Back to checkout</a>
+          <a class="btn-hb btn-outline" href="/cart">Back to cart</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong>Payment status</strong>
+          <span class="status-pill">live</span>
+        </div>
+        <div id="statusText">Waiting for payment...</div>
+        <div class="text-muted" style="font-size:12px;margin-top:6px;">
+          It may take a few seconds to update after you pay.
+        </div>
+        <hr />
+        <div class="text-muted small mb-1">Transaction reference</div>
+        <div class="mono"><%= txnRetrievalRef %></div>
+        <div class="text-muted small mt-3 mb-1">Amount</div>
+        <div style="font-weight:800;color:#dd9b00;">S$ <%= Number(total || 0).toFixed(2) %></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const txnRetrievalRef = "<%= txnRetrievalRef %>";
+      const statusEl = document.getElementById("statusText");
+      let es = null;
+
+      try {
+        es = new EventSource(`/sse/payment-status/${encodeURIComponent(txnRetrievalRef)}`);
+      } catch (e) {
+        console.warn("EventSource not supported", e);
+      }
+
+      if (!es) return;
+
+      es.onmessage = async (ev) => {
+        try {
+          const data = JSON.parse(ev.data || "{}");
+          if (data.success) {
+            if (statusEl) statusEl.textContent = "Payment successful. Redirecting...";
+            await fetch("/nets/complete", { method: "POST", credentials: "include" });
+            window.location.href = "/receipt";
+            es.close();
+            return;
+          }
+          if (data.fail) {
+            if (statusEl) statusEl.textContent = "Payment failed. Please try again.";
+            await fetch("/nets/complete-fail", { method: "POST", credentials: "include" });
+            window.location.href = "/nets-qr/fail";
+            es.close();
+            return;
+          }
+          if (statusEl) statusEl.textContent = "Waiting for payment...";
+        } catch (e) {
+          // ignore
+        }
+      };
+
+      es.onerror = () => {
+        if (statusEl) statusEl.textContent = "Checking payment status...";
+      };
+    })();
+  </script>
+</body>
+</html>
