@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -10,14 +10,18 @@
   <style>
     :root {
       --cream: #fff5ea;
-      --cream-deep: #fde8cf;
-      --card: #ffffff;
-      --ink: #1d1d1d;
-      --muted: #6c6c6c;
-      --accent: #f0a400;
-      --accent-deep: #e38f00;
-      --line: rgba(20, 20, 20, 0.12);
-      --shadow: 0 12px 28px rgba(20, 20, 20, 0.08);
+      --card: #fffaf3;
+      --ink: #2a241e;
+      --muted: #6f6256;
+      --accent: #d59b2d;
+      --line: #eadac6;
+      --shadow: 0 12px 28px rgba(42, 36, 30, 0.10);
+      --paid: #2f9e44;
+      --paylater: #8a5cf6;
+      --pending: #f59f00;
+      --refunded: #c92a2a;
+      --failed: #a61e4d;
+      --neutral: #6f6256;
     }
 
     * { box-sizing: border-box; }
@@ -33,24 +37,27 @@
     }
 
     .page {
-      max-width: 1180px;
-      margin: 34px auto 96px;
-      padding: 0 28px;
+      max-width: 1220px;
+      margin: 28px auto 82px;
+      padding: 0 24px;
+      display: grid;
+      gap: 16px;
     }
 
     .page-head {
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
-      gap: 18px;
-      margin-bottom: 18px;
+      align-items: end;
+      gap: 14px;
       flex-wrap: wrap;
     }
 
     .page-title {
-      font-size: 26px;
-      font-weight: 700;
       margin: 0;
+      font-size: 28px;
+      line-height: 1.1;
+      font-weight: 800;
+      letter-spacing: -0.02em;
     }
 
     .subtle {
@@ -59,25 +66,70 @@
       margin-top: 6px;
     }
 
-    .search {
-      min-width: 260px;
-      max-width: 420px;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 8px 14px;
-      box-shadow: var(--shadow);
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
     }
 
-    .search input {
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .controls {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) 180px 180px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      min-height: 42px;
+    }
+
+    .field-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .field input,
+    .field select {
       border: none;
       outline: none;
       width: 100%;
-      font-size: 14px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--ink);
       background: transparent;
     }
 
@@ -86,138 +138,429 @@
       border-radius: 14px;
       box-shadow: var(--shadow);
       border: 1px solid var(--line);
-      overflow-x: auto;
+      overflow: hidden;
+    }
+
+    .table-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+      background: #fffdf9;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 68vh;
     }
 
     table {
       width: 100%;
-      border-collapse: collapse;
-      min-width: 900px;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 1040px;
       font-size: 13px;
     }
 
     thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
       text-align: left;
-      padding: 12px 14px;
+      padding: 11px 12px;
       border-bottom: 1px solid var(--line);
       font-weight: 700;
       white-space: nowrap;
+      background: #fff5e8;
+      color: #4f4337;
     }
 
     tbody td {
-      padding: 12px 14px;
+      padding: 11px 12px;
       border-bottom: 1px solid var(--line);
       vertical-align: top;
+      background: #fff;
     }
 
-    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:nth-child(even) td {
+      background: #fffdf9;
+    }
 
-    .badge {
+    tbody tr:hover td {
+      background: #fff5e8;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .txn-id {
+      display: inline-flex;
+      min-width: 48px;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 12px;
+      color: #6a4b14;
+      background: #fff2d8;
+      border: 1px solid #f2d8a7;
+      border-radius: 999px;
+      padding: 4px 9px;
+    }
+
+    .cust-name {
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 3px;
+    }
+
+    .cust-email {
+      color: var(--muted);
+      font-size: 12px;
+      word-break: break-word;
+      max-width: 230px;
+    }
+
+    .items {
+      max-width: 340px;
+      line-height: 1.35;
+      color: #3f362d;
+      word-break: break-word;
+    }
+
+    .date-main {
+      font-weight: 700;
+      color: #3d342c;
+      margin-bottom: 2px;
+      white-space: nowrap;
+    }
+
+    .date-sub {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .amount {
+      font-weight: 800;
+      color: #3e2d0a;
+      white-space: nowrap;
+    }
+
+    .status-badge {
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      gap: 6px;
       padding: 4px 10px;
       border-radius: 999px;
       font-size: 12px;
       font-weight: 700;
       color: #fff;
+      text-transform: lowercase;
+      white-space: nowrap;
     }
 
-    .badge.completed { background: #2f9e44; }
-    .badge.pending { background: #f59f00; }
-    .badge.refunded { background: #c92a2a; }
+    .status-badge.paid,
+    .status-badge.completed {
+      background: var(--paid);
+    }
+
+    .status-badge.paylater {
+      background: var(--paylater);
+    }
+
+    .status-badge.pending {
+      background: var(--pending);
+    }
+
+    .status-badge.refunded {
+      background: var(--refunded);
+    }
+
+    .status-badge.failed,
+    .status-badge.cancelled {
+      background: var(--failed);
+    }
+
+    .status-badge.neutral {
+      background: var(--neutral);
+    }
 
     .empty {
       text-align: center;
-      padding: 26px 0 30px;
+      padding: 28px 0 34px;
       color: var(--muted);
       font-weight: 600;
+      background: #fff;
     }
 
-    @media (max-width: 700px) {
-      .page { padding: 0 18px; }
-      .page-head { align-items: flex-start; }
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1080px) {
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        padding: 0 14px;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .page-title {
+        font-size: 24px;
+      }
     }
   </style>
 </head>
 <body>
   <%- include('partials/navbar-admin') %>
 
+  <%
+    const safeRecords = Array.isArray(records) ? records : [];
+    const totalRevenue = safeRecords.reduce((sum, r) => sum + Number(r?.total || 0), 0);
+    const paidCount = safeRecords.filter(r => {
+      const s = String(r?.status || '').toLowerCase();
+      return s.includes('paid') || s.includes('complete');
+    }).length;
+    const paylaterCount = safeRecords.filter(r => String(r?.status || '').toLowerCase().includes('paylater')).length;
+    const pendingCount = safeRecords.filter(r => {
+      const s = String(r?.status || '').toLowerCase();
+      return !s || s.includes('pending');
+    }).length;
+  %>
+
   <main class="page">
     <div class="page-head">
       <div>
-        <h1 class="page-title">View Records</h1>
-        <div class="subtle">All Transactions (<%= records.length %>)</div>
+        <h1 class="page-title">Purchase Records</h1>
+        <div class="subtle">Monitor transaction history and quickly filter by payment status, customer, or amount.</div>
       </div>
-      <label class="search">
-        <span>Search</span>
-        <input id="recordSearch" type="search" placeholder="Search by transaction no, name, or email" />
-      </label>
     </div>
 
+    <section class="stats">
+      <article class="stat-card">
+        <div class="stat-label">Total Transactions</div>
+        <div class="stat-value"><%= safeRecords.length %></div>
+      </article>
+      <article class="stat-card">
+        <div class="stat-label">Paid / Completed</div>
+        <div class="stat-value"><%= paidCount %></div>
+      </article>
+      <article class="stat-card">
+        <div class="stat-label">PayLater</div>
+        <div class="stat-value"><%= paylaterCount %></div>
+      </article>
+      <article class="stat-card">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value">S$ <%= totalRevenue.toFixed(2) %></div>
+      </article>
+    </section>
+
+    <section class="controls">
+      <label class="field">
+        <span class="field-label">Search</span>
+        <input id="recordSearch" type="search" placeholder="Transaction, customer, email, number, item" />
+      </label>
+
+      <label class="field">
+        <span class="field-label">Status</span>
+        <select id="statusFilter">
+          <option value="all">All</option>
+          <option value="paid">Paid / Completed</option>
+          <option value="paylater">PayLater</option>
+          <option value="pending">Pending</option>
+          <option value="refunded">Refunded</option>
+          <option value="failed">Failed / Cancelled</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Sort</span>
+        <select id="sortOrder">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="amount_desc">Highest amount</option>
+          <option value="amount_asc">Lowest amount</option>
+          <option value="txn_desc">Txn no (desc)</option>
+          <option value="txn_asc">Txn no (asc)</option>
+        </select>
+      </label>
+    </section>
+
     <section class="table-card">
-      <table>
-        <thead>
-          <tr>
-            <th>Transaction No.</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Number</th>
-            <th>Items</th>
-            <th>Status</th>
-            <th>Total</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% if (!records.length) { %>
+      <div class="table-top">
+        <div>Showing <strong id="visibleCount"><%= safeRecords.length %></strong> of <strong><%= safeRecords.length %></strong> records</div>
+        <div>Admin view updates with search, filter, and sort controls</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
             <tr>
-              <td class="empty" colspan="8">No purchase records found.</td>
+              <th>Txn</th>
+              <th>Customer</th>
+              <th>Contact</th>
+              <th>Items</th>
+              <th>Status</th>
+              <th>Total</th>
+              <th>Ordered At</th>
             </tr>
-          <% } %>
-          <% records.forEach(r => { %>
-            <%
-              const statusText = (r.status || 'Pending').toString();
-              const key = statusText.toLowerCase();
-              const badgeClass = key.includes('refund') ? 'refunded' : (key.includes('pending') ? 'pending' : 'completed');
-              const dateText = r.createdAt ? new Date(r.createdAt).toLocaleString() : '-';
-              const searchText = [
-                r.id,
-                r.name,
-                r.email,
-                r.contact,
-                r.items,
-                r.status
-              ].filter(Boolean).join(' ').toLowerCase();
-            %>
-            <tr data-search="<%= searchText %>">
-              <td><%= r.id %></td>
-              <td><%= r.name %></td>
-              <td><%= r.email %></td>
-              <td><%= r.contact %></td>
-              <td><%= r.items %></td>
-              <td><span class="badge <%= badgeClass %>"><%= statusText %></span></td>
-              <td>S$ <%= Number(r.total || 0).toFixed(2) %></td>
-              <td><%= dateText %></td>
+          </thead>
+          <tbody id="recordsBody">
+            <tr id="noRowsRow" class="<%= safeRecords.length ? 'hidden' : '' %>">
+              <td class="empty" colspan="7">No purchase records found.</td>
             </tr>
-          <% }) %>
-        </tbody>
-      </table>
+
+            <% safeRecords.forEach(r => { %>
+              <% 
+                const statusText = (r?.status || 'Pending').toString().trim() || 'Pending';
+                const statusKey = statusText.toLowerCase();
+                let statusClass = 'neutral';
+                if (statusKey.includes('paylater')) statusClass = 'paylater';
+                else if (statusKey.includes('paid') || statusKey.includes('complete')) statusClass = 'paid';
+                else if (statusKey.includes('pending')) statusClass = 'pending';
+                else if (statusKey.includes('refund')) statusClass = 'refunded';
+                else if (statusKey.includes('fail') || statusKey.includes('cancel')) statusClass = 'failed';
+
+                const createdDate = r?.createdAt ? new Date(r.createdAt) : null;
+                const ts = createdDate && !Number.isNaN(createdDate.getTime()) ? createdDate.getTime() : 0;
+                const dateMain = ts ? createdDate.toLocaleDateString() : '-';
+                const dateSub = ts ? createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                const totalNum = Number(r?.total || 0);
+
+                const searchText = [
+                  r?.id,
+                  r?.name,
+                  r?.email,
+                  r?.contact,
+                  r?.items,
+                  r?.status,
+                  totalNum
+                ].filter(Boolean).join(' ').toLowerCase();
+              %>
+              <tr
+                class="record-row"
+                data-search="<%= searchText %>"
+                data-status="<%= statusClass %>"
+                data-total="<%= totalNum.toFixed(2) %>"
+                data-ts="<%= ts %>"
+                data-id="<%= Number(r?.id || 0) %>">
+                <td><span class="txn-id">#<%= r?.id || '-' %></span></td>
+                <td>
+                  <div class="cust-name"><%= r?.name || '-' %></div>
+                  <div class="cust-email"><%= r?.email || '-' %></div>
+                </td>
+                <td><%= r?.contact || '-' %></td>
+                <td class="items"><%= r?.items || '-' %></td>
+                <td><span class="status-badge <%= statusClass %>"><%= statusText %></span></td>
+                <td class="amount">S$ <%= totalNum.toFixed(2) %></td>
+                <td>
+                  <div class="date-main"><%= dateMain %></div>
+                  <div class="date-sub"><%= dateSub || '-' %></div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
     </section>
   </main>
 
   <script>
     (() => {
-      const input = document.getElementById('recordSearch');
-      const rows = Array.from(document.querySelectorAll('tbody tr[data-search]'));
-      if (!input) return;
-      input.addEventListener('input', () => {
-        const q = input.value.trim().toLowerCase();
-        rows.forEach(row => {
-          const hay = row.getAttribute('data-search') || '';
-          row.style.display = hay.includes(q) ? '' : 'none';
+      const searchInput = document.getElementById('recordSearch');
+      const statusFilter = document.getElementById('statusFilter');
+      const sortOrder = document.getElementById('sortOrder');
+      const recordsBody = document.getElementById('recordsBody');
+      const noRowsRow = document.getElementById('noRowsRow');
+      const visibleCountEl = document.getElementById('visibleCount');
+      const rows = Array.from(document.querySelectorAll('.record-row'));
+
+      if (!recordsBody || !rows.length) {
+        if (visibleCountEl) visibleCountEl.textContent = '0';
+        return;
+      }
+
+      function sortRows(visibleRows, mode) {
+        const copy = visibleRows.slice();
+        switch (mode) {
+          case 'oldest':
+            copy.sort((a, b) => Number(a.dataset.ts || 0) - Number(b.dataset.ts || 0));
+            break;
+          case 'amount_desc':
+            copy.sort((a, b) => Number(b.dataset.total || 0) - Number(a.dataset.total || 0));
+            break;
+          case 'amount_asc':
+            copy.sort((a, b) => Number(a.dataset.total || 0) - Number(b.dataset.total || 0));
+            break;
+          case 'txn_desc':
+            copy.sort((a, b) => Number(b.dataset.id || 0) - Number(a.dataset.id || 0));
+            break;
+          case 'txn_asc':
+            copy.sort((a, b) => Number(a.dataset.id || 0) - Number(b.dataset.id || 0));
+            break;
+          case 'newest':
+          default:
+            copy.sort((a, b) => Number(b.dataset.ts || 0) - Number(a.dataset.ts || 0));
+            break;
+        }
+        return copy;
+      }
+
+      function applyFilters() {
+        const q = (searchInput?.value || '').trim().toLowerCase();
+        const status = statusFilter?.value || 'all';
+        const mode = sortOrder?.value || 'newest';
+
+        const visible = rows.filter((row) => {
+          const matchesSearch = !q || (row.dataset.search || '').includes(q);
+          if (!matchesSearch) return false;
+
+          if (status === 'all') return true;
+          const rowStatus = row.dataset.status || '';
+          if (status === 'paid') return rowStatus === 'paid';
+          if (status === 'failed') return rowStatus === 'failed';
+          return rowStatus === status;
         });
-      });
+
+        rows.forEach((row) => {
+          row.style.display = 'none';
+        });
+
+        const ordered = sortRows(visible, mode);
+        ordered.forEach((row) => {
+          row.style.display = '';
+          recordsBody.appendChild(row);
+        });
+
+        const count = ordered.length;
+        if (visibleCountEl) visibleCountEl.textContent = String(count);
+
+        if (noRowsRow) {
+          noRowsRow.classList.toggle('hidden', count > 0);
+        }
+      }
+
+      searchInput?.addEventListener('input', applyFilters);
+      statusFilter?.addEventListener('change', applyFilters);
+      sortOrder?.addEventListener('change', applyFilters);
+
+      applyFilters();
     })();
   </script>
 </body>

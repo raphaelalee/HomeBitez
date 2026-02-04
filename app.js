@@ -795,7 +795,9 @@ app.get('/admin/customers', async (req, res) => {
 
     res.render('admin-customers', {
         customers,
-        adminName: req.session.user?.username || 'Admin'
+        adminName: req.session.user?.username || 'Admin',
+        success: req.flash('success'),
+        error: req.flash('error')
     });
 });
 
