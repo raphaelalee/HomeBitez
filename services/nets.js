@@ -14,6 +14,8 @@ const NETS_MID =
   process.env.NETS_MID ||
   process.env.NETS_MERCHANT_ID ||
   "1234567"; // sandbox-friendly default
+const NETS_TIMEOUT_AS_SUCCESS =
+  String(process.env.NETS_TIMEOUT_AS_SUCCESS || "").toLowerCase() === "true";
 
 function mustHaveEnv(name, value) {
   if (!value || !String(value).trim()) {
@@ -129,10 +131,12 @@ async function checkStatus(input) {
       err?.code === "ECONNABORTED" ||
       /timeout/i.test(err?.message || "");
 
-    // If timeout, treat as soft success to keep UX flowing in sandbox
+    // On timeout, default to PENDING so users are not auto-redirected to receipt.
+    // Set NETS_TIMEOUT_AS_SUCCESS=true only if you explicitly want old behavior.
     if (isTimeout) {
-      console.warn("NETS enquiry timed out; returning soft SUCCESS fallback");
-      return { status: "SUCCESS", data: { timeoutFallback: true } };
+      const status = NETS_TIMEOUT_AS_SUCCESS ? "SUCCESS" : "PENDING";
+      console.warn(`NETS enquiry timed out; returning ${status} fallback`);
+      return { status, data: { timeoutFallback: true } };
     }
 
     // Fallback if sandbox doesn't expose this path
@@ -144,8 +148,9 @@ async function checkStatus(input) {
           err2?.code === "ECONNABORTED" ||
           /timeout/i.test(err2?.message || "");
         if (isTimeout2) {
-          console.warn("NETS enquiry (fallback) timed out; returning soft SUCCESS fallback");
-          return { status: "SUCCESS", data: { timeoutFallback: true, fallback: true } };
+          const status = NETS_TIMEOUT_AS_SUCCESS ? "SUCCESS" : "PENDING";
+          console.warn(`NETS enquiry (fallback) timed out; returning ${status} fallback`);
+          return { status, data: { timeoutFallback: true, fallback: true } };
         }
         throw err2;
       }

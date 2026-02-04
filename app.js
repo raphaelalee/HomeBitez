@@ -212,6 +212,54 @@ function issueTwoFactor(req) {
     return code;
 }
 
+// Legacy fallback metadata so existing menu items still show badges/tags
+// even before biz owners set per-product values from the add/edit form.
+const DEFAULT_PRODUCT_META = {
+    "curry": {
+        bestSeller: true,
+        discountPercent: 20,
+        dietaryTags: ["Spicy"],
+        allergenTags: ["Contains Beef"]
+    },
+    "shrimp fried rice": {
+        bestSeller: true,
+        dietaryTags: ["Spicy"],
+        allergenTags: ["Shellfish"]
+    },
+    "nasi lemak": {
+        bestSeller: true,
+        dietaryTags: ["Spicy"],
+        allergenTags: ["Egg"]
+    },
+    "papaya salad": {
+        dietaryTags: ["Spicy", "Vegetarian"],
+        allergenTags: []
+    },
+    "pandan chiffon cake": {
+        dietaryTags: ["Vegetarian"],
+        allergenTags: ["Egg", "Dairy", "Gluten"]
+    },
+    "pho": {
+        dietaryTags: ["Contains Beef"],
+        allergenTags: ["Gluten"]
+    },
+    "bagel": {
+        dietaryTags: ["Vegetarian"],
+        allergenTags: ["Gluten"]
+    },
+    "strawberry matcha": {
+        dietaryTags: ["Vegetarian"],
+        allergenTags: ["Dairy"]
+    }
+};
+
+function getDefaultProductMeta(productName) {
+    const key = String(productName || "").trim().toLowerCase();
+    if (DEFAULT_PRODUCT_META[key]) return DEFAULT_PRODUCT_META[key];
+    if (key.includes("curry")) return DEFAULT_PRODUCT_META["curry"];
+    return {};
+}
+
 function toUniqueTags(tags) {
     return [...new Set((tags || []).map(t => String(t || "").trim()).filter(Boolean))];
 }
@@ -228,20 +276,30 @@ function clampDiscount(value) {
 }
 
 function enrichProductForDisplay(product) {
+    const fallback = getDefaultProductMeta(product.productName);
     const basePrice = Number(product.price || 0);
-    const discountPercent = clampDiscount(product.discountPercent);
+    const dbDiscount = Number(product.discountPercent);
+    const hasDbDiscount = Number.isFinite(dbDiscount) && dbDiscount > 0;
+    const discountPercent = hasDbDiscount
+        ? clampDiscount(dbDiscount)
+        : clampDiscount(fallback.discountPercent || 0);
     const finalPrice = discountPercent > 0
         ? Number((basePrice * (1 - discountPercent / 100)).toFixed(2))
         : Number(basePrice.toFixed(2));
 
+    const dbDietary = parseTags(product.dietaryTags);
+    const dbAllergen = parseTags(product.allergenTags);
+    const fallbackDietary = toUniqueTags(fallback.dietaryTags || []);
+    const fallbackAllergen = toUniqueTags(fallback.allergenTags || []);
+
     return {
         ...product,
-        isBestSeller: Boolean(Number(product.isBestSeller || 0)),
+        isBestSeller: Boolean(Number(product.isBestSeller || 0)) || Boolean(fallback.bestSeller),
         discountPercent,
         originalPrice: Number(basePrice.toFixed(2)),
         finalPrice,
-        dietaryTags: parseTags(product.dietaryTags),
-        allergenTags: parseTags(product.allergenTags)
+        dietaryTags: dbDietary.length ? dbDietary : fallbackDietary,
+        allergenTags: dbAllergen.length ? dbAllergen : fallbackAllergen
     };
 }
 

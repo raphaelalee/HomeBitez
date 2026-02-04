@@ -162,6 +162,56 @@
     .progress-bar{
       background:#dd9b00;
     }
+
+    .hb-modal-backdrop{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 11000;
+      padding: 16px;
+    }
+
+    .hb-modal-backdrop.show{
+      display: flex;
+    }
+
+    .hb-modal{
+      width: 100%;
+      max-width: 460px;
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #eee;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      padding: 18px;
+    }
+
+    .hb-modal h5{
+      margin: 0 0 8px;
+      font-family: 'Sniglet', system-ui, sans-serif;
+      font-size: 22px;
+    }
+
+    .hb-modal p{
+      margin: 0;
+      color: #575757;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .hb-modal-actions{
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hb-modal-actions .hb-btn{
+      flex: 1;
+      min-width: 150px;
+    }
   </style>
 </head>
 
@@ -288,9 +338,49 @@
     </div>
   </div>
 
+  <div id="expiryModal" class="hb-modal-backdrop" aria-hidden="true">
+    <div class="hb-modal" role="dialog" aria-modal="true" aria-labelledby="expiryTitle">
+      <h5 id="expiryTitle">Payment Failed</h5>
+      <p>
+        Your NETS QR timer expired before payment was detected. You can try again to generate a new QR, or go back to checkout.
+      </p>
+      <div class="hb-modal-actions">
+        <button id="retryPaymentBtn" type="button" class="hb-btn">
+          <i class="bi bi-arrow-repeat"></i> Try Again
+        </button>
+        <button id="backCheckoutBtn" type="button" class="hb-btn hb-btn-outline">
+          <i class="bi bi-arrow-left"></i> Back to Checkout
+        </button>
+      </div>
+    </div>
+  </div>
+
 <script>
   (function(){
     const txnRetrievalRef = "<%= (typeof txnRetrievalRef !== 'undefined' ? txnRetrievalRef : '') %>";
+    const checkoutTotal = Number("<%= (typeof total !== 'undefined') ? Number(total).toFixed(2) : '0.00' %>");
+    const statusTitle = document.getElementById('statusTitle');
+    const statusMsg = document.getElementById('statusMsg');
+    const expiryModal = document.getElementById('expiryModal');
+    const retryPaymentBtn = document.getElementById('retryPaymentBtn');
+    const backCheckoutBtn = document.getElementById('backCheckoutBtn');
+    let paymentFlowEnded = false;
+    let es = null;
+
+    function markExpiredAndShowModal() {
+      if (paymentFlowEnded) return;
+      paymentFlowEnded = true;
+      if (statusTitle) statusTitle.textContent = "Payment window expired";
+      if (statusMsg) statusMsg.textContent = "No payment detected. Please try again with a new QR code.";
+
+      try { if (es) es.close(); } catch (e) {}
+      fetch('/nets/complete-fail', { method: 'POST', credentials: 'include' }).catch(() => {});
+
+      if (expiryModal) {
+        expiryModal.classList.add('show');
+        expiryModal.setAttribute('aria-hidden', 'false');
+      }
+    }
 
     // ===== Timer UI (5 minutes default) =====
     const totalSeconds = 5 * 60;
@@ -314,14 +404,16 @@
       const pct = Math.max(0, Math.floor((remainingSeconds / totalSeconds) * 100));
       if (barEl) barEl.style.width = pct + "%";
 
-      if (remainingSeconds <= 0) clearInterval(timerId);
+      if (remainingSeconds <= 0) {
+        clearInterval(timerId);
+        markExpiredAndShowModal();
+      }
     }, 1000);
 
     // ===== SSE status updates (listen to server for real status) =====
     (function(){
       const evtUrl = `/sse/payment-status/${encodeURIComponent(txnRetrievalRef)}`;
 
-      let es;
       try {
         es = new EventSource(evtUrl);
       } catch (e) {
@@ -330,10 +422,13 @@
 
       if (es) {
         es.onmessage = async (ev) => {
+          if (paymentFlowEnded) return;
+
           try {
             const data = JSON.parse(ev.data || '{}');
 
             if (data.success) {
+              paymentFlowEnded = true;
               // Call server to finalize payment (set session etc.) then redirect to receipt
               try {
                 try {
@@ -353,6 +448,7 @@
             }
 
             if (data.fail) {
+              paymentFlowEnded = true;
               // notify server to clear pending and redirect to fail page
               try {
                 try {
@@ -444,6 +540,29 @@
         }
       }
     })();
+
+    if (retryPaymentBtn) {
+      retryPaymentBtn.addEventListener('click', () => {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/nets-qr/request';
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'cartTotal';
+        input.value = String(Number.isFinite(checkoutTotal) ? checkoutTotal : 0);
+
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+      });
+    }
+
+    if (backCheckoutBtn) {
+      backCheckoutBtn.addEventListener('click', () => {
+        window.location.href = '/checkout';
+      });
+    }
   })();
 </script>
 
