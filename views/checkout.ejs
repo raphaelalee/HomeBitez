@@ -523,8 +523,10 @@
                         window.location.href = '/receipt';
                       } else if (data.needed) {
                         // Not enough balance -> redirect to top-up
-                        alert(`Insufficient balance. Please top up $${data.needed}`);
+                        alert(`Not enough funds. Please top up $${data.needed} in your HomeBitez Wallet.`);
                         window.location.href = `/digitalwallet?redirect=/checkout`;
+                      } else if (data.error && data.error.includes('Daily wallet spend limit')) {
+                        alert(`Daily wallet transaction limit reached. Please use another payment method.`);
                       } else {
                         alert(data.error || "Wallet payment failed");
                       }

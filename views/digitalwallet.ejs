@@ -1,107 +1,504 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>HomeBitez Digital Wallet</title>
+  <title>HomeBitez Wallet</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    :root {
+      --cream: #fff1df;
+      --card: #ffffff;
+      --accent: #f3a23c;
+      --accent-dark: #e08a20;
+      --ink: #1f1f1f;
+      --muted: #6b6b6b;
+      --stroke: #f0d8b3;
+      --shadow: 0 10px 24px rgba(0,0,0,0.08);
+    }
+
+    * { box-sizing: border-box; }
+
     body {
-      font-family: Arial, sans-serif;
-      padding: 40px;
-      background: #fff6eb;
-      text-align: center;
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 16px 60px;
     }
 
-    .card {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      width: 420px;
-      margin: auto;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-
-    h1 {
-      margin-bottom: 10px;
-    }
-
-    input {
-      padding: 10px;
-      margin-top: 15px;
+    .wallet-shell {
       width: 100%;
-      box-sizing: border-box;
-      font-size: 16px;
+      max-width: 460px;
+    }
+
+    .wallet-frame {
+      background: #fff8ef;
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid #f1e1c9;
+      position: relative;
+      overflow: hidden;
+      min-height: 620px;
+    }
+
+    .wallet-frame:before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(120px 120px at 10% 20%, rgba(243,162,60,0.18), transparent 70%),
+        radial-gradient(160px 160px at 90% 10%, rgba(28,121,255,0.12), transparent 70%),
+        radial-gradient(120px 120px at 80% 80%, rgba(255,214,153,0.25), transparent 70%);
+      pointer-events: none;
+    }
+
+    .wallet-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .wallet-hero {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 16px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .wallet-title {
+      font-weight: 700;
+      font-size: 18px;
+      margin: 0 0 6px;
+      text-transform: lowercase;
+    }
+
+    .wallet-balance {
+      font-size: 24px;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .wallet-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .wallet-action {
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .wallet-action i {
+      display: inline-flex;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: #f6f6f6;
+      align-items: center;
+      justify-content: center;
+      font-style: normal;
+      font-size: 18px;
+    }
+
+    .wallet-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      margin-top: 14px;
+      border: 1px solid #f4e6cf;
+    }
+
+    .wallet-card.header {
+      border: 2px solid #1c79ff;
+    }
+
+    .wallet-card-title {
+      font-weight: 700;
+      margin: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chevron {
+      font-size: 20px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 999;
+    }
+
+    .modal {
+      background: #fff;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .modal h3 { margin: 0 0 8px; }
+    .modal input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #e8d7b6;
+      margin-top: 8px;
+      font-size: 14px;
     }
 
     .btn {
-      padding: 12px;
-      margin-top: 12px;
       width: 100%;
-      font-weight: bold;
+      padding: 10px 14px;
+      margin-top: 10px;
+      border-radius: 10px;
       border: none;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
       cursor: pointer;
-      border-radius: 6px;
-      font-size: 15px;
     }
 
-    .card-btn { background: #4CAF50; color: white; }
-    .paypal-btn { background: #0070ba; color: white; }
-    .paynow-btn { background: #f4b400; color: black; }
+    .btn.secondary {
+      background: #fff;
+      color: var(--accent-dark);
+      border: 1px solid var(--accent-dark);
+    }
 
-    .note {
-      margin-top: 15px;
+    .inline-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .notice {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: #6b4b0f;
+      font-weight: 700;
+      background: #fff;
+      border: 1px solid #f1d9b0;
+      padding: 8px 12px;
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+    }
+
+    .txn-list {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    .txn-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       font-size: 13px;
-      color: #666;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #fffaf4;
+      border: 1px solid #f1e1c9;
+    }
+
+    .txn-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .txn-type {
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+
+    .txn-meta {
+      color: #7a6a55;
+      font-size: 11px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      top: 18px;
+      background: #2a241e;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      font-size: 13px;
+      display: none;
+      z-index: 1000;
+    }
+
+    .code-chip {
+      position: fixed;
+      left: 50%;
+      top: 18px;
+      transform: translateX(-50%);
+      background: #fff;
+      color: #2a241e;
+      border: 2px solid #f3a23c;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 13px;
+      box-shadow: var(--shadow);
+      display: none;
+      z-index: 1000;
     }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <h2>Your Wallet Balance</h2>
-    <h1>$<%= balance.toFixed(2) %></h1>
+  <div class="wallet-shell">
+    <div class="wallet-frame">
+      <div class="wallet-content">
+        <a class="back-link" href="/user/profile">← Back</a>
 
-    <h3>Enter Top-Up Amount</h3>
-    <input type="number" id="amount" placeholder="Enter amount" min="1" step="0.01">
+        <div class="wallet-hero">
+          <div class="wallet-title">homebitez wallet</div>
+          <div class="wallet-balance">$<%= Number(balance || 0).toFixed(2) %></div>
+        </div>
 
-    <button class="btn card-btn" onclick="payCard()">Top Up with Card</button>
-    <button class="btn paypal-btn" onclick="payPaypal()">Top Up with PayPal</button>
-    <button class="btn paynow-btn" onclick="payPayNow()">Top Up with PayNow</button>
+        <div class="wallet-actions">
+          <div class="wallet-action" id="topupBtn">
+            <i>+</i>
+            Top up
+          </div>
+          <div class="wallet-action">
+            <i>⇄</i>
+            Transfer
+          </div>
+        </div>
 
-    <div class="note">
-      You will be redirected to a secure payment page.  
-      Wallet will be credited only after successful payment.
+        <div class="wallet-card header">
+          <div class="wallet-card-title">
+            Spend & Balance Limits
+            <span class="chevron">›</span>
+          </div>
+          <div class="muted" style="margin-top:6px;">
+            Daily wallet spend cap: $<%= Number(dailyLimit || 0).toFixed(2) %>
+          </div>
+          <div class="muted" style="margin-top:2px;">
+            Spent today: $<%= Number(dailySpent || 0).toFixed(2) %>
+          </div>
+        </div>
+
+        <div class="wallet-card">
+          <div class="wallet-card-title">
+            Wallet Transactions
+          </div>
+          <div class="txn-list">
+            <% if (transactions && transactions.length) { %>
+              <% transactions.forEach(tx => { %>
+                <div class="txn-row">
+                  <div class="txn-left">
+                    <div class="txn-type"><%= tx.type %> via <%= tx.method || 'wallet' %></div>
+                    <div class="txn-meta"><%= tx.created_at ? new Date(tx.created_at).toLocaleString() : '-' %></div>
+                  </div>
+                  <div>
+                    <strong><%= tx.type === 'payment' ? '-' : '+' %>$<%= Number(tx.amount).toFixed(2) %></strong>
+                  </div>
+                </div>
+              <% }) %>
+            <% } else { %>
+              <div class="muted">No transactions yet.</div>
+            <% } %>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-<script>
-function getAmount() {
-  const amount = parseFloat(document.getElementById('amount').value);
+  <div class="toast" id="toast"></div>
+  <div class="code-chip" id="codeChip"></div>
 
-  if (!amount || amount <= 0) {
-    alert("Please enter a valid amount.");
-    return null;
-  }
+  <div class="modal-backdrop" id="topupModal">
+    <div class="modal">
+      <h3>Top Up Wallet</h3>
+      <div class="muted">Enter an amount, then verify with 2FA before paying.</div>
+      <input type="number" id="topupAmount" placeholder="Enter amount (SGD)" min="1" step="0.01">
 
-  return amount.toFixed(2);
-}
+      <div id="twofaBlock">
+        <button class="btn secondary" id="sendCodeBtn">Send 2FA Code</button>
+        <div id="sendInfo" class="notice"></div>
+        <input type="text" id="twofaCode" placeholder="Enter 2FA code">
+        <button class="btn" id="verifyCodeBtn">Verify Code</button>
+        <div id="verifyInfo" class="notice"></div>
+      </div>
 
-function payCard() {
-  const amount = getAmount();
-  if (!amount) return;
-  window.location.href = `/wallet/card?amount=${amount}`;
-}
+      <div id="payBlock" style="display:none;">
+        <div class="inline-actions">
+          <button class="btn" id="paypalBtn">PayPal</button>
+          <button class="btn secondary" id="stripeBtn">Stripe</button>
+        </div>
+        <div class="notice">Stripe checkout supports card, GrabPay, Alipay, PayNow, WeChat Pay.</div>
+      </div>
 
-function payPaypal() {
-  const amount = getAmount();
-  if (!amount) return;
-  window.location.href = `/wallet/paypal?amount=${amount}`;
-}
+      <button class="btn secondary" id="closeModalBtn">Close</button>
+    </div>
+  </div>
 
-function payPayNow() {
-  const amount = getAmount();
-  if (!amount) return;
-  window.location.href = `/wallet/paynow?amount=${amount}`;
-}
-</script>
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    const stripe = Stripe('<%= process.env.STRIPE_PUBLISHABLE_KEY %>');
+    const topupBtn = document.getElementById('topupBtn');
+    const modal = document.getElementById('topupModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const sendCodeBtn = document.getElementById('sendCodeBtn');
+    const verifyCodeBtn = document.getElementById('verifyCodeBtn');
+    const paypalBtn = document.getElementById('paypalBtn');
+    const stripeBtn = document.getElementById('stripeBtn');
+    const topupAmount = document.getElementById('topupAmount');
+    const twofaCode = document.getElementById('twofaCode');
+    const sendInfo = document.getElementById('sendInfo');
+    const verifyInfo = document.getElementById('verifyInfo');
+    const payBlock = document.getElementById('payBlock');
+    const toast = document.getElementById('toast');
+    const codeChip = document.getElementById('codeChip');
+
+    let wallet2faVerified = <%= wallet2faVerified ? 'true' : 'false' %>;
+
+    function openModal() {
+      modal.style.display = 'flex';
+      if (wallet2faVerified) {
+        payBlock.style.display = 'block';
+      }
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+    }
+
+    function validateAmount() {
+      const amount = Number(topupAmount.value || 0);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        alert('Enter a valid amount');
+        return null;
+      }
+      return amount;
+    }
+
+    topupBtn.addEventListener('click', openModal);
+    closeModalBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    sendCodeBtn.addEventListener('click', async () => {
+      sendInfo.textContent = 'Sending...';
+      const res = await fetch('/wallet/2fa/send', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        sendInfo.textContent = `Code sent to ${data.maskedPhone} / ${data.maskedEmail}.`;
+        if (data.demoCode && codeChip) {
+          codeChip.textContent = `2FA: ${data.demoCode}`;
+          codeChip.style.display = 'block';
+          setTimeout(() => { codeChip.style.display = 'none'; }, 5000);
+        }
+        showToast("2FA code sent. Check terminal.");
+      } else {
+        sendInfo.textContent = data.error || 'Failed to send code';
+        showToast(sendInfo.textContent);
+      }
+      autoClear(sendInfo);
+    });
+
+    verifyCodeBtn.addEventListener('click', async () => {
+      verifyInfo.textContent = 'Verifying...';
+      const code = String(twofaCode.value || '').trim();
+      const res = await fetch('/wallet/2fa/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        wallet2faVerified = true;
+        verifyInfo.textContent = 'Verified. Choose PayNow or Stripe.';
+        payBlock.style.display = 'block';
+        showToast("2FA verified.");
+      } else {
+        verifyInfo.textContent = data.error || 'Verification failed';
+        showToast(verifyInfo.textContent);
+      }
+      autoClear(verifyInfo);
+    });
+
+    async function startCheckout(url) {
+      const amount = validateAmount();
+      if (!amount) return;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount })
+      });
+      const data = await res.json();
+      if (data.id) {
+        stripe.redirectToCheckout({ sessionId: data.id });
+      } else {
+        alert(data.error || 'Failed to start payment');
+      }
+    }
+
+    paypalBtn.addEventListener('click', () => {
+      const amount = validateAmount();
+      if (!amount) return;
+      window.location.href = `/wallet/paypal?amount=${amount.toFixed(2)}`;
+    });
+    stripeBtn.addEventListener('click', () => startCheckout('/wallet/topup/stripe-session'));
+
+    function autoClear(el) {
+      setTimeout(() => { if (el) el.textContent = ""; }, 2500);
+    }
+
+    function showToast(message) {
+      if (!toast) return;
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2000);
+    }
+  </script>
 
 </body>
 </html>

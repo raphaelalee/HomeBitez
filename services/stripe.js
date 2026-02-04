@@ -35,6 +35,40 @@ module.exports = {
     return session;
   },
 
+  createWalletTopupSession: async ({ amount, successUrl, cancelUrl, paymentMethodTypes }) => {
+    const topupAmount = Number(amount || 0);
+    if (!Number.isFinite(topupAmount) || topupAmount <= 0) {
+      throw new Error("Invalid top-up amount");
+    }
+
+    const pmTypes = paymentMethodTypes || ['card'];
+    const paymentMethodOptions = pmTypes.includes('wechat_pay') ? { wechat_pay: { client: 'web' } } : undefined;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: pmTypes,
+      payment_method_options: paymentMethodOptions,
+      line_items: [
+        {
+          price_data: {
+            currency: 'sgd',
+            product_data: { name: 'HomeBitez Wallet Top Up' },
+            unit_amount: Math.round(topupAmount * 100)
+          },
+          quantity: 1
+        }
+      ],
+      mode: 'payment',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        type: 'wallet_topup',
+        amount: topupAmount.toFixed(2)
+      }
+    });
+
+    return session;
+  },
+
   retrieveCheckoutSession: async (sessionId) => {
     if (!sessionId) throw new Error("Missing Stripe session ID");
     return stripe.checkout.sessions.retrieve(sessionId, {

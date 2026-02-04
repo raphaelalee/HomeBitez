@@ -10,7 +10,7 @@ const paypal = require('@paypal/checkout-server-sdk');
 
 const environment = new paypal.core.SandboxEnvironment(
   process.env.PAYPAL_CLIENT_ID,
-  process.env.PAYPAL_SECRET
+  process.env.PAYPAL_CLIENT_SECRET
 );
 
 const paypalClient = new paypal.core.PayPalHttpClient(environment);
@@ -105,6 +105,52 @@ async function ensureMessagesTable() {
         // ignore if column already nullable or missing
     }
     messagesTableEnsured = true;
+}
+
+let walletColumnEnsured = false;
+async function ensureWalletColumn() {
+    if (walletColumnEnsured) return;
+    try {
+        await db.query("ALTER TABLE users ADD COLUMN wallet_balance DECIMAL(10,2) NOT NULL DEFAULT 0");
+    } catch (err) {
+        // ignore if column exists or alter fails
+    }
+    walletColumnEnsured = true;
+}
+
+let walletTxnTableEnsured = false;
+async function ensureWalletTransactionsTable() {
+    if (walletTxnTableEnsured) return;
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS wallet_transactions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                type ENUM('topup','payment') NOT NULL,
+                method VARCHAR(50) NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                balance_after DECIMAL(10,2) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_wallet_user (user_id),
+                CONSTRAINT fk_wallet_user FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        `);
+    } catch (err) {
+        console.error("ensureWalletTransactionsTable failed:", err);
+    }
+    walletTxnTableEnsured = true;
+}
+
+async function recordWalletTxn(userId, type, method, amount, balanceAfter) {
+    try {
+        await ensureWalletTransactionsTable();
+        await db.query(
+            "INSERT INTO wallet_transactions (user_id, type, method, amount, balance_after) VALUES (?,?,?,?,?)",
+            [userId, type, method || null, amount, balanceAfter]
+        );
+    } catch (err) {
+        console.error("recordWalletTxn failed:", err);
+    }
 }
 
 // Initialize app
@@ -1773,14 +1819,78 @@ app.get('/digitalwallet', async (req, res) => {
   if (!req.session.user) return res.redirect('/login');
 
   const redirect = req.query.redirect || '/checkout';
-  const [rows] = await db.promise().query(
+  await ensureWalletColumn();
+  await ensureWalletTransactionsTable();
+  const [rows] = await db.query(
     "SELECT wallet_balance FROM users WHERE id=?",
     [req.session.user.id]
   );
 
-  const balance = rows[0].wallet_balance;
+  const balance = rows?.[0]?.wallet_balance ?? 0;
+  const wallet2fa = req.session.wallet2fa || {};
+  const wallet2faVerified = !!wallet2fa.verified && (!wallet2fa.verifiedAt || (Date.now() - wallet2fa.verifiedAt) < 5 * 60 * 1000);
 
-  res.render('digitalwallet', { balance, redirect });
+  const dailyLimit = 1000;
+  let dailySpent = 0;
+  try {
+    const [sumRows] = await db.query(
+      "SELECT COALESCE(SUM(amount),0) AS total FROM wallet_transactions WHERE user_id=? AND type='payment' AND DATE(created_at)=CURDATE()",
+      [req.session.user.id]
+    );
+    dailySpent = Number(sumRows?.[0]?.total || 0);
+  } catch (err) {
+    console.error("wallet daily spent error:", err);
+  }
+
+  let transactions = [];
+  try {
+    const [txRows] = await db.query(
+      "SELECT id, type, method, amount, balance_after, created_at FROM wallet_transactions WHERE user_id=? ORDER BY created_at DESC LIMIT 10",
+      [req.session.user.id]
+    );
+    transactions = txRows || [];
+  } catch (err) {
+    console.error("wallet transactions load error:", err);
+  }
+
+  res.render('digitalwallet', { balance, redirect, wallet2faVerified, transactions, dailyLimit, dailySpent });
+});
+
+// POST /wallet/2fa/send
+app.post('/wallet/2fa/send', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Not logged in' });
+
+  const code = generateTwoFactorCode();
+  req.session.wallet2fa = {
+    code,
+    expiresAt: Date.now() + 5 * 60 * 1000,
+    verified: false,
+    verifiedAt: null
+  };
+
+  console.log('Wallet 2FA code for', req.session.user?.email || req.session.user?.username, ':', code);
+
+  return res.json({
+    ok: true,
+    maskedPhone: maskPhone(req.session.user.contact),
+    maskedEmail: maskEmail(req.session.user.email),
+    demoCode: code
+  });
+});
+
+// POST /wallet/2fa/verify
+app.post('/wallet/2fa/verify', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Not logged in' });
+
+  const submitted = String(req.body.code || '').replace(/\s/g, '');
+  const w = req.session.wallet2fa || {};
+
+  if (!w.code) return res.status(400).json({ ok: false, error: 'Code not found. Please resend.' });
+  if (w.expiresAt && Date.now() > w.expiresAt) return res.status(400).json({ ok: false, error: 'Code expired. Please resend.' });
+  if (submitted !== String(w.code)) return res.status(400).json({ ok: false, error: 'Invalid code.' });
+
+  req.session.wallet2fa = { verified: true, verifiedAt: Date.now() };
+  return res.json({ ok: true });
 });
 
 // POST /digitalwallet/use
@@ -1790,19 +1900,45 @@ app.post('/digitalwallet/use', async (req, res) => {
   const total = parseFloat(req.body.total);
   if (isNaN(total) || total <= 0) return res.json({ success: false, error: 'Invalid total' });
 
-  const [rows] = await db.promise().query(
+  await ensureWalletColumn();
+  await ensureWalletTransactionsTable();
+
+  const dailyLimit = 1000;
+  let dailySpent = 0;
+  try {
+    const [sumRows] = await db.query(
+      "SELECT COALESCE(SUM(amount),0) AS total FROM wallet_transactions WHERE user_id=? AND type='payment' AND DATE(created_at)=CURDATE()",
+      [req.session.user.id]
+    );
+    dailySpent = Number(sumRows?.[0]?.total || 0);
+  } catch (err) {
+    console.error("wallet daily spent error:", err);
+  }
+
+  if (dailySpent + total > dailyLimit) {
+    return res.json({
+      success: false,
+      error: 'Daily wallet spend limit reached',
+      dailyLimit,
+      dailySpent
+    });
+  }
+
+  const [rows] = await db.query(
     "SELECT wallet_balance FROM users WHERE id=?",
     [req.session.user.id]
   );
 
-  const balance = rows[0].wallet_balance;
+  const balance = rows?.[0]?.wallet_balance ?? 0;
 
   if (balance >= total) {
-    await db.promise().query(
+    await db.query(
       "UPDATE users SET wallet_balance = wallet_balance - ? WHERE id=?",
       [total, req.session.user.id]
     );
-    return res.json({ success: true, newBalance: balance - total });
+    const newBalance = Number(balance) - Number(total);
+    await recordWalletTxn(req.session.user.id, 'payment', 'wallet', Number(total), newBalance);
+    return res.json({ success: true, newBalance });
   }
 
   const needed = (total - balance).toFixed(2);
@@ -1816,13 +1952,109 @@ app.post('/digitalwallet/topup', async (req, res) => {
   const amount = parseFloat(req.body.amount);
   if (isNaN(amount) || amount <= 0) return res.status(400).json({ success: false, error: 'Invalid amount' });
 
-  await db.promise().query(
+  await ensureWalletColumn();
+  await db.query(
     "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
     [amount, req.session.user.id]
   );
 
+  const [rows] = await db.query(
+    "SELECT wallet_balance FROM users WHERE id=?",
+    [req.session.user.id]
+  );
+  const balanceAfter = rows?.[0]?.wallet_balance ?? Number(amount);
+  await recordWalletTxn(req.session.user.id, 'topup', 'manual', Number(amount), balanceAfter);
+
   // After top-up, redirect back to the original page
   res.json({ success: true, redirect: req.body.redirect || '/checkout' });
+});
+
+function wallet2faIsValid(req) {
+  const w = req.session.wallet2fa || {};
+  if (!w.verified) return false;
+  if (w.verifiedAt && (Date.now() - w.verifiedAt) > 5 * 60 * 1000) return false;
+  return true;
+}
+
+// POST /wallet/topup/stripe-session
+app.post('/wallet/topup/stripe-session', async (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Not logged in' });
+  if (!wallet2faIsValid(req)) return res.status(403).json({ ok: false, error: '2FA required' });
+
+  const amount = parseFloat(req.body.amount);
+  if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ ok: false, error: 'Invalid amount' });
+
+  try {
+    const session = await stripeService.createWalletTopupSession({
+      amount,
+      successUrl: 'http://localhost:3000/wallet/stripe/success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'http://localhost:3000/digitalwallet',
+      paymentMethodTypes: ['card', 'grabpay', 'alipay', 'paynow', 'wechat_pay']
+    });
+    return res.json({ ok: true, id: session.id });
+  } catch (err) {
+    console.error('Stripe topup session error:', err);
+    return res.status(500).json({ ok: false, error: 'Stripe session failed' });
+  }
+});
+
+// POST /wallet/topup/paynow-session
+app.post('/wallet/topup/paynow-session', async (req, res) => {
+  if (!req.session.user) return res.status(401).json({ ok: false, error: 'Not logged in' });
+  if (!wallet2faIsValid(req)) return res.status(403).json({ ok: false, error: '2FA required' });
+
+  const amount = parseFloat(req.body.amount);
+  if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ ok: false, error: 'Invalid amount' });
+
+  try {
+    const session = await stripeService.createWalletTopupSession({
+      amount,
+      successUrl: 'http://localhost:3000/wallet/stripe/success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'http://localhost:3000/digitalwallet',
+      paymentMethodTypes: ['paynow']
+    });
+    return res.json({ ok: true, id: session.id });
+  } catch (err) {
+    console.error('PayNow topup session error:', err);
+    return res.status(500).json({ ok: false, error: 'PayNow session failed' });
+  }
+});
+
+// GET /wallet/stripe/success
+app.get('/wallet/stripe/success', async (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
+  const sessionId = req.query.session_id;
+  if (!sessionId) return res.redirect('/digitalwallet');
+
+  try {
+    const session = await stripeService.retrieveCheckoutSession(sessionId);
+    if (!session || session.payment_status !== 'paid') {
+      return res.redirect('/digitalwallet');
+    }
+
+    const amount = Number(session.amount_total || 0) / 100;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.redirect('/digitalwallet');
+    }
+
+    await ensureWalletColumn();
+    await db.query(
+      "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
+      [amount, req.session.user.id]
+    );
+
+    const [rows] = await db.query(
+      "SELECT wallet_balance FROM users WHERE id=?",
+      [req.session.user.id]
+    );
+    const balanceAfter = rows?.[0]?.wallet_balance ?? Number(amount);
+    await recordWalletTxn(req.session.user.id, 'topup', 'stripe', Number(amount), balanceAfter);
+
+    return res.redirect('/digitalwallet');
+  } catch (err) {
+    console.error('Wallet topup success error:', err);
+    return res.redirect('/digitalwallet');
+  }
 });
 
 app.get('/wallet/paypal', async (req, res) => {
@@ -1864,13 +2096,21 @@ app.get('/wallet/paypal/success', async (req, res) => {
   await paypalClient.execute(request);
 
   // ✅ Now safe to update wallet
-  await db.promise().query(
+  await ensureWalletColumn();
+  await db.query(
     "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
     [amount, req.session.user.id]
   );
 
-  // Redirect back to checkout
-  res.redirect('/checkout');
+  const [rows] = await db.query(
+    "SELECT wallet_balance FROM users WHERE id=?",
+    [req.session.user.id]
+  );
+  const balanceAfter = rows?.[0]?.wallet_balance ?? Number(amount);
+  await recordWalletTxn(req.session.user.id, 'topup', 'paypal', Number(amount), balanceAfter);
+
+  // Redirect back to wallet
+  res.redirect('/digitalwallet');
 });
 
 
