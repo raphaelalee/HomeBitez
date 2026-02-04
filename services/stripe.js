@@ -8,7 +8,10 @@ module.exports = {
     const total = Number(subtotal) + Number(deliveryFee);
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: ['card', 'grabpay', 'alipay', 'paynow', 'wechat_pay'],
+      payment_method_options: {
+        wechat_pay: { client: 'web' }
+      },
 
       line_items: [
         {
