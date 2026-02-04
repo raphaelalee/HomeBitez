@@ -19,7 +19,6 @@
     body{
       margin:0;
       font-family: Arial, sans-serif;
-<<<<<<< HEAD
       background: #faefe5;
     }
 
@@ -152,9 +151,6 @@
 
     #paypal-button-container {
       margin-top: 10px;
-=======
-      background:#faefe5;
->>>>>>> 4688eca47bb83c5d6623970fac95446d20b7fd9d
     }
 
     .muted-label {
@@ -203,99 +199,11 @@
     .paylater-option small {
       color: #8a8a8a;
     }
-<<<<<<< HEAD
 
     .paylater-options input:checked+.paylater-option {
       border-color: #dd9b00;
       background: #fff7e3;
       box-shadow: 0 0 0 2px rgba(221, 155, 0, 0.15);
-=======
-    .hb-pill{
-      padding:6px 12px;
-      background:#fff7e3;
-      border:1px solid #ffe2a6;
-      border-radius:999px;
-      font-size:12px;
-      color:#7a5a00;
-      white-space:nowrap;
-    }
-    .hb-summary{
-      border-top:1px solid #eee;
-      margin-top:10px;
-      padding-top:12px;
-      font-size:14px;
-    }
-    .hb-line{
-      display:flex;
-      justify-content:space-between;
-      color:#5a5a5a;
-      margin:6px 0;
-    }
-    .hb-total{
-      display:flex;
-      justify-content:space-between;
-      font-weight:900;
-      font-size:18px;
-    }
-    .hb-total span:last-child{
-      color:#dd9b00;
-      font-size:20px;
-    }
-    .hb-input{
-      border-radius:12px;
-      border:1px solid #eee;
-      padding:10px 12px;
-      font-size:14px;
-    }
-    .hb-btn{
-      margin-top:10px;
-      padding:10px 16px;
-      background:#dd9b00;
-      color:white;
-      border:none;
-      border-radius:20px;
-      font-weight:700;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      justify-content:center;
-      cursor:pointer;
-      text-decoration:none;
-    }
-    .hb-btn-outline{
-      background:white;
-      color:#dd9b00;
-      border:1px solid #dd9b00;
-    }
-    #paypal-button-container{margin-top:10px;}
-    .muted-label{font-size:12px;color:#6b6b6b;}
-    .option-block{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding:10px 12px;
-      border:1px solid #f0e0bf;
-      border-radius:10px;
-      margin-bottom:10px;
-    }
-    .small-note{font-size:12px;color:#5a5a5a;margin:0;}
-    .paylater-options{display:flex;gap:10px;}
-    .paylater-options input{display:none;}
-    .paylater-option{
-      flex:1;
-      border:1px solid #eee;
-      border-radius:12px;
-      padding:12px;
-      cursor:pointer;
-      background:#fff;
-    }
-    .paylater-option strong{color:#2a241e;}
-    .paylater-option small{color:#8a8a8a;}
-    .paylater-options input:checked + .paylater-option{
-      border-color:#dd9b00;
-      background:#fff7e3;
-      box-shadow:0 0 0 2px rgba(221,155,0,0.15);
->>>>>>> 4688eca47bb83c5d6623970fac95446d20b7fd9d
     }
   </style>
 </head>
@@ -310,113 +218,17 @@
 
   <div class="hb-wrap">
 
-<<<<<<< HEAD
-      <% if (!items || items.length===0) { %>
+      <% if (!items || items.length === 0) { %>
         <div class="hb-card">
           <div class="alert alert-warning mb-0">Your cart is empty.</div>
           <a class="hb-btn hb-btn-outline mt-3" href="/menu">
             <i class="bi bi-arrow-left"></i> Back to Menu
           </a>
-=======
-  <% if (!items || items.length === 0) { %>
-    <div class="hb-card">
-      <div class="alert alert-warning mb-0">Your cart is empty.</div>
-      <a class="hb-btn hb-btn-outline mt-3" href="/menu">
-        <i class="bi bi-arrow-left"></i> Back to Menu
-      </a>
-    </div>
+        </div>
+
   <% } else { %>
 
   <div class="hb-grid">
-
-    <!-- LEFT -->
-    <div class="d-flex flex-column gap-4">
-
-      <!-- Fulfillment -->
-      <div class="hb-card">
-        <div class="hb-card-title">
-          <i class="bi bi-truck"></i>
-          Fulfillment
-        </div>
-
-        <div class="option-block">
-          <input type="radio" name="mode" id="modePickup" value="pickup" <%= (prefs?.mode || 'pickup') === 'pickup' ? 'checked' : '' %>>
-          <label for="modePickup" class="mb-0">
-            <strong>Pickup</strong><br>
-            <span class="small-note">Collect in store; no delivery fee.</span>
-          </label>
-        </div>
-
-        <div id="pickupFields" style="display:<%= (prefs?.mode || 'pickup') === 'pickup' ? 'block' : 'none' %>;">
-          <div class="row g-2">
-            <div class="col-md-6">
-              <label class="muted-label">Pickup date</label>
-              <input class="form-control hb-input" type="date" id="pickupDate" value="<%= prefs?.pickupDate || '' %>">
-            </div>
-            <div class="col-md-6">
-              <label class="muted-label">Pickup time</label>
-              <select class="form-control hb-input" id="pickupTime">
-                <option value="">Select a slot</option>
-                <option value="9-12" <%= (prefs?.pickupTime === '9-12') ? 'selected' : '' %>>9:00am - 12:00pm</option>
-                <option value="12-3" <%= (prefs?.pickupTime === '12-3') ? 'selected' : '' %>>12:00pm - 3:00pm</option>
-                <option value="3-6" <%= (prefs?.pickupTime === '3-6') ? 'selected' : '' %>>3:00pm - 6:00pm</option>
-                <option value="6-8" <%= (prefs?.pickupTime === '6-8') ? 'selected' : '' %>>6:00pm - 8:00pm</option>
-              </select>
-              <div class="text-muted" style="font-size:12px;margin-top:4px;">Choose a pickup slot; times are fixed to these windows.</div>
-            </div>
-            <div class="col-12">
-              <label class="muted-label">Pickup notes (optional)</label>
-              <input class="form-control hb-input" id="pickupNotes" placeholder="e.g. Call when ready, extra napkins"
-                value="<%= prefs?.pickupNotes || '' %>">
-            </div>
-          </div>
-        </div>
-
-        <div class="option-block">
-          <input type="radio" name="mode" id="modeDelivery" value="delivery" <%= (prefs?.mode || 'pickup') === 'delivery' ? 'checked' : '' %>>
-          <label for="modeDelivery" class="mb-0">
-            <strong>Delivery</strong><br>
-            <span class="small-note">Flat fee $<%= defaultDeliveryFee.toFixed(2) %>.</span>
-          </label>
-        </div>
-
-        <div id="deliveryFields" style="display:<%= (prefs?.mode || 'pickup') === 'delivery' ? 'block' : 'none' %>;">
-          <div class="row g-2">
-            <div class="col-md-6">
-              <label class="muted-label">Name</label>
-              <input class="form-control hb-input" id="deliveryName" placeholder="Name"
-                value="<%= prefs?.name || (user && (user.username || user.name)) || '' %>">
-            </div>
-            <div class="col-md-6">
-              <label class="muted-label">Contact</label>
-              <input class="form-control hb-input" id="deliveryContact" placeholder="Contact"
-                value="<%= prefs?.contact || '' %>">
-            </div>
-            <div class="col-12">
-              <label class="muted-label">Address</label>
-              <input class="form-control hb-input" id="deliveryAddress" placeholder="Address"
-                value="<%= prefs?.address || '' %>">
-            </div>
-            <div class="col-12">
-              <label class="muted-label">Notes (optional)</label>
-              <input class="form-control hb-input" id="deliveryNotes" placeholder="Notes"
-                value="<%= prefs?.notes || '' %>">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Order Summary -->
-      <div class="hb-card">
-        <div class="hb-card-title">
-          <i class="bi bi-bag-heart"></i>
-          Order Summary
-          <span class="hb-pill"><%= items.length %> item(s)</span>
->>>>>>> 4688eca47bb83c5d6623970fac95446d20b7fd9d
-        </div>
-
-<<<<<<< HEAD
-          <div class="hb-grid">
 
             <!-- LEFT -->
             <div class="d-flex flex-column gap-4">
@@ -449,14 +261,10 @@
                       <label class="muted-label">Pickup time</label>
                       <select class="form-control hb-input" id="pickupTime">
                         <option value="">Select a slot</option>
-                        <option value="9-12" <%=(prefs?.pickupTime==='9-12' ) ? 'selected' : '' %>>9:00am – 12:00pm
-                        </option>
-                        <option value="12-3" <%=(prefs?.pickupTime==='12-3' ) ? 'selected' : '' %>>12:00pm – 3:00pm
-                        </option>
-                        <option value="3-6" <%=(prefs?.pickupTime==='3-6' ) ? 'selected' : '' %>>3:00pm – 6:00pm
-                        </option>
-                        <option value="6-8" <%=(prefs?.pickupTime==='6-8' ) ? 'selected' : '' %>>6:00pm – 8:00pm
-                        </option>
+                        <option value="9-12" <%=(prefs?.pickupTime==='9-12' ) ? 'selected' : '' %>>9:00am - 12:00pm</option>
+                        <option value="12-3" <%=(prefs?.pickupTime==='12-3' ) ? 'selected' : '' %>>12:00pm - 3:00pm</option>
+                        <option value="3-6" <%=(prefs?.pickupTime==='3-6' ) ? 'selected' : '' %>>3:00pm - 6:00pm</option>
+                        <option value="6-8" <%=(prefs?.pickupTime==='6-8' ) ? 'selected' : '' %>>6:00pm - 8:00pm</option>
                       </select>
                       <div class="text-muted" style="font-size:12px;margin-top:4px;">Choose a pickup slot; times are
                         fixed to these windows.</div>
@@ -514,7 +322,6 @@
                     <%= items.length %> item(s)
                   </span>
                 </div>
-                <% } else { %>
 
                   <table class="table table-sm">
                     <thead>
@@ -567,7 +374,7 @@
                         <div class="hb-line">
                           <span>Pickup slot</span>
                           <span id="summaryPickup">
-                            <%= (prefs?.pickupDate || 'Set date' ) %> · <%= (prefs?.pickupTime || 'Set time' ) %>
+                            <%= (prefs?.pickupDate || 'Set date' ) %> - <%= (prefs?.pickupTime || 'Set time' ) %>
                           </span>
                         </div>
                         <div class="hb-total">
@@ -599,32 +406,10 @@
                 <div id="paypal-status" class="text-muted mt-2"></div>
 
                 <script>
-                  const checkoutItems = <% - JSON.stringify(items) %>;
+                  const checkoutItems = <%- JSON.stringify(items) %>;
                   const checkoutSubtotal = <%= subtotal.toFixed(2) %>;
                   const baseDeliveryFee = <%= defaultDeliveryFee.toFixed(2) %>;
                   let currentDeliveryFee = <%= initialDeliveryFee.toFixed(2) %>;
-=======
-        <table class="table table-sm">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th class="text-end">Price</th>
-              <th class="text-end">Qty</th>
-              <th class="text-end">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% items.forEach(i => { %>
-              <tr>
-                <td><strong><%= i.name %></strong></td>
-                <td class="text-end">$<%= Number(i.price).toFixed(2) %></td>
-                <td class="text-end"><%= i.qty %></td>
-                <td class="text-end">$<%= Number(i.subtotal).toFixed(2) %></td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
->>>>>>> 4688eca47bb83c5d6623970fac95446d20b7fd9d
 
                   function renderPaypal() {
                     if (!window.paypal) {
@@ -653,7 +438,6 @@
                         return data.id;
                       },
 
-<<<<<<< HEAD
                       onApprove: async (data) => {
                         const res = await fetch("/paypal/capture-order", {
                           method: "POST",
@@ -666,7 +450,7 @@
                           throw new Error(result.error || "Capture failed");
                         }
                         document.getElementById("paypal-status").innerText =
-                          "Payment successful. Redirecting…";
+                          "Payment successful. Redirecting...";
                         window.location.href = "/receipt";
                       },
 
@@ -710,20 +494,6 @@
                 <div class="text-muted mb-2">
                   Use your wallet to pay instantly.
                 </div>
-=======
-    </div>
-
-    <!-- RIGHT -->
-    <div class="d-flex flex-column gap-4">
-
-      <!-- PAYPAL -->
-      <div class="hb-card">
-        <div class="hb-card-title">
-          <i class="bi bi-paypal"></i>
-          Pay with PayPal
-          <span class="hb-pill">secure</span>
-        </div>
->>>>>>> 4688eca47bb83c5d6623970fac95446d20b7fd9d
 
                 <button class="hb-btn hb-btn-outline w-100 mt-2" type="button" onclick="useWallet()">
                   Use Wallet
@@ -732,8 +502,8 @@
 
               <script>
                 function useWallet() {
-                  // totalAmount must be passed from server: e.g., res.render('checkout', { totalAmount: order.total });
-                  const total = parseFloat(<%= totalAmount %>);
+                  // total is passed from server: e.g., res.render("checkout", { total })
+                  const total = Number(<%= (typeof total !== "undefined" ? total.toFixed(2) : 0) %>);
 
                   fetch('/digitalwallet/use', {
                     method: 'POST',
@@ -746,7 +516,7 @@
                         alert(`Wallet payment successful! New balance: $${data.newBalance.toFixed(2)}`);
                         window.location.href = '/receipt';
                       } else if (data.needed) {
-                        // Not enough balance → redirect to top-up
+        // Not enough balance -> redirect to top-up
                         alert(`Insufficient balance. Please top up $${data.needed}`);
                         window.location.href = `/digitalwallet?redirect=/checkout`;
                       } else {
@@ -754,80 +524,15 @@
                       }
                     });
                 }
-<<<<<<< HEAD
               </script>
-=======
-                document.getElementById("paypal-status").innerText =
-                  "Payment successful. Redirecting...";
-                window.location.href = "/receipt";
-              },
->>>>>>> 4688eca47bb83c5d6623970fac95446d20b7fd9d
 
 
-<<<<<<< HEAD
               <!-- PAYLATER -->
               <div class="hb-card">
                 <div class="hb-card-title">
                   <i class="bi bi-hourglass-split"></i>
                   HomeBitez PayLater
                   <span class="hb-pill">secure</span>
-=======
-          if (document.readyState === "complete") renderPaypal();
-          else window.addEventListener("load", renderPaypal);
-        </script>
-      </div>
-
-      <!-- NETS -->
-      <div class="hb-card">
-        <div class="hb-card-title">
-          <i class="bi bi-qr-code-scan"></i>
-          Pay with NETS
-          <span class="hb-pill">QR</span>
-        </div>
-
-        <form id="netsForm" action="/nets-qr/request" method="POST">
-          <input type="hidden" id="netsCartTotal" name="cartTotal" value="<%= total.toFixed(2) %>">
-          <button class="hb-btn w-100" type="submit">
-            <i class="bi bi-qr-code"></i> Pay with NETS
-          </button>
-        </form>
-      </div>
-
-      <!-- WALLET -->
-      <div class="hb-card">
-        <div class="hb-card-title">
-          <i class="bi bi-wallet2"></i>
-          Pay with HomeBitez Wallet
-          <span class="hb-pill">coming soon</span>
-        </div>
-
-        <div class="text-muted">
-          Wallet checkout will be available in a future update.
-        </div>
-
-        <button class="hb-btn hb-btn-outline w-100 mt-2" type="button">
-          Use Wallet (Coming Soon)
-        </button>
-      </div>
-
-      <!-- PAYLATER -->
-      <div class="hb-card">
-        <div class="hb-card-title">
-          <i class="bi bi-hourglass-split"></i>
-          HomeBitez PayLater
-          <span class="hb-pill">secure</span>
-        </div>
-
-        <div class="text-muted" style="font-size:12px;">Choose a plan and pay in installments.</div>
-        <form action="/paylater/choose" method="POST" class="mt-2">
-          <div class="paylater-options">
-            <input type="radio" id="paylater-3" name="months" value="3" checked>
-            <label for="paylater-3" class="paylater-option">
-              <div class="d-flex justify-content-between">
-                <div>
-                  <div><strong>$<%= (total / 3).toFixed(2) %></strong></div>
-                  <small>0% interest</small>
->>>>>>> 4688eca47bb83c5d6623970fac95446d20b7fd9d
                 </div>
 
                 <div class="text-muted" style="font-size:12px;">Choose a plan and pay in installments.</div>
@@ -909,24 +614,10 @@
       const summaryPickup = document.getElementById("summaryPickup");
       const netsCartTotal = document.getElementById("netsCartTotal");
 
-<<<<<<< HEAD
       const subtotalValue = Number(<%= subtotal.toFixed(2) %>);
       const baseDeliveryFeeNum = Number(<%= defaultDeliveryFee.toFixed(2) %>);
       let currentDeliveryFeeNum = Number(<%= initialDeliveryFee.toFixed(2) %>);
       const redeemAmount = Number(<%=(redeem || 0).toFixed(2) %>);
-=======
-  <script>
-    const modePickup = document.getElementById("modePickup");
-    const modeDelivery = document.getElementById("modeDelivery");
-    const pickupFields = document.getElementById("pickupFields");
-    const deliveryFields = document.getElementById("deliveryFields");
-    const pickupDate = document.getElementById("pickupDate");
-    const pickupTime = document.getElementById("pickupTime");
-    const deliveryName = document.getElementById("deliveryName");
-    const deliveryContact = document.getElementById("deliveryContact");
-    const deliveryAddress = document.getElementById("deliveryAddress");
-    const deliveryNotes = document.getElementById("deliveryNotes");
->>>>>>> 4688eca47bb83c5d6623970fac95446d20b7fd9d
 
       // Enforce pickup date between today and +2 months
       if (pickupDate) {
@@ -940,158 +631,12 @@
         pickupDate.setAttribute("min", minDateStr);
         pickupDate.setAttribute("max", maxDateStr);
 
-<<<<<<< HEAD
         pickupDate.addEventListener("change", () => {
           if (!pickupDate.value) return;
           if (pickupDate.value < minDateStr || pickupDate.value > maxDateStr) {
             alert(`Please choose a date between ${minDateStr} and ${maxDateStr}.`);
             pickupDate.value = "";
           }
-=======
-    if (pickupDate) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const maxDate = new Date(today);
-      maxDate.setMonth(maxDate.getMonth() + 2);
-
-      const minDateStr = today.toISOString().split("T")[0];
-      const maxDateStr = maxDate.toISOString().split("T")[0];
-      pickupDate.setAttribute("min", minDateStr);
-      pickupDate.setAttribute("max", maxDateStr);
-
-      pickupDate.addEventListener("change", () => {
-        if (!pickupDate.value) return;
-        if (pickupDate.value < minDateStr || pickupDate.value > maxDateStr) {
-          alert(`Please choose a date between ${minDateStr} and ${maxDateStr}.`);
-          pickupDate.value = "";
-        }
-      });
-    }
-
-    function computeTotal(){
-      return Number((subtotalValue + currentDeliveryFeeNum - redeemAmount).toFixed(2));
-    }
-
-    function validateFulfillment(showAlerts = true){
-      const errs = [];
-      if (modePickup && modePickup.checked){
-        if (!pickupDate || !pickupDate.value) errs.push("Select a pickup date.");
-        if (!pickupTime || !pickupTime.value) errs.push("Choose a pickup slot.");
-      } else if (modeDelivery && modeDelivery.checked){
-        if (!deliveryName || !deliveryName.value.trim()) errs.push("Enter the delivery name.");
-        if (!deliveryContact || !deliveryContact.value.trim()) errs.push("Enter a delivery contact number.");
-        if (!deliveryAddress || !deliveryAddress.value.trim()) errs.push("Enter the delivery address.");
-      }
-
-      if (errs.length && showAlerts){
-        alert("Please finish these before checking out:\n- " + errs.join("\n- "));
-        return false;
-      }
-      return true;
-    }
-
-    function syncSummary(){
-      summaryDeliveryFee.textContent = `$${currentDeliveryFeeNum.toFixed(2)}`;
-      summaryMode.textContent = modeDelivery.checked ? "Delivery" : "Pickup";
-      summaryPickup.textContent = modePickup.checked
-        ? `${pickupDate.value || "Set date"} · ${pickupTime.value || "Set time"}`
-        : "N/A";
-      summaryTotal.textContent = `$${computeTotal().toFixed(2)}`;
-      if (netsCartTotal) netsCartTotal.value = computeTotal().toFixed(2);
-      if (typeof currentDeliveryFee !== "undefined") {
-        currentDeliveryFee = Number(currentDeliveryFeeNum.toFixed(2));
-      }
-    }
-
-    function savePrefs(){
-      const payload = {
-        mode: modeDelivery.checked ? "delivery" : "pickup",
-        pickupDate: pickupDate ? pickupDate.value : "",
-        pickupTime: pickupTime ? pickupTime.value : "",
-        name: deliveryName ? deliveryName.value : "",
-        address: deliveryAddress ? deliveryAddress.value : "",
-        contact: deliveryContact ? deliveryContact.value : "",
-        notes: deliveryNotes ? deliveryNotes.value : ""
-      };
-
-      fetch("/cart/preferences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      }).catch(()=>{});
-    }
-
-    function handleModeChange(){
-      if (modeDelivery.checked){
-        pickupFields.style.display = "none";
-        deliveryFields.style.display = "block";
-        currentDeliveryFeeNum = baseDeliveryFeeNum;
-        [deliveryName, deliveryContact, deliveryAddress].forEach(el => { if (el) el.required = true; });
-        if (pickupDate) pickupDate.required = false;
-        if (pickupTime) pickupTime.required = false;
-      } else {
-        pickupFields.style.display = "block";
-        deliveryFields.style.display = "none";
-        currentDeliveryFeeNum = 0;
-        [deliveryName, deliveryContact, deliveryAddress].forEach(el => { if (el) el.required = false; });
-        if (pickupDate) pickupDate.required = true;
-        if (pickupTime) pickupTime.required = true;
-      }
-      syncSummary();
-      savePrefs();
-    }
-
-    if (modePickup) modePickup.addEventListener("change", handleModeChange);
-    if (modeDelivery) modeDelivery.addEventListener("change", handleModeChange);
-
-    if (pickupDate) pickupDate.addEventListener("change", () => { syncSummary(); savePrefs(); });
-    if (pickupTime) pickupTime.addEventListener("change", () => { syncSummary(); savePrefs(); });
-    if (deliveryName) deliveryName.addEventListener("change", savePrefs);
-    if (deliveryContact) deliveryContact.addEventListener("change", savePrefs);
-    if (deliveryAddress) deliveryAddress.addEventListener("change", savePrefs);
-    if (deliveryNotes) deliveryNotes.addEventListener("change", savePrefs);
-
-    handleModeChange();
-    syncSummary();
-
-    const netsForm = document.getElementById("netsForm");
-    if (netsForm) {
-      netsForm.addEventListener("submit", (e) => {
-        if (!validateFulfillment()) e.preventDefault();
-      });
-    }
-
-    const paylaterForm = document.querySelector("form[action='/paylater/choose']");
-    if (paylaterForm) {
-      paylaterForm.addEventListener("submit", (e) => {
-        if (!validateFulfillment()) e.preventDefault();
-      });
-    }
-
-    window.validateFulfillment = validateFulfillment;
-  </script>
-
-  <script src="https://js.stripe.com/v3/"></script>
-  <script>
-    const stripe = Stripe('<%= process.env.STRIPE_PUBLISHABLE_KEY %>');
-
-    const stripeBtn = document.getElementById('stripeBtn');
-
-    if (stripeBtn) {
-      stripeBtn.addEventListener('click', async () => {
-
-        if (typeof window.validateFulfillment === "function" && !window.validateFulfillment()) {
-          return;
-        }
-
-        const res = await fetch('/stripe/create-checkout-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subtotal: <%= subtotal.toFixed(2) %>,
-            deliveryFee: currentDeliveryFeeNum
-          })
->>>>>>> 4688eca47bb83c5d6623970fac95446d20b7fd9d
         });
       }
 
@@ -1121,7 +666,7 @@
         summaryDeliveryFee.textContent = `$${currentDeliveryFeeNum.toFixed(2)}`;
         summaryMode.textContent = modeDelivery.checked ? "Delivery" : "Pickup";
         summaryPickup.textContent = modePickup.checked
-          ? `${pickupDate.value || "Set date"} · ${pickupTime.value || "Set time"}`
+          ? `${pickupDate.value || "Set date"} - ${pickupTime.value || "Set time"}`
           : "N/A";
         summaryTotal.textContent = `$${computeTotal().toFixed(2)}`;
         if (netsCartTotal) netsCartTotal.value = computeTotal().toFixed(2);
@@ -1234,9 +779,5 @@
     </script>
 
 </body>
-<<<<<<< HEAD
 
 </html>
-=======
-</html>
->>>>>>> 4688eca47bb83c5d6623970fac95446d20b7fd9d
