@@ -48,8 +48,8 @@ function buildReply(rawMessage, snapshot) {
     return "Hi. I can help with checkout, delivery, payment methods, and loyalty points.";
   }
 
-  if (/\b(payment|pay|paypal|nets|wallet|stripe|paylater)\b/.test(message)) {
-    return "You can pay using PayPal, NETS QR, HomeBitez Wallet, Stripe, or HomeBitez PayLater (3 or 6 months).";
+  if (/\b(payment|pay|paypal|wallet|stripe|paylater)\b/.test(message)) {
+    return "You can pay using PayPal, HomeBitez Wallet, Stripe, or HomeBitez PayLater (3 or 6 months).";
   }
 
   if (/\b(delivery|pickup|fee|shipping)\b/.test(message)) {

@@ -23,7 +23,4 @@ router.get("/receipt", checkoutController.renderReceipt);
 router.post("/paypal/create-order", checkoutController.createPaypalOrder);
 router.post("/paypal/capture-order", checkoutController.capturePaypalOrder);
 
-// NETS QR (no separate nets routes folder, relax)
-router.post("/nets-qr/request", checkoutController.requestNetsQr);
-
 module.exports = router;

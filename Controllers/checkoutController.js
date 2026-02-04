@@ -1,16 +1,12 @@
 // controllers/checkoutController.js
-// HomeBitez – Checkout (PayPal + NETS)
+// HomeBitez – Checkout (PayPal)
 
 const paypal = require("../services/paypal");
-const nets = require("../services/nets");
 const OrdersModel = require("../Models/OrdersModel");
 const CartModel = require("../Models/cartModels");
 const UsersModel = require("../Models/UsersModel");
 const db = require("../db");
 
-// NETS sandbox txn id (keep yours)
-const NETS_TXN_ID =
-  "sandbox_nets|m|8ff8e5b6-d43e-4786-8ac5-7accf8c5bd9b";
 const NORMAL_DELIVERY_FEE = 2.5;
 const URGENT_DELIVERY_FEE = 6;
 
@@ -658,67 +654,7 @@ exports.capturePaypalOrder = async (req, res) => {
 };
 
 /* =========================
-   POST /nets-qr/request
-========================= */
-exports.requestNetsQr = async (req, res) => {
-  try {
-    const cartTotal = Number(req.body.cartTotal);
-    const cart = getSelectedCartItems(req.session);
-    if (!cart.length) {
-      return res.render("netsQrFail", {
-        title: "Error",
-        errorMsg: "No selected items to checkout.",
-      });
-    }
-    const subtotal = cart.reduce(
-      (s, i) => s + Number(i.price || 0) * Number(i.quantity || i.qty || 0),
-      0
-    );
-    const { redeemPoints } = getRedeemForSubtotal(req.session, subtotal);
-
-    if (!Number.isFinite(cartTotal) || cartTotal <= 0) {
-      return res.render("netsQrFail", {
-        title: "Error",
-        errorMsg: "Invalid cart total",
-      });
-    }
-
-    const qrData = await nets.requestNetsQr(cartTotal, NETS_TXN_ID);
-    const txnRetrievalRef =
-      qrData?.txn_retrieval_ref ||
-      qrData?.txnRetrievalRef ||
-      qrData?.txn_ref ||
-      null;
-
-    if (nets.isQrSuccess(qrData)) {
-      req.session.netsPending = {
-        amount: cartTotal,
-        redeemPoints,
-        txnRetrievalRef,
-        createdAt: Date.now(),
-      };
-
-      return res.render("netsQR", {
-        qrCodeUrl: `data:image/png;base64,${qrData.qr_code}`,
-        txnRetrievalRef,
-        total: cartTotal,
-      });
-    }
-
-    return res.render("netsQrFail", {
-      title: "Error",
-      errorMsg: qrData.error_message || "NETS QR failed",
-    });
-  } catch (err) {
-    console.error("NETS QR error:", err);
-    return res.render("netsQrFail", {
-      title: "Error",
-      errorMsg: "NETS server error",
-    });
-  }
-};
-
-/* =========================
+  /* =========================
    GET /receipt
 ========================= */
 exports.renderReceipt = async (req, res) => {
@@ -789,7 +725,7 @@ exports.renderReceipt = async (req, res) => {
   const deliveryFee = Number((total - subtotal).toFixed(2));
   const paymentMethod = paylaterPurchase
     ? "PayLater"
-    : (paypalCapture ? "PayPal" : (stripeCapture ? "Stripe" : "NETS / Other"));
+    : (paypalCapture ? "PayPal" : (stripeCapture ? "Stripe" : "Other"));
   const fulfillment = prefs.mode === "delivery"
     ? (getDeliveryTypeFromPrefs(prefs) === "urgent" ? "Urgent Delivery" : "Normal Delivery")
     : "Pickup";
