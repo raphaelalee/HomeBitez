@@ -334,6 +334,7 @@ const publicPaths = [
     '/menu',
     '/contact',
     '/report',
+    '/chatbot',
     '/login',
     '/register',
     '/signup',
@@ -1450,6 +1451,10 @@ app.get("/about", (req, res) => {
 /* -------------------- CHECKOUT ROUTES -------------------- */
 const checkoutRoutes = require("./Routes/checkoutRoutes");
 app.use(checkoutRoutes);
+
+/* -------------------- CHATBOT ROUTES -------------------- */
+const chatbotRoutes = require("./Routes/chatbotRoutes");
+app.use(chatbotRoutes);
 
 /* -------------------- NETS (NO ROUTE FILE, DIRECT HERE) -------------------- */
 /**

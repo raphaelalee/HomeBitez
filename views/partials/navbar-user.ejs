@@ -91,6 +91,120 @@
     object-fit: cover;
   }
 
+  .hb-chatbot-toggle {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: none;
+    background: #dd9b00;
+    color: #fff;
+    font-size: 24px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    z-index: 9998;
+  }
+
+  .hb-chatbot-panel {
+    position: fixed;
+    right: 18px;
+    bottom: 84px;
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    background: #fff;
+    border: 1px solid #ecd7a5;
+    border-radius: 14px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    z-index: 9998;
+    overflow: hidden;
+  }
+
+  .hb-chatbot-panel[hidden] {
+    display: none;
+  }
+
+  .hb-chatbot-header {
+    background: #fff7e3;
+    border-bottom: 1px solid #f3deb0;
+    padding: 10px 12px;
+    font-weight: 700;
+    color: #5a4303;
+  }
+
+  .hb-chatbot-messages {
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .hb-chatbot-msg {
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.4;
+    max-width: 92%;
+  }
+
+  .hb-chatbot-msg.user {
+    align-self: flex-end;
+    background: #f9e7bf;
+    color: #4c3a04;
+  }
+
+  .hb-chatbot-msg.bot {
+    align-self: flex-start;
+    background: #f6f6f6;
+    color: #2e2e2e;
+  }
+
+  .hb-chatbot-suggestions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 0 10px 8px;
+  }
+
+  .hb-chatbot-suggestion {
+    border: 1px solid #ecd7a5;
+    background: #fffaf0;
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: 11px;
+    color: #5a4303;
+    cursor: pointer;
+  }
+
+  .hb-chatbot-form {
+    border-top: 1px solid #f0f0f0;
+    padding: 8px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .hb-chatbot-input {
+    flex: 1;
+    border: 1px solid #e6e6e6;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .hb-chatbot-send {
+    border: none;
+    border-radius: 10px;
+    background: #dd9b00;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+
   /* RESPONSIVE */
   @media (max-width: 768px) {
     .navbar {
@@ -109,6 +223,17 @@
 
     .hb-icons {
       margin-top: 12px;
+    }
+
+    .hb-chatbot-panel {
+      right: 12px;
+      bottom: 78px;
+      width: calc(100vw - 24px);
+    }
+
+    .hb-chatbot-toggle {
+      right: 12px;
+      bottom: 12px;
     }
   }
 </style>
@@ -153,3 +278,105 @@
 </div>
 
 <%- include('./flash') %>
+
+<button id="hbChatbotToggle" class="hb-chatbot-toggle" type="button" title="Chatbot Assistant">
+  <i class="bi bi-chat-dots-fill"></i>
+</button>
+
+<div id="hbChatbotPanel" class="hb-chatbot-panel" hidden>
+  <div class="hb-chatbot-header">HomeBitez Assistant</div>
+  <div id="hbChatbotMessages" class="hb-chatbot-messages"></div>
+  <div id="hbChatbotSuggestions" class="hb-chatbot-suggestions"></div>
+  <form id="hbChatbotForm" class="hb-chatbot-form">
+    <input id="hbChatbotInput" class="hb-chatbot-input" type="text" placeholder="Ask about checkout, points, delivery..." maxlength="280">
+    <button class="hb-chatbot-send" type="submit">Send</button>
+  </form>
+</div>
+
+<script>
+  (() => {
+    if (window.__hbChatbotLoaded) return;
+    window.__hbChatbotLoaded = true;
+
+    const panel = document.getElementById("hbChatbotPanel");
+    const toggle = document.getElementById("hbChatbotToggle");
+    const form = document.getElementById("hbChatbotForm");
+    const input = document.getElementById("hbChatbotInput");
+    const messages = document.getElementById("hbChatbotMessages");
+    const suggestionsBox = document.getElementById("hbChatbotSuggestions");
+
+    if (!panel || !toggle || !form || !input || !messages || !suggestionsBox) return;
+
+    function appendMessage(text, sender) {
+      const el = document.createElement("div");
+      el.className = `hb-chatbot-msg ${sender}`;
+      el.textContent = text;
+      messages.appendChild(el);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function renderSuggestions(list) {
+      suggestionsBox.innerHTML = "";
+      (list || []).forEach((label) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "hb-chatbot-suggestion";
+        btn.textContent = label;
+        btn.addEventListener("click", () => {
+          input.value = label;
+          submitMessage(label);
+        });
+        suggestionsBox.appendChild(btn);
+      });
+    }
+
+    async function submitMessage(message) {
+      const text = String(message || "").trim();
+      if (!text) return;
+
+      appendMessage(text, "user");
+      form.querySelector("button").disabled = true;
+
+      try {
+        const res = await fetch("/chatbot/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ message: text }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || "Chatbot unavailable.");
+        }
+
+        appendMessage(data.reply, "bot");
+        renderSuggestions(data.suggestions);
+      } catch (err) {
+        appendMessage(err.message || "Sorry, I could not reply right now.", "bot");
+      } finally {
+        input.value = "";
+        form.querySelector("button").disabled = false;
+        input.focus();
+      }
+    }
+
+    toggle.addEventListener("click", () => {
+      panel.hidden = !panel.hidden;
+      if (!panel.hidden && messages.children.length === 0) {
+        appendMessage("Hi. Ask me about delivery, payment options, points, or your cart total.", "bot");
+        renderSuggestions([
+          "What payment methods are available?",
+          "How much is delivery?",
+          "How do I use points?",
+        ]);
+      }
+      if (!panel.hidden) input.focus();
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submitMessage(input.value);
+    });
+  })();
+</script>
