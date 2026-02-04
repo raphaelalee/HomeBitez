@@ -31,9 +31,16 @@ module.exports = {
 
     async getPointsHistory(userId, limit = 50) {
         await this.ensurePointsHistoryTable();
-        const [rows] = await db.execute(
-            "SELECT created_at, description, points FROM user_points_history WHERE user_id = ? ORDER BY created_at ASC LIMIT ?",
-            [userId, Number(limit) || 50]
+        const safeUserId = Number(userId);
+        if (!Number.isFinite(safeUserId)) return [];
+        const safeLimit = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+        const [rows] = await db.query(
+            `SELECT created_at, description, points
+             FROM user_points_history
+             WHERE user_id = ?
+             ORDER BY created_at ASC
+             LIMIT ${safeLimit}`,
+            [safeUserId]
         );
         return rows.map(r => ({
             date: r.created_at ? new Date(r.created_at).toLocaleString() : '',

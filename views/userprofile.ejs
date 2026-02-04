@@ -55,11 +55,33 @@
   .alert-success { background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
   .alert-danger { background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }
 
+  /* Points tab enhancements */
+  .points-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; flex-wrap:wrap; margin-bottom:12px; }
+  .points-sub { color:#6f6256; font-size:13px; margin:0; max-width:720px; }
+  .points-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; margin:14px 0 16px; }
+  .points-metric { background:#fff; border:1px solid #eadac6; border-radius:14px; padding:12px 14px; }
+  .points-metric .label { display:block; color:#6f6256; font-size:12px; margin-bottom:4px; }
+  .points-metric .value { font-size:22px; font-weight:800; color:#2a241e; line-height:1.1; }
+  .points-metric .hint { font-size:12px; color:#6f6256; margin-top:5px; }
+  .points-metric.earn .value { color:#1b7a2e; }
+  .points-metric.redeem .value { color:#8f1d1d; }
+  .points-progress-wrap { background:#fff; border:1px solid #eadac6; border-radius:14px; padding:12px 14px; margin:0 0 8px; }
+  .points-progress-meta { display:flex; justify-content:space-between; gap:10px; align-items:center; font-size:12px; color:#6f6256; margin-bottom:8px; }
+  .points-progress-track { width:100%; height:10px; background:#f2e3cf; border-radius:999px; overflow:hidden; }
+  .points-progress-bar { height:100%; border-radius:999px; background:linear-gradient(90deg, #d59b2d 0%, #f0b83f 100%); }
+  .points-value-note { margin:10px 0 0; font-size:13px; color:#2a241e; }
+  .points-table-wrap { overflow-x:auto; }
+  .points-type { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; border:1px solid transparent; }
+  .points-type.earned { color:#145b23; background:#e8f5eb; border-color:#b8dfc1; }
+  .points-type.redeemed { color:#7a1212; background:#fdecec; border-color:#f5c0c0; }
+  .points-empty { color:#6f6256; margin:12px 0 0; }
+
   @media (max-width:760px){ 
     .grid{ grid-template-columns: 1fr; } 
     .page-title{ font-size:22px; } 
     .actions{ justify-content:stretch; } 
     .btn{ width:100%; } 
+    .points-grid{ grid-template-columns:1fr 1fr; }
   }
 </style>
 
@@ -179,42 +201,116 @@
       </tbody>
     </table>
   </div>
-
   <!-- Points Tab -->
   <div class="card tab-content" id="points" style="display:none;">
-    <h3>Your Points</h3>
-    <p style="color:#6f6256; font-size:13px; margin:0 0 10px;">
-      Earn points every time you order on HomeBitez and redeem them for instant discounts on your next checkout.
-      It’s our way of saying thanks for supporting local food makers.
-    </p>
-    <p>You currently have <strong><%= user?.points || 0 %></strong> points.</p>
-    <% if (user?.pointsHistory?.length) { %>
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Description</th>
-            <th>Points</th>
-            <th class="text-end">Balance after</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% user.pointsHistory.forEach(item => { %>
+    <%
+      const pointsHistory = Array.isArray(user?.pointsHistory) ? user.pointsHistory : [];
+      const currentPoints = Number(user?.points || 0);
+      let totalEarned = 0;
+      let totalRedeemed = 0;
+      pointsHistory.forEach(item => {
+        const pts = Number(item?.points || 0);
+        if (pts >= 0) totalEarned += pts;
+        else totalRedeemed += Math.abs(pts);
+      });
+      const pointsValue = Number(currentPoints * 0.1).toFixed(2);
+      const cycleSize = 50;
+      const nextRewardAt = Math.max(cycleSize, Math.ceil((currentPoints + 1) / cycleSize) * cycleSize);
+      const pointsInCycle = currentPoints % cycleSize;
+      const progressPct = currentPoints === 0 ? 0 : ((pointsInCycle / cycleSize) * 100);
+      const pointsToNext = Math.max(0, nextRewardAt - currentPoints);
+    %>
+
+    <div class="points-head">
+      <div>
+        <h3 style="margin:0 0 6px;">Your Points</h3>
+        <p class="points-sub">
+          Earn points every time you order on HomeBitez and redeem them for instant discounts on your next checkout.
+          Every 50 points is worth about $5.00 in redemption value.
+        </p>
+      </div>
+    </div>
+
+    <div class="points-grid">
+      <div class="points-metric">
+        <span class="label">Current balance</span>
+        <div class="value"><%= currentPoints %></div>
+        <div class="hint">Available now</div>
+      </div>
+      <div class="points-metric earn">
+        <span class="label">Total earned</span>
+        <div class="value">+<%= totalEarned %></div>
+        <div class="hint">All time</div>
+      </div>
+      <div class="points-metric redeem">
+        <span class="label">Total redeemed</span>
+        <div class="value">-<%= totalRedeemed %></div>
+        <div class="hint">All time</div>
+      </div>
+      <div class="points-metric">
+        <span class="label">Estimated value</span>
+        <div class="value">$<%= pointsValue %></div>
+        <div class="hint">Based on 1 point = $0.10</div>
+      </div>
+    </div>
+
+    <div class="points-progress-wrap">
+      <div class="points-progress-meta">
+        <span>Progress to next 50-point milestone</span>
+        <span>
+          <% if (pointsToNext > 0) { %>
+            <%= pointsToNext %> point(s) to <%= nextRewardAt %>
+          <% } else { %>
+            Milestone reached
+          <% } %>
+        </span>
+      </div>
+      <div class="points-progress-track">
+        <div class="points-progress-bar" style="width:<%= Math.min(100, Math.max(0, progressPct)).toFixed(0) %>%;"></div>
+      </div>
+      <p class="points-value-note">
+        Your current points can redeem up to <strong>$<%= pointsValue %></strong> at checkout.
+      </p>
+    </div>
+
+    <% if (pointsHistory.length) { %>
+      <div class="points-table-wrap">
+        <table>
+          <thead>
             <tr>
-              <td><%= item.date %></td>
-              <td><%= item.desc %></td>
-              <td>
-                <span style="color:<%= item.points >= 0 ? '#1b7a2e' : '#8f1d1d' %>; font-weight:700;">
-                  <%= item.points >= 0 ? '+' : '' %><%= item.points %>
-                </span>
-              </td>
-              <td class="text-end" style="font-weight:700;"><%= item.balanceAfter %></td>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Type</th>
+              <th>Points</th>
+              <th class="text-end">Balance after</th>
             </tr>
-          <% }) %>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <% pointsHistory.forEach(item => {
+              const pts = Number(item?.points || 0);
+              const isRedeem = pts < 0 || String(item?.desc || '').toLowerCase().includes('redeem');
+            %>
+              <tr>
+                <td><%= item.date %></td>
+                <td><%= item.desc %></td>
+                <td>
+                  <span class="points-type <%= isRedeem ? 'redeemed' : 'earned' %>">
+                    <%= isRedeem ? 'Redeemed' : 'Earned' %>
+                  </span>
+                </td>
+                <td>
+                  <span style="color:<%= pts >= 0 ? '#1b7a2e' : '#8f1d1d' %>; font-weight:700;">
+                    <%= pts >= 0 ? '+' : '' %><%= pts %>
+                  </span>
+                </td>
+                <td class="text-end" style="font-weight:700;"><%= item.balanceAfter %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
     <% } else { %>
-      <p>No points transactions yet.</p>
+      <p class="points-empty">No points transactions yet. Place your first order to start earning.</p>
     <% } %>
   </div>
 
@@ -343,8 +439,4 @@
 </script>
 
 <%- include('partials/foot') %>
-
-
-
-
 
