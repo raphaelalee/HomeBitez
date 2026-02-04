@@ -6,6 +6,7 @@ const nets = require("../services/nets");
 const OrdersModel = require("../Models/OrdersModel");
 const CartModel = require("../Models/cartModels");
 const UsersModel = require("../Models/UsersModel");
+const db = require("../db");
 
 // NETS sandbox txn id (keep yours)
 const NETS_TXN_ID =
@@ -29,6 +30,79 @@ function getRedeemForSubtotal(session, subtotal) {
     redeemAmount: Number(redeemAmount.toFixed(2)),
     redeemPoints: Number(redeemPoints || 0)
   };
+}
+
+let hasQuantityColumnCache = null;
+let hasStockColumnCache = null;
+
+async function detectProductInventoryColumns() {
+  if (hasQuantityColumnCache !== null && hasStockColumnCache !== null) {
+    return {
+      hasQuantity: hasQuantityColumnCache,
+      hasStock: hasStockColumnCache
+    };
+  }
+
+  try {
+    const [rows] = await db.query(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'product'
+         AND COLUMN_NAME IN ('quantity', 'stock')`
+    );
+    const columnSet = new Set((rows || []).map(r => String(r.COLUMN_NAME || "").toLowerCase()));
+    hasQuantityColumnCache = columnSet.has("quantity");
+    hasStockColumnCache = columnSet.has("stock");
+  } catch (err) {
+    console.error("Inventory column detection failed:", err);
+    // Default to quantity because app UI reads quantity.
+    hasQuantityColumnCache = true;
+    hasStockColumnCache = false;
+  }
+
+  return {
+    hasQuantity: hasQuantityColumnCache,
+    hasStock: hasStockColumnCache
+  };
+}
+
+async function decrementPurchasedProductInventory(purchasedItems) {
+  const { hasQuantity, hasStock } = await detectProductInventoryColumns();
+  if (!hasQuantity && !hasStock) return;
+
+  for (const item of purchasedItems || []) {
+    const name = String(item?.name || "").trim();
+    const qtyRaw = Number(item?.qty ?? item?.quantity ?? 0);
+    const qty = Number.isFinite(qtyRaw) ? Math.floor(qtyRaw) : 0;
+    if (!name || qty <= 0) continue;
+
+    try {
+      const setClauses = [];
+      const params = [];
+
+      if (hasQuantity) {
+        setClauses.push("quantity = GREATEST(quantity - ?, 0)");
+        params.push(qty);
+      }
+
+      if (hasStock) {
+        setClauses.push("stock = GREATEST(stock - ?, 0)");
+        params.push(qty);
+      }
+
+      params.push(name);
+
+      await db.query(
+        `UPDATE product
+         SET ${setClauses.join(", ")}
+         WHERE LOWER(TRIM(product_name)) = LOWER(TRIM(?))`,
+        params
+      );
+    } catch (err) {
+      console.error(`Failed to decrement inventory for "${name}":`, err);
+    }
+  }
 }
 
 async function removePurchasedItemsFromCart(req, purchasedItems) {
@@ -696,11 +770,14 @@ exports.renderReceipt = async (req, res) => {
         payerEmail: null
       });
 
-  // clear only purchased/checked-out items from cart
-  await removePurchasedItemsFromCart(req, items);
-  req.session.latestOrderDbId = null;
-  req.session.paylaterPurchase = null;
-  req.session.cartRedeem = null;
+  if (isPaid) {
+    // Finalize purchase: decrement product inventory and clear purchased cart items.
+    await decrementPurchasedProductInventory(items);
+    await removePurchasedItemsFromCart(req, items);
+    req.session.latestOrderDbId = null;
+    req.session.paylaterPurchase = null;
+    req.session.cartRedeem = null;
+  }
 
   res.render("receipt", {
     brand: "HomeBitez",
