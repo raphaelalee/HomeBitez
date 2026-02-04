@@ -6,6 +6,7 @@
     <title>Login - HomeBitez</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
     <!-- Sniglet font for bubble letters -->
     <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&display=swap" rel="stylesheet">
@@ -84,6 +85,22 @@
             height: 45px;
             border: none;
         }
+        .password-wrap {
+            position: relative;
+        }
+        .toggle-pass {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            padding: 4px 6px;
+            font-size: 18px;
+            line-height: 1;
+        }
 
         .login-btn {
             width: 100%;
@@ -138,7 +155,12 @@
 
         <form action="/login" method="POST">
             <input type="email" name="email" placeholder="Your Email" class="form-control mb-3" required />
-            <input type="password" name="password" placeholder="Your Password" class="form-control mb-3" required />
+            <div class="password-wrap mb-3">
+                <input type="password" name="password" placeholder="Your Password" class="form-control" required />
+                <button type="button" class="toggle-pass" aria-label="Show password">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
 
             <div class="text-end mb-3">
                 <a href="/forgot-password">Forgot password?</a>
@@ -170,6 +192,20 @@
     </div>
 
 </div>
+
+<script>
+    document.querySelectorAll('.toggle-pass').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = btn.parentElement.querySelector('input');
+            const icon = btn.querySelector('i');
+            if (!input || !icon) return;
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            icon.className = isHidden ? 'bi bi-eye-slash' : 'bi bi-eye';
+            btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+        });
+    });
+</script>
 
 </body>
 </html>

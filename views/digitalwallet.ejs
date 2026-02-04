@@ -84,9 +84,6 @@
     }
 
     .wallet-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
       margin-top: 16px;
     }
 
@@ -113,6 +110,32 @@
       justify-content: center;
       font-style: normal;
       font-size: 18px;
+    }
+ 
+    .wallet-balance-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .wallet-topup-inline {
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      box-shadow: none;
+      border: 1px solid rgba(255,255,255,0.55);
+      background: #fff;
+      color: #6b4b0f;
+    }
+
+    .wallet-topup-inline i {
+      background: #fff7ea;
+      color: #6b4b0f;
+      width: 28px;
+      height: 28px;
+      font-size: 16px;
+      border-radius: 8px;
     }
 
     .wallet-card {
@@ -288,6 +311,10 @@
       display: none;
       z-index: 1000;
     }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -298,8 +325,14 @@
         <a class="back-link" href="/user/profile">← Back</a>
 
         <div class="wallet-hero">
-          <div class="wallet-title">homebitez wallet</div>
-          <div class="wallet-balance">$<%= Number(balance || 0).toFixed(2) %></div>
+          <div class="wallet-title">Homebitez Wallet</div>
+          <div class="wallet-balance-row">
+            <div class="wallet-balance">$<%= Number(balance || 0).toFixed(2) %></div>
+            <div class="wallet-action wallet-topup-inline" id="topupBtn">
+              <i>+</i>
+              Top up
+            </div>
+          </div>
           <% if (Number(requestedTopup || 0) > 0) { %>
             <div class="notice" style="margin-top:8px; color:#fff;">
               Checkout requires an additional <strong>$<%= Number(requestedTopup).toFixed(2) %></strong>.
@@ -307,16 +340,7 @@
           <% } %>
         </div>
 
-        <div class="wallet-actions">
-          <div class="wallet-action" id="topupBtn">
-            <i>+</i>
-            Top up
-          </div>
-          <div class="wallet-action">
-            <i>⇄</i>
-            Transfer
-          </div>
-        </div>
+        <div class="wallet-actions"></div>
 
         <div class="wallet-card header">
           <div class="wallet-card-title">
@@ -365,13 +389,16 @@
       <h3>Top Up Wallet</h3>
       <div class="muted">Enter an amount, then verify with 2FA before paying.</div>
       <input type="number" id="topupAmount" placeholder="Enter amount (SGD)" min="1" step="0.01">
+      <div id="limitInfo" class="notice"></div>
 
       <div id="twofaBlock">
         <button class="btn secondary" id="sendCodeBtn">Send 2FA Code</button>
         <div id="sendInfo" class="notice"></div>
-        <input type="text" id="twofaCode" placeholder="Enter 2FA code">
-        <button class="btn" id="verifyCodeBtn">Verify Code</button>
-        <div id="verifyInfo" class="notice"></div>
+        <div id="verifyBlock" class="hidden">
+          <input type="text" id="twofaCode" placeholder="Enter 2FA code">
+          <button class="btn" id="verifyCodeBtn">Verify Code</button>
+          <div id="verifyInfo" class="notice"></div>
+        </div>
       </div>
 
       <div id="payBlock" style="display:none;">
@@ -400,17 +427,30 @@
     const twofaCode = document.getElementById('twofaCode');
     const sendInfo = document.getElementById('sendInfo');
     const verifyInfo = document.getElementById('verifyInfo');
+    const limitInfo = document.getElementById('limitInfo');
     const payBlock = document.getElementById('payBlock');
     const toast = document.getElementById('toast');
     const codeChip = document.getElementById('codeChip');
+    const verifyBlock = document.getElementById('verifyBlock');
+    const DAILY_TOPUP_LIMIT = 1000;
+    const dailyTopup = Number('<%= Number(dailyTopup || 0).toFixed(2) %>');
+    const topupError = <%- JSON.stringify(topupError || '') %>;
     const requestedTopup = Number('<%= Number(requestedTopup || 0).toFixed(2) %>');
 
     let wallet2faVerified = <%= wallet2faVerified ? 'true' : 'false' %>;
 
     function openModal() {
       modal.style.display = 'flex';
+      sendInfo.textContent = '';
+      verifyInfo.textContent = '';
+      limitInfo.textContent = '';
+      twofaCode.value = '';
+      verifyBlock.classList.add('hidden');
+      sendCodeBtn.style.display = 'inline-block';
+      payBlock.style.display = 'none';
       if (wallet2faVerified) {
         payBlock.style.display = 'block';
+        sendCodeBtn.style.display = 'none';
       }
     }
 
@@ -424,6 +464,15 @@
         alert('Enter a valid amount');
         return null;
       }
+      const remaining = Math.max(0, DAILY_TOPUP_LIMIT - dailyTopup);
+      if (amount > remaining) {
+        const msg = remaining <= 0
+          ? 'Daily top up limit reached. Try again tomorrow.'
+          : `Daily top up limit is $${DAILY_TOPUP_LIMIT}. You have $${remaining.toFixed(2)} left today.`;
+        limitInfo.textContent = msg;
+        showToast(msg);
+        return null;
+      }
       return amount;
     }
 
@@ -432,11 +481,14 @@
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
     sendCodeBtn.addEventListener('click', async () => {
+      if (!validateAmount()) return;
       sendInfo.textContent = 'Sending...';
       const res = await fetch('/wallet/2fa/send', { method: 'POST' });
       const data = await res.json();
       if (data.ok) {
         sendInfo.textContent = `Code sent to ${data.maskedPhone} / ${data.maskedEmail}.`;
+        verifyBlock.classList.remove('hidden');
+        twofaCode.focus();
         if (data.demoCode && codeChip) {
           codeChip.textContent = `2FA: ${data.demoCode}`;
           codeChip.style.display = 'block';
@@ -483,7 +535,9 @@
       if (data.id) {
         stripe.redirectToCheckout({ sessionId: data.id });
       } else {
-        alert(data.error || 'Failed to start payment');
+        const msg = data.error || 'Failed to start payment';
+        limitInfo.textContent = msg;
+        showToast(msg);
       }
     }
 
@@ -505,6 +559,26 @@
       setTimeout(() => { toast.style.display = 'none'; }, 2000);
     }
 
+    topupAmount.addEventListener('input', () => {
+      const amount = Number(topupAmount.value || 0);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        limitInfo.textContent = '';
+        return;
+      }
+      const remaining = Math.max(0, DAILY_TOPUP_LIMIT - dailyTopup);
+      if (amount > remaining) {
+        limitInfo.textContent = remaining <= 0
+          ? 'Daily top up limit reached. Try again tomorrow.'
+          : `Daily top up limit is $${DAILY_TOPUP_LIMIT}. You have $${remaining.toFixed(2)} left today.`;
+      } else {
+        limitInfo.textContent = '';
+      }
+    });
+
+    if (topupError) {
+      showToast(topupError);
+    }
+
     if (requestedTopup > 0) {
       topupAmount.value = requestedTopup.toFixed(2);
       openModal();
@@ -513,3 +587,5 @@
 
 </body>
 </html>
+
+

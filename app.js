@@ -194,6 +194,14 @@ function maskEmail(email) {
     return name[0] + "***" + name[name.length - 1] + "@" + domain;
 }
 
+function maskPhone(phone) {
+    if (!phone || typeof phone !== 'string') return '-';
+    const digits = phone.replace(/\D/g, '');
+    if (!digits) return '-';
+    const tail = digits.slice(-4);
+    return "***" + tail;
+}
+
 function issueTwoFactor(req) {
     const code = generateTwoFactorCode();
     if (!req.session.twoFactor) {
@@ -210,6 +218,30 @@ function issueTwoFactor(req) {
     req.flash('success', `Demo code: ${code}`);
     console.log('2FA email code for', req.session.user?.email || req.session.user?.username, ':', code);
     return code;
+}
+
+const DAILY_TOPUP_LIMIT = 1000;
+
+async function getDailyTopupTotal(userId) {
+    try {
+        await ensureWalletTransactionsTable();
+        const [sumRows] = await db.query(
+            "SELECT COALESCE(SUM(amount),0) AS total FROM wallet_transactions WHERE user_id=? AND type='topup' AND DATE(created_at)=CURDATE()",
+            [userId]
+        );
+        return Number(sumRows?.[0]?.total || 0);
+    } catch (err) {
+        console.error("wallet daily topup error:", err);
+        return 0;
+    }
+}
+
+async function checkDailyTopupLimit(userId, amount) {
+    const dailyTopup = await getDailyTopupTotal(userId);
+    if (dailyTopup + amount > DAILY_TOPUP_LIMIT) {
+        return { ok: false, dailyTopup, limit: DAILY_TOPUP_LIMIT };
+    }
+    return { ok: true, dailyTopup, limit: DAILY_TOPUP_LIMIT };
 }
 
 // Legacy fallback metadata so existing menu items still show badges/tags
@@ -554,6 +586,83 @@ app.post('/login', UsersController.login);
 app.get('/register', UsersController.showRegister);
 app.post('/register', UsersController.register);
 app.post('/signup', UsersController.register);
+
+app.get('/forgot-password', (req, res) => {
+    res.render('forgot-password', {
+        success: req.flash('success'),
+        error: req.flash('error')
+    });
+});
+
+app.post('/forgot-password', async (req, res) => {
+    const email = String(req.body.email || '').trim();
+    if (!email) {
+        req.flash('error', 'Please enter your email.');
+        return res.redirect('/forgot-password');
+    }
+
+    const user = await UsersModel.findByEmail(email);
+    if (user) {
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+        await UsersModel.createPasswordReset(user.id || user.user_id, token, expiresAt);
+
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const resetLink = `${baseUrl}/reset-password?token=${token}`;
+        console.log('Password reset link for', email, ':', resetLink);
+    }
+
+    req.flash('success', 'If that email exists, a reset link was sent.');
+    return res.redirect('/forgot-password');
+});
+
+app.get('/reset-password', async (req, res) => {
+    const token = String(req.query.token || '');
+    let validToken = '';
+    if (token) {
+        const reset = await UsersModel.findValidPasswordReset(token);
+        if (reset) validToken = token;
+    }
+
+    if (!validToken) {
+        req.flash('error', 'Reset link is invalid or expired.');
+    }
+
+    res.render('reset-password', {
+        token: validToken,
+        success: req.flash('success'),
+        error: req.flash('error')
+    });
+});
+
+app.post('/reset-password', async (req, res) => {
+    const token = String(req.body.token || '');
+    const newPassword = String(req.body.newPassword || '');
+    const confirmPassword = String(req.body.confirmPassword || '');
+
+    if (!token) {
+        req.flash('error', 'Reset link is invalid or expired.');
+        return res.redirect('/reset-password');
+    }
+
+    const reset = await UsersModel.findValidPasswordReset(token);
+    if (!reset) {
+        req.flash('error', 'Reset link is invalid or expired.');
+        return res.redirect('/reset-password');
+    }
+
+    if (!newPassword || newPassword !== confirmPassword) {
+        req.flash('error', 'Passwords do not match.');
+        return res.redirect(`/reset-password?token=${encodeURIComponent(token)}`);
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await UsersModel.updatePassword(reset.user_id, hashed);
+    await UsersModel.markPasswordResetUsed(reset.id);
+
+    req.flash('success', 'Password reset successful. Please log in.');
+    return res.redirect('/login');
+});
 
 
 app.get('/2fa/email', (req, res) => {
@@ -1924,6 +2033,13 @@ app.get('/digitalwallet', async (req, res) => {
     console.error("wallet daily spent error:", err);
   }
 
+  let dailyTopup = 0;
+  try {
+    dailyTopup = await getDailyTopupTotal(req.session.user.id);
+  } catch (err) {
+    console.error("wallet daily topup error:", err);
+  }
+
   let transactions = [];
   try {
     const [txRows] = await db.query(
@@ -1935,6 +2051,9 @@ app.get('/digitalwallet', async (req, res) => {
     console.error("wallet transactions load error:", err);
   }
 
+  const topupError = req.session.walletTopupError || '';
+  req.session.walletTopupError = null;
+
   res.render('digitalwallet', {
     balance,
     redirect,
@@ -1942,6 +2061,8 @@ app.get('/digitalwallet', async (req, res) => {
     transactions,
     dailyLimit,
     dailySpent,
+    dailyTopup,
+    topupError,
     requestedTopup
   });
 });
@@ -2038,11 +2159,24 @@ app.post('/digitalwallet/use', async (req, res) => {
 // POST /digitalwallet/topup
 app.post('/digitalwallet/topup', async (req, res) => {
   if (!req.session.user) return res.status(401).json({ success: false });
+  if (!wallet2faIsValid(req)) return res.status(403).json({ success: false, error: '2FA required' });
 
   const amount = parseFloat(req.body.amount);
   if (isNaN(amount) || amount <= 0) return res.status(400).json({ success: false, error: 'Invalid amount' });
 
   await ensureWalletColumn();
+  await ensureWalletTransactionsTable();
+
+  const limitCheck = await checkDailyTopupLimit(req.session.user.id, amount);
+  if (!limitCheck.ok) {
+    return res.status(400).json({
+      success: false,
+      error: 'Daily top up limit reached',
+      dailyTopup: limitCheck.dailyTopup,
+      limit: limitCheck.limit
+    });
+  }
+
   await db.query(
     "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
     [amount, req.session.user.id]
@@ -2054,6 +2188,7 @@ app.post('/digitalwallet/topup', async (req, res) => {
   );
   const balanceAfter = rows?.[0]?.wallet_balance ?? Number(amount);
   await recordWalletTxn(req.session.user.id, 'topup', 'manual', Number(amount), balanceAfter);
+  clearWallet2fa(req);
 
   // After top-up, redirect back to the original page
   res.json({ success: true, redirect: req.body.redirect || '/checkout' });
@@ -2066,6 +2201,10 @@ function wallet2faIsValid(req) {
   return true;
 }
 
+function clearWallet2fa(req) {
+  req.session.wallet2fa = { verified: false, verifiedAt: null };
+}
+
 // POST /wallet/topup/stripe-session
 app.post('/wallet/topup/stripe-session', async (req, res) => {
   if (!req.session.user) return res.status(401).json({ ok: false, error: 'Not logged in' });
@@ -2073,6 +2212,16 @@ app.post('/wallet/topup/stripe-session', async (req, res) => {
 
   const amount = parseFloat(req.body.amount);
   if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ ok: false, error: 'Invalid amount' });
+
+  const limitCheck = await checkDailyTopupLimit(req.session.user.id, amount);
+  if (!limitCheck.ok) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Daily top up limit reached',
+      dailyTopup: limitCheck.dailyTopup,
+      limit: limitCheck.limit
+    });
+  }
 
   try {
     const session = await stripeService.createWalletTopupSession({
@@ -2095,6 +2244,16 @@ app.post('/wallet/topup/paynow-session', async (req, res) => {
 
   const amount = parseFloat(req.body.amount);
   if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ ok: false, error: 'Invalid amount' });
+
+  const limitCheck = await checkDailyTopupLimit(req.session.user.id, amount);
+  if (!limitCheck.ok) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Daily top up limit reached',
+      dailyTopup: limitCheck.dailyTopup,
+      limit: limitCheck.limit
+    });
+  }
 
   try {
     const session = await stripeService.createWalletTopupSession({
@@ -2127,6 +2286,12 @@ app.get('/wallet/stripe/success', async (req, res) => {
       return res.redirect('/digitalwallet');
     }
 
+    const limitCheck = await checkDailyTopupLimit(req.session.user.id, amount);
+    if (!limitCheck.ok) {
+      req.session.walletTopupError = 'Daily top up limit reached. Try again tomorrow.';
+      return res.redirect('/digitalwallet');
+    }
+
     await ensureWalletColumn();
     await db.query(
       "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
@@ -2139,6 +2304,7 @@ app.get('/wallet/stripe/success', async (req, res) => {
     );
     const balanceAfter = rows?.[0]?.wallet_balance ?? Number(amount);
     await recordWalletTxn(req.session.user.id, 'topup', 'stripe', Number(amount), balanceAfter);
+    clearWallet2fa(req);
 
     return res.redirect('/digitalwallet');
   } catch (err) {
@@ -2149,8 +2315,23 @@ app.get('/wallet/stripe/success', async (req, res) => {
 
 app.get('/wallet/paypal', async (req, res) => {
   if (!req.session.user) return res.redirect('/login');
+  if (!wallet2faIsValid(req)) {
+    req.session.walletTopupError = '2FA required for top up.';
+    return res.redirect('/digitalwallet');
+  }
 
   const amount = req.query.amount;
+  const parsedAmount = Number(amount);
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    req.session.walletTopupError = 'Invalid top up amount.';
+    return res.redirect('/digitalwallet');
+  }
+
+  const limitCheck = await checkDailyTopupLimit(req.session.user.id, parsedAmount);
+  if (!limitCheck.ok) {
+    req.session.walletTopupError = 'Daily top up limit reached. Try again tomorrow.';
+    return res.redirect('/digitalwallet');
+  }
 
   const request = new paypal.orders.OrdersCreateRequest();
   request.prefer("return=representation");
@@ -2178,6 +2359,17 @@ app.get('/wallet/paypal/success', async (req, res) => {
   if (!req.session.user) return res.redirect('/login');
 
   const { token, amount } = req.query;
+  const parsedAmount = Number(amount);
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    req.session.walletTopupError = 'Invalid top up amount.';
+    return res.redirect('/digitalwallet');
+  }
+
+  const limitCheck = await checkDailyTopupLimit(req.session.user.id, parsedAmount);
+  if (!limitCheck.ok) {
+    req.session.walletTopupError = 'Daily top up limit reached. Try again tomorrow.';
+    return res.redirect('/digitalwallet');
+  }
 
   // Capture the payment
   const request = new paypal.orders.OrdersCaptureRequest(token);
@@ -2189,15 +2381,16 @@ app.get('/wallet/paypal/success', async (req, res) => {
   await ensureWalletColumn();
   await db.query(
     "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
-    [amount, req.session.user.id]
+    [parsedAmount, req.session.user.id]
   );
 
   const [rows] = await db.query(
     "SELECT wallet_balance FROM users WHERE id=?",
     [req.session.user.id]
   );
-  const balanceAfter = rows?.[0]?.wallet_balance ?? Number(amount);
-  await recordWalletTxn(req.session.user.id, 'topup', 'paypal', Number(amount), balanceAfter);
+  const balanceAfter = rows?.[0]?.wallet_balance ?? Number(parsedAmount);
+  await recordWalletTxn(req.session.user.id, 'topup', 'paypal', Number(parsedAmount), balanceAfter);
+  clearWallet2fa(req);
 
   // Redirect back to wallet
   res.redirect('/digitalwallet');
