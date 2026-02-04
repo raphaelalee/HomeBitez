@@ -13,6 +13,108 @@ const NETS_TXN_ID =
   "sandbox_nets|m|8ff8e5b6-d43e-4786-8ac5-7accf8c5bd9b";
 const NORMAL_DELIVERY_FEE = 2.5;
 const URGENT_DELIVERY_FEE = 6;
+const WALLET_DAILY_LIMIT = 1000;
+
+let walletColumnEnsured = false;
+let walletTxnTableEnsured = false;
+
+async function ensureWalletColumn() {
+  if (walletColumnEnsured) return;
+  try {
+    await db.query("ALTER TABLE users ADD COLUMN wallet_balance DECIMAL(10,2) NOT NULL DEFAULT 0");
+  } catch (err) {
+    // ignore if column already exists
+  }
+  walletColumnEnsured = true;
+}
+
+async function ensureWalletTransactionsTable() {
+  if (walletTxnTableEnsured) return;
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS wallet_transactions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        type ENUM('topup','payment') NOT NULL,
+        method VARCHAR(50) NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        balance_after DECIMAL(10,2) NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_wallet_user (user_id),
+        CONSTRAINT fk_wallet_user FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+  } catch (err) {
+    console.error("ensureWalletTransactionsTable failed:", err);
+  }
+  walletTxnTableEnsured = true;
+}
+
+async function getWalletBalance(userId) {
+  if (!userId) return 0;
+  await ensureWalletColumn();
+  try {
+    const [rows] = await db.query(
+      "SELECT wallet_balance FROM users WHERE id = ? LIMIT 1",
+      [userId]
+    );
+    return Number(rows?.[0]?.wallet_balance || 0);
+  } catch (err) {
+    console.error("getWalletBalance failed:", err);
+    return 0;
+  }
+}
+
+async function getWalletDailySpent(userId) {
+  if (!userId) return 0;
+  await ensureWalletTransactionsTable();
+  try {
+    const [sumRows] = await db.query(
+      "SELECT COALESCE(SUM(amount),0) AS total FROM wallet_transactions WHERE user_id=? AND type='payment' AND DATE(created_at)=CURDATE()",
+      [userId]
+    );
+    return Number(sumRows?.[0]?.total || 0);
+  } catch (err) {
+    console.error("wallet daily spent error:", err);
+    return 0;
+  }
+}
+
+async function recordWalletTxn(userId, type, method, amount, balanceAfter) {
+  try {
+    await ensureWalletTransactionsTable();
+    await db.query(
+      "INSERT INTO wallet_transactions (user_id, type, method, amount, balance_after) VALUES (?,?,?,?,?)",
+      [userId, type, method || null, amount, balanceAfter]
+    );
+  } catch (err) {
+    console.error("recordWalletTxn failed:", err);
+  }
+}
+
+async function getPayLaterTotals(userId) {
+  const rawOrders = await OrdersModel.listByUser(userId, 200);
+  const planOrders = (rawOrders || []).filter(o => String(o.status || '').toLowerCase() === 'paylater');
+
+  let monthlyTotal = 0;
+  let outstanding = 0;
+
+  for (const o of planOrders) {
+    const total = Number(o.total || 0);
+    const months = Number(o.paylater_months || 0) || 3;
+    const monthly = Number(o.paylater_monthly || 0) || Number((total / months).toFixed(2));
+    const remaining = Number(o.paylater_remaining || 0) || total;
+    if (remaining > 0) {
+      monthlyTotal += monthly;
+      outstanding += remaining;
+    }
+  }
+
+  return {
+    monthlyTotal: Number(monthlyTotal.toFixed(2)),
+    outstanding: Number(outstanding.toFixed(2))
+  };
+}
 
 function getDeliveryTypeFromPrefs(prefs) {
   const rawType = String(prefs?.deliveryType || "").toLowerCase();
@@ -215,9 +317,9 @@ exports.renderCheckout = async (req, res) => {
 ========================= */
 exports.renderPayLater = async (req, res) => {
   const creditLimit = 300.0;
-  const walletBalance = 120.5;
   const userId = req.session?.user?.id || null;
   const today = new Date();
+  const walletBalance = await getWalletBalance(userId);
 
   const addMonths = (date, months) => {
     const d = new Date(date);
@@ -301,6 +403,77 @@ exports.renderPayLater = async (req, res) => {
     paylaterMessage,
     paylaterError,
   });
+};
+
+exports.payPayLaterWallet = async (req, res) => {
+  try {
+    const userId = req.session?.user?.id || null;
+    if (!userId) return res.status(401).json({ ok: false, error: "Not logged in" });
+
+    const payType = String(req.body.type || "").toLowerCase();
+    if (!["installment", "early"].includes(payType)) {
+      return res.status(400).json({ ok: false, error: "Invalid PayLater payment type" });
+    }
+
+    const { monthlyTotal, outstanding } = await getPayLaterTotals(userId);
+    const amount = payType === "installment" ? monthlyTotal : outstanding;
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ ok: false, error: "No outstanding PayLater balance." });
+    }
+
+    const dailySpent = await getWalletDailySpent(userId);
+    if (dailySpent + amount > WALLET_DAILY_LIMIT) {
+      return res.status(400).json({
+        ok: false,
+        error: "Daily wallet spend limit reached",
+        dailyLimit: WALLET_DAILY_LIMIT,
+        dailySpent
+      });
+    }
+
+    const balance = await getWalletBalance(userId);
+    if (balance < amount) {
+      const needed = Number((amount - balance).toFixed(2));
+      return res.status(400).json({ ok: false, error: "Insufficient balance", needed });
+    }
+
+    await ensureWalletColumn();
+    await ensureWalletTransactionsTable();
+
+    await db.query(
+      "UPDATE users SET wallet_balance = wallet_balance - ? WHERE id=?",
+      [amount, userId]
+    );
+
+    const applied = await OrdersModel.applyPaylaterPayment(userId, amount);
+    if (!Number.isFinite(applied) || applied <= 0) {
+      await db.query(
+        "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
+        [amount, userId]
+      );
+      return res.status(500).json({ ok: false, error: "Failed to apply PayLater payment." });
+    }
+
+    if (applied < amount) {
+      const refund = Number((amount - applied).toFixed(2));
+      await db.query(
+        "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
+        [refund, userId]
+      );
+    }
+
+    const newBalance = Number((balance - applied).toFixed(2));
+    await recordWalletTxn(userId, "payment", "paylater", Number(applied), newBalance);
+
+    req.session.paylaterMessage = `PayLater payment received: $${Number(applied).toFixed(2)} via wallet.`;
+    req.session.paylaterWalletPay = null;
+
+    return res.json({ ok: true, applied, newBalance, redirect: "/paylater" });
+  } catch (err) {
+    console.error("payPayLaterWallet error:", err);
+    return res.status(500).json({ ok: false, error: "Failed to process wallet payment." });
+  }
 };
 
 /* =========================

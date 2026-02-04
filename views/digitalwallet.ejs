@@ -4,6 +4,7 @@
   <title>HomeBitez Wallet</title>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --cream: #fff1df;
@@ -20,7 +21,7 @@
 
     body {
       margin: 0;
-      font-family: "Segoe UI", Arial, sans-serif;
+      font-family: "Manrope", "Segoe UI", sans-serif;
       background: var(--cream);
       color: var(--ink);
       min-height: 100vh;
@@ -71,6 +72,7 @@
     }
 
     .wallet-title {
+      font-family: "Fraunces", "Times New Roman", serif;
       font-weight: 700;
       font-size: 18px;
       margin: 0 0 6px;
@@ -396,7 +398,7 @@
         <div id="sendInfo" class="notice"></div>
         <div id="verifyBlock" class="hidden">
           <input type="text" id="twofaCode" placeholder="Enter 2FA code">
-          <button class="btn" id="verifyCodeBtn">Verify Code</button>
+          <button class="btn secondary" id="verifyCodeBtn">Verify Code</button>
           <div id="verifyInfo" class="notice"></div>
         </div>
       </div>
@@ -404,7 +406,7 @@
       <div id="payBlock" style="display:none;">
         <div class="inline-actions">
           <button class="btn" id="paypalBtn">PayPal</button>
-          <button class="btn secondary" id="stripeBtn">Stripe</button>
+          <button class="btn" id="stripeBtn">Stripe</button>
         </div>
         <div class="notice">Stripe checkout supports card, GrabPay, Alipay, PayNow, WeChat Pay.</div>
       </div>
@@ -513,7 +515,7 @@
       const data = await res.json();
       if (data.ok) {
         wallet2faVerified = true;
-        verifyInfo.textContent = 'Verified. Choose PayNow or Stripe.';
+    verifyInfo.textContent = 'Verified. Choose PayPal or Stripe.';
         payBlock.style.display = 'block';
         showToast("2FA verified.");
       } else {
