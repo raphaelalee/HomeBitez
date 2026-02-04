@@ -1,135 +1,369 @@
 <%- include('../partials/head', { title: 'Business Owner Dashboard' }) %>
 <%- include('../partials/navbar-bizowner') %>
 
+<%
+  const safeTotalProducts = Number(totalProducts || 0);
+  const safeTotalStocks = Number(totalStocks || 0);
+  const safeTotalRevenue = Number(totalRevenue || 0);
+  const safeNewMessages = Number(newMessages || 0);
+
+  const revenueFormatted = safeTotalRevenue.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  const avgStockPerProduct = safeTotalProducts > 0 ? (safeTotalStocks / safeTotalProducts) : 0;
+  const stockHealthPct = safeTotalProducts > 0 ? Math.min(100, Math.round((avgStockPerProduct / 30) * 100)) : 0;
+  const stockHealthLabel = stockHealthPct >= 70 ? 'Healthy' : stockHealthPct >= 40 ? 'Watch' : 'Low';
+  const inboxLabel = safeNewMessages === 0 ? 'All caught up' : `${safeNewMessages} unread`;
+%>
+
 <style>
   body {
-    background: #f7efe3;
+    background:
+      radial-gradient(circle at 90% -10%, rgba(219, 173, 91, 0.22), transparent 42%),
+      radial-gradient(circle at 8% 22%, rgba(240, 211, 165, 0.34), transparent 38%),
+      #f7efe3;
     color: #2f2419;
     font-family: 'Segoe UI', Arial, sans-serif;
   }
 
-  .page-wrap { padding: 0 22px 40px; max-width:1200px; margin:0 auto; }
-  .navbar { position: relative; }
-  .hb-icons { position: relative; right: 16px; }
-
-  .page-title {
-    margin: 24px 6px 14px;
-    font-size: 22px;
-    font-weight: 500;
-    color: #2f2419;
+  .page-wrap {
+    padding: 26px 22px 42px;
+    max-width: 1220px;
+    margin: 0 auto;
   }
 
-  .stats-container {
+  .hero-card {
+    background: linear-gradient(135deg, #fff7ec 0%, #f2e1cc 100%);
+    border: 1px solid #e7d2b0;
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 14px 30px rgba(52, 37, 24, 0.08);
+    display: grid;
+    gap: 6px;
+  }
+
+  .hero-title {
+    margin: 0;
+    font-size: 30px;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+
+  .hero-subtitle {
+    margin: 0;
+    color: #6a5c4f;
+    font-size: 14px;
+  }
+
+  .hero-chips {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .hero-chip {
+    border: 1px solid #e6cfac;
+    border-radius: 999px;
+    background: rgba(255, 247, 236, 0.88);
+    padding: 7px 12px;
+    font-size: 12px;
+    color: #5f5246;
+    font-weight: 600;
+  }
+
+  .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 14px;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
   }
 
   .stat-card {
     background: linear-gradient(145deg, #fff8ef 0%, #f1e1cd 100%);
-    border:1px solid #ead7b7;
-    border-radius:14px;
-    padding:16px;
-    box-shadow:0 8px 18px rgba(0,0,0,0.06);
+    border: 1px solid #ead7b7;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+    display: grid;
+    gap: 9px;
   }
-  .stat-label { font-size:12px; color:#6c5f53; font-weight:500; }
-  .stat-number { font-size:24px; font-weight:500; margin-top:4px; }
+
+  .stat-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .stat-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid #e5cfae;
+    background: rgba(255, 248, 236, 0.9);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #876639;
+    font-size: 16px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: #6c5f53;
+    font-weight: 600;
+  }
+
+  .stat-number {
+    font-size: 29px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 0;
+  }
+
+  .layout-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 14px;
+  }
+
+  .panel {
+    background: linear-gradient(150deg, #fff8ef 0%, #f3e4d1 100%);
+    border: 1px solid #ead7b7;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+  }
+
+  .panel-title {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #3a2f24;
+  }
+
+  .meter-row {
+    display: grid;
+    gap: 10px;
+  }
+
+  .meter-track {
+    width: 100%;
+    height: 10px;
+    border-radius: 99px;
+    background: #ebdbc3;
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #d9a349 0%, #c18622 100%);
+    border-radius: 99px;
+  }
+
+  .meter-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #65584d;
+  }
+
+  .badge-soft {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid #dfc59e;
+    background: #fff4e2;
+    color: #755220;
+  }
+
+  .quick-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  .quick-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-decoration: none;
+    color: #3f3429;
+    border: 1px solid #e2c9a6;
+    background: #fff8ef;
+    border-radius: 11px;
+    padding: 10px 12px;
+    font-weight: 600;
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+
+  .quick-link:hover {
+    background: #f8ebd6;
+    transform: translateY(-1px);
+  }
 
   .section-grid {
-    display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap:14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
   }
 
   .section-card {
     background: linear-gradient(150deg, #fff8ef 0%, #f3e4d1 100%);
-    border:1px solid #ead7b7;
-    border-radius:14px;
-    padding:16px;
-    box-shadow:0 8px 18px rgba(0,0,0,0.06);
-    position:relative;
+    border: 1px solid #ead7b7;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+    position: relative;
   }
-  .section-card h3 { margin:0 0 6px; font-size:15px; font-weight:500; color:#3a2f24; }
-  .section-card p { margin:0 0 12px; font-size:13px; color:#6c5f53; }
-  .arrow { position:absolute; right:14px; top:12px; color:#9a8f85; font-size:16px; }
+
+  .section-card h3 {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #3a2f24;
+  }
+
+  .section-card p {
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: #6c5f53;
+  }
 
   .btn-gold {
-    padding:9px 14px;
-    background:#d09a2e;
-    border:none;
-    border-radius:10px;
-    color:#fffaf2;
-    font-weight:500;
-    text-decoration:none;
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    font-size:13px;
-    box-shadow:0 8px 18px rgba(0,0,0,0.08);
+    padding: 9px 14px;
+    background: #d09a2e;
+    border: none;
+    border-radius: 10px;
+    color: #fffaf2;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    transition: background 0.2s ease;
   }
-  .btn-gold:hover { background:#bb8220; }
 
-  @media (max-width: 768px){
-    .page-wrap{ padding:0 14px 32px; }
-    .hb-icons{ right:8px; }
+  .btn-gold:hover {
+    background: #bb8220;
+  }
+
+  @media (max-width: 992px) {
+    .layout-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .page-wrap {
+      padding: 16px 14px 30px;
+    }
+
+    .hero-title {
+      font-size: 24px;
+    }
   }
 </style>
 
 <div class="page-wrap">
-
-  <!-- Welcome -->
-  <div class="page-title">
-    Welcome back, <%= currentUser?.username || 'Business Owner' %>
-  </div>
-
-  <!-- Stats -->
-  <div class="stats-container">
-    <div class="stat-card">
-      <div class="stat-number"><%= totalProducts %></div>
-      <div class="stat-label">Total Products</div>
+  <section class="hero-card">
+    <h1 class="hero-title">Welcome back, <%= currentUser?.username || 'Business Owner' %></h1>
+    <p class="hero-subtitle">Here is a quick pulse of your business today.</p>
+    <div class="hero-chips">
+      <span class="hero-chip">Inventory status: <%= stockHealthLabel %></span>
+      <span class="hero-chip">Inbox: <%= inboxLabel %></span>
+      <span class="hero-chip">Avg stock/product: <%= avgStockPerProduct.toFixed(1) %></span>
     </div>
+  </section>
 
-    <div class="stat-card">
-      <div class="stat-number">$<%= Number(totalRevenue || 0).toFixed(2) %></div>
-      <div class="stat-label">Total Revenue</div>
-    </div>
+  <section class="stats-grid">
+    <article class="stat-card">
+      <div class="stat-head">
+        <div class="stat-label">Total Products</div>
+        <span class="stat-icon"><i class="bi bi-grid"></i></span>
+      </div>
+      <p class="stat-number"><%= safeTotalProducts %></p>
+    </article>
 
-    <div class="stat-card">
-      <div class="stat-number"><%= totalStocks %></div>
-      <div class="stat-label">Total Stocks</div>
-    </div>
+    <article class="stat-card">
+      <div class="stat-head">
+        <div class="stat-label">Total Revenue</div>
+        <span class="stat-icon"><i class="bi bi-cash-stack"></i></span>
+      </div>
+      <p class="stat-number">$<%= revenueFormatted %></p>
+    </article>
 
-    <div class="stat-card">
-      <div class="stat-number"><%= newMessages %></div>
-      <div class="stat-label">New Messages</div>
-    </div>
-  </div>
+    <article class="stat-card">
+      <div class="stat-head">
+        <div class="stat-label">Total Stocks</div>
+        <span class="stat-icon"><i class="bi bi-box-seam"></i></span>
+      </div>
+      <p class="stat-number"><%= safeTotalStocks %></p>
+    </article>
 
-  <!-- Sections -->
-  <div class="section-grid" style="margin-top:18px;">
-    <div class="section-card">
+    <article class="stat-card">
+      <div class="stat-head">
+        <div class="stat-label">New Messages</div>
+        <span class="stat-icon"><i class="bi bi-chat-dots"></i></span>
+      </div>
+      <p class="stat-number"><%= safeNewMessages %></p>
+    </article>
+  </section>
+
+  <section class="layout-grid">
+    <article class="panel">
+      <h2 class="panel-title">Operational Snapshot</h2>
+      <div class="meter-row">
+        <div class="meter-meta">
+          <span>Inventory coverage</span>
+          <span class="badge-soft"><%= stockHealthLabel %></span>
+        </div>
+        <div class="meter-track">
+          <div class="meter-fill" style="width: <%= stockHealthPct %>%;"></div>
+        </div>
+        <div class="meter-meta">
+          <span><%= stockHealthPct %>% coverage score</span>
+          <span><%= safeTotalStocks %> units on hand</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <h2 class="panel-title">Quick Actions</h2>
+      <div class="quick-list">
+        <a class="quick-link" href="/bizowner/add">Add a new product <span>&rarr;</span></a>
+        <a class="quick-link" href="/bizowner/orders">Review incoming orders <span>&rarr;</span></a>
+        <a class="quick-link" href="/bizowner/messages">Respond to customer messages <span>&rarr;</span></a>
+      </div>
+    </article>
+  </section>
+
+  <section class="section-grid">
+    <article class="section-card">
       <h3>Business Profile</h3>
-      <div class="arrow">→</div>
-      <p>Edit your business information and image</p>
+      <p>Update your business details, image and contact information.</p>
       <a href="/bizowner/profile" class="btn-gold">Edit Profile</a>
-    </div>
+    </article>
 
-    <div class="section-card">
+    <article class="section-card">
       <h3>Customer Messages</h3>
-      <div class="arrow">→</div>
-      <p>Read and respond to customer inquiries</p>
+      <p>Check inquiries and keep your customers engaged.</p>
       <a href="/bizowner/messages" class="btn-gold">View Messages</a>
-    </div>
+    </article>
 
-    <div class="section-card">
+    <article class="section-card">
       <h3>Inventory Management</h3>
-      <div class="arrow">→</div>
-      <p>Add, edit and manage your product inventory</p>
+      <p>Add, edit and maintain your product inventory in one place.</p>
       <a href="/bizowner/inventory" class="btn-gold">Manage Inventory</a>
-    </div>
-  </div>
-
+    </article>
+  </section>
 </div>
 
 <%- include('../partials/foot') %>

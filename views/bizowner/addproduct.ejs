@@ -1,284 +1,491 @@
-<!DOCTYPE html>
-<html lang="en">
+<%- include('../partials/head', { title: 'Add Product' }) %>
+<%- include('../partials/navbar-bizowner') %>
 
-<head>
-    <meta charset="UTF-8">
-    <title>Add Product</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&display=swap');
 
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: "Poppins", Arial, sans-serif;
-            background: #faf7f2;
-        }
+  body {
+    background:
+      radial-gradient(circle at 92% -10%, rgba(215, 156, 52, 0.26), transparent 40%),
+      radial-gradient(circle at 2% 18%, rgba(240, 212, 169, 0.3), transparent 30%),
+      #f7efe3;
+    color: #2f2419;
+    font-family: 'Manrope', sans-serif;
+  }
 
-        /* NAVBAR */
-        .navbar {
-            background: white;
-            padding: 18px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #eee;
-        }
+  .add-page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+  }
 
-        .logo {
-            font-size: 26px;
-            font-weight: 700;
-            color: #f4b400;
-        }
+  .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
 
-        /* PAGE TITLE */
-        .page-title {
-            margin: 30px 40px 10px;
-            font-size: 26px;
-            font-weight: 600;
-            color: #444;
-        }
+  .head-title {
+    margin: 0;
+    font-family: 'Fraunces', serif;
+    font-size: 34px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: #322417;
+  }
 
-        /* FORM CONTAINER */
-        .container {
-            background: white;
-            padding: 35px;
-            width: 520px;
-            margin: 25px auto;
-            border-radius: 18px;
-            box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.10);
-        }
+  .head-subtitle {
+    margin: 6px 0 0;
+    color: #6d5f52;
+    font-size: 14px;
+    font-weight: 500;
+  }
 
-        label {
-            font-weight: 600;
-            margin-top: 12px;
-            display: block;
-            font-size: 14px;
-            color: #555;
-        }
+  .back-link {
+    text-decoration: none;
+    color: #4f3f2f;
+    background: rgba(255, 248, 236, 0.95);
+    border: 1px solid #e8d2b0;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
 
-        input[type="text"],
-        input[type="number"],
-        input[type="file"],
-        textarea,
-        select {
-            width: 100%;
-            padding: 12px;
-            margin-top: 6px;
-            border-radius: 10px;
-            border: 1px solid #ccc;
-            font-size: 14px;
-            background: #fafafa;
-        }
+  .content-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
 
-        textarea {
-            resize: vertical;
-            min-height: 96px;
-            line-height: 1.4;
-        }
+  .side-panel,
+  .form-shell {
+    background: linear-gradient(145deg, #fff8ef 0%, #f3e4d1 100%);
+    border: 1px solid #ead7b7;
+    border-radius: 16px;
+    box-shadow: 0 12px 28px rgba(60, 42, 24, 0.08);
+  }
 
-        .check-line {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 8px;
-            color: #555;
-            font-size: 14px;
-        }
+  .side-panel {
+    padding: 16px;
+    position: sticky;
+    top: 84px;
+  }
 
-        .check-line input[type="checkbox"] {
-            width: auto;
-            margin: 0;
-            transform: scale(1.05);
-        }
+  .side-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #392c21;
+  }
 
-        .tag-grid {
-            margin-top: 8px;
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 8px;
-        }
+  .checklist {
+    margin: 10px 0 16px;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+    color: #66584b;
+    font-size: 13px;
+  }
 
-        .tag-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 10px;
-            border: 1px solid #e8e0d4;
-            border-radius: 10px;
-            background: #fff;
-            font-size: 13px;
-            color: #4f4f4f;
-        }
+  .checklist li {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
 
-        .tag-item input[type="checkbox"] {
-            width: auto;
-            margin: 0;
-        }
+  .checklist-dot {
+    margin-top: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(120deg, #d9a349, #b78029);
+    flex-shrink: 0;
+  }
 
-        .hint {
-            margin-top: 6px;
-            font-size: 12px;
-            color: #777;
-        }
+  .preview-box {
+    border: 1px dashed #d9bc93;
+    border-radius: 12px;
+    background: #fff8ef;
+    min-height: 190px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
 
-        select {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            cursor: pointer;
-        }
+  .preview-empty {
+    font-size: 12px;
+    color: #807160;
+    text-align: center;
+    padding: 16px;
+  }
 
-        .select-wrapper {
-            position: relative;
-        }
+  .image-preview {
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+    display: none;
+  }
 
-        .select-wrapper::after {
-            content: "▾";
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-            color: #666;
-            font-size: 14px;
-        }
+  .file-note {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #746556;
+  }
 
-        input[type="file"] {
-            padding: 10px;
-            border: 1px dashed #bbb;
-            background: #fffdf5;
-        }
+  .form-shell {
+    padding: 16px;
+  }
 
-        input[type="file"]:hover {
-            border-color: #f4b400;
-        }
+  .form-section + .form-section {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed #e2c9a7;
+  }
 
-        /* PREVIEW */
-        .image-preview {
-            margin-top: 15px;
-            width: 100%;
-            height: 220px;
-            object-fit: cover;
-            border-radius: 14px;
-            border: 1px solid #ddd;
-            display: none;
-        }
+  .section-title {
+    margin: 0 0 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #3c2f23;
+  }
 
-        button {
-            padding: 14px;
-            width: 100%;
-            background: #f4b400;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 20px;
-        }
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+  }
 
-        button:hover {
-            background: #d99a00;
-        }
+  .field {
+    display: grid;
+    gap: 5px;
+  }
 
-        .back {
-            text-decoration: none;
-            display: block;
-            margin-bottom: 20px;
-            color: #444;
-            font-size: 14px;
-            font-weight: 500;
-        }
-    </style>
-</head>
+  .field-full {
+    grid-column: 1 / -1;
+  }
 
-<body>
+  label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #4a3b2d;
+  }
 
-    <!-- NAVIGATION BAR -->
-    <div class="navbar">
-        <div class="logo">HomeBitez</div>
+  input[type='text'],
+  input[type='number'],
+  textarea,
+  select,
+  input[type='file'] {
+    width: 100%;
+    border: 1px solid #ddc6a6;
+    background: #fffaf3;
+    border-radius: 11px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #2f2419;
+    font-family: inherit;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: #c78b2a;
+    box-shadow: 0 0 0 3px rgba(199, 139, 42, 0.15);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 96px;
+    line-height: 1.45;
+  }
+
+  input[type='file'] {
+    padding: 8px 10px;
+    border-style: dashed;
+    background: #fff6e9;
+    cursor: pointer;
+  }
+
+  .helper {
+    margin-top: 5px;
+    font-size: 11px;
+    color: #78695a;
+  }
+
+  .check-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid #e3cdac;
+    border-radius: 10px;
+    background: #fffaf3;
+    font-size: 13px;
+    color: #5f5144;
+  }
+
+  .check-line input[type='checkbox'] {
+    width: auto;
+    margin: 0;
+  }
+
+  .tag-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .tag-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid #e2ccab;
+    border-radius: 999px;
+    background: #fff8ee;
+    font-size: 12px;
+    color: #57493d;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .tag-item input[type='checkbox'] {
+    width: auto;
+    margin: 0;
+  }
+
+  .actions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .btn-primary,
+  .btn-ghost {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .btn-ghost {
+    background: #fdf5e9;
+    border: 1px solid #e1c8a5;
+    color: #604f3f;
+  }
+
+  .btn-primary {
+    background: linear-gradient(120deg, #d39a2d 0%, #bf8120 100%);
+    color: #fffaf3;
+    box-shadow: 0 10px 20px rgba(191, 129, 32, 0.28);
+  }
+
+  .btn-primary:hover {
+    filter: brightness(0.97);
+  }
+
+  @media (max-width: 980px) {
+    .content-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .side-panel {
+      position: static;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .add-page {
+      padding: 16px 12px 26px;
+    }
+
+    .page-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .head-title {
+      font-size: 28px;
+    }
+
+    .field-grid,
+    .tag-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .actions {
+      justify-content: stretch;
+      flex-direction: column;
+    }
+
+    .btn-primary,
+    .btn-ghost {
+      width: 100%;
+      text-align: center;
+    }
+  }
+</style>
+
+<main class="add-page">
+  <header class="page-head">
+    <div>
+      <h1 class="head-title">Add New Product</h1>
+      <p class="head-subtitle">Create a polished listing that is easy for customers to discover and trust.</p>
     </div>
+    <a class="back-link" href="/bizowner/inventory">Back to Inventory</a>
+  </header>
 
-    <div class="page-title">Add New Product</div>
+  <div class="content-grid">
+    <aside class="side-panel">
+      <h2 class="side-title">Quick Checklist</h2>
+      <ul class="checklist">
+        <li><span class="checklist-dot"></span><span>Use a clear product name and detailed description.</span></li>
+        <li><span class="checklist-dot"></span><span>Set stock quantity accurately before publishing.</span></li>
+        <li><span class="checklist-dot"></span><span>Add dietary and allergen tags to reduce customer confusion.</span></li>
+        <li><span class="checklist-dot"></span><span>Upload a bright photo to improve click-through rate.</span></li>
+      </ul>
 
-    <div class="container">
+      <div class="preview-box">
+        <div id="previewEmpty" class="preview-empty">Image preview appears here after upload</div>
+        <img id="preview" class="image-preview" alt="Product preview">
+      </div>
+      <div id="fileName" class="file-note">No image selected</div>
+    </aside>
 
-        <a class="back" href="/bizowner/inventory">← Back to Inventory</a>
-
-        <form action="/bizowner/add" method="POST" enctype="multipart/form-data">
-
-            <label>Product Name</label>
-            <input type="text" name="productName" required>
-
-            <label>Description</label>
-            <textarea name="description" placeholder="Describe the dish, key ingredients, or flavor profile..." required></textarea>
-
-            <label>Category</label>
-            <div class="select-wrapper">
-                <select name="category" required>
-                    <option value="" disabled selected>Select category</option>
-                    <option value="International">International</option>
-                    <option value="Local">Local</option>
-                    <option value="Dessert">Dessert</option>
-                    <option value="Sides">Sides</option>
-                    <option value="Beverage">Beverage</option>
-                </select>
+    <section class="form-shell">
+      <form action="/bizowner/add" method="POST" enctype="multipart/form-data">
+        <div class="form-section">
+          <h3 class="section-title">Basic Details</h3>
+          <div class="field-grid">
+            <div class="field field-full">
+              <label for="productName">Product Name</label>
+              <input id="productName" type="text" name="productName" required>
             </div>
 
-            <label>Price (S$)</label>
-            <input type="number" step="0.01" name="price" required>
-
-            <label>Quantity</label>
-            <input type="number" min="0" step="1" name="quantity" value="0" required>
-
-            <label>Best Seller</label>
-            <label class="check-line">
-                <input type="checkbox" name="isBestSeller" value="1">
-                Mark this product as a Best Seller
-            </label>
-
-            <label>Discount (%)</label>
-            <input type="number" min="0" max="90" step="1" name="discountPercent" value="0">
-            <div class="hint">Set 0 if no discount.</div>
-
-            <label>Dietary / Food Tags</label>
-            <div class="tag-grid">
-                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Spicy"> Spicy</label>
-                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Vegetarian"> Vegetarian</label>
-                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Vegan"> Vegan</label>
-                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Contains Beef"> Contains Beef</label>
-                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Contains Chicken"> Contains Chicken</label>
-                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Contains Seafood"> Contains Seafood</label>
+            <div class="field field-full">
+              <label for="description">Description</label>
+              <textarea id="description" name="description" placeholder="Describe the dish, key ingredients, or flavor profile..." required></textarea>
             </div>
-            <input type="text" name="dietaryTagsCustom" placeholder="Custom dietary tags (comma separated)">
 
-            <label>Allergen Tags</label>
-            <div class="tag-grid">
-                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Gluten"> Gluten</label>
-                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Dairy"> Dairy</label>
-                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Egg"> Egg</label>
-                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Nuts"> Nuts</label>
-                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Shellfish"> Shellfish</label>
-                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Soy"> Soy</label>
+            <div class="field">
+              <label for="category">Category</label>
+              <select id="category" name="category" required>
+                <option value="" disabled selected>Select category</option>
+                <option value="International">International</option>
+                <option value="Local">Local</option>
+                <option value="Dessert">Dessert</option>
+                <option value="Sides">Sides</option>
+                <option value="Beverage">Beverage</option>
+              </select>
             </div>
-            <input type="text" name="allergenTagsCustom" placeholder="Custom allergen tags (comma separated)">
 
-            <label>Product Image</label>
-            <input type="file" name="imageFile" accept="image/*" onchange="showPreview(event)" required>
+            <div class="field">
+              <label for="price">Price (S$)</label>
+              <input id="price" type="number" step="0.01" min="0" name="price" required>
+            </div>
+          </div>
+        </div>
 
-            <img id="preview" class="image-preview">
+        <div class="form-section">
+          <h3 class="section-title">Availability and Promotion</h3>
+          <div class="field-grid">
+            <div class="field">
+              <label for="quantity">Quantity</label>
+              <input id="quantity" type="number" min="0" step="1" name="quantity" value="0" required>
+            </div>
 
-            <button type="submit">Add Product</button>
-        </form>
+            <div class="field">
+              <label for="discountPercent">Discount (%)</label>
+              <input id="discountPercent" type="number" min="0" max="90" step="1" name="discountPercent" value="0">
+              <div class="helper">Set to 0 if no discount is needed.</div>
+            </div>
 
-    </div>
+            <div class="field field-full">
+              <label>Best Seller</label>
+              <label class="check-line"><input type="checkbox" name="isBestSeller" value="1">Mark this product as a Best Seller</label>
+            </div>
+          </div>
+        </div>
 
-    <script>
-        function showPreview(event) {
-            const preview = document.getElementById("preview");
-            preview.src = URL.createObjectURL(event.target.files[0]);
-            preview.style.display = "block";
-        }
-    </script>
+        <div class="form-section">
+          <h3 class="section-title">Tags</h3>
+          <div class="field-grid">
+            <div class="field field-full">
+              <label>Dietary / Food Tags</label>
+              <div class="tag-grid">
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Spicy">Spicy</label>
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Vegetarian">Vegetarian</label>
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Vegan">Vegan</label>
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Contains Beef">Contains Beef</label>
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Contains Chicken">Contains Chicken</label>
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Contains Seafood">Contains Seafood</label>
+              </div>
+              <input type="text" name="dietaryTagsCustom" placeholder="Custom dietary tags (comma separated)">
+            </div>
 
-</body>
-</html>
+            <div class="field field-full">
+              <label>Allergen Tags</label>
+              <div class="tag-grid">
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Gluten">Gluten</label>
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Dairy">Dairy</label>
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Egg">Egg</label>
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Nuts">Nuts</label>
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Shellfish">Shellfish</label>
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Soy">Soy</label>
+              </div>
+              <input type="text" name="allergenTagsCustom" placeholder="Custom allergen tags (comma separated)">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">Product Media</h3>
+          <div class="field">
+            <label for="imageFile">Product Image</label>
+            <input id="imageFile" type="file" name="imageFile" accept="image/*" onchange="showPreview(event)" required>
+          </div>
+        </div>
+
+        <div class="actions">
+          <a class="btn-ghost" href="/bizowner/inventory">Cancel</a>
+          <button class="btn-primary" type="submit">Add Product</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</main>
+
+<script>
+  function showPreview(event) {
+    const fileInput = event.target;
+    const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+    const preview = document.getElementById('preview');
+    const empty = document.getElementById('previewEmpty');
+    const fileName = document.getElementById('fileName');
+
+    if (!file) {
+      preview.style.display = 'none';
+      preview.removeAttribute('src');
+      empty.style.display = 'block';
+      fileName.textContent = 'No image selected';
+      return;
+    }
+
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+    empty.style.display = 'none';
+    fileName.textContent = file.name;
+  }
+</script>
+
+<%- include('../partials/foot') %>

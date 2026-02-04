@@ -250,27 +250,31 @@
 
 <body>
 
-<header>
-  <div class="logo">HomeBitez</div>
-  <nav>
-    <a href="/">Home</a>
-    <% if (user && user.role === 'admin') { %>
-      <a href="/admin">Admin Dashboard</a>
-    <% } else { %>
-      <a href="<%= user ? '/menu' : '/login' %>">Menu</a>
-      <a href="/about">About Us</a>
-      <a href="/contact">Contact Us</a>
-    <% } %>
-  </nav>
-  <div class="header-actions">
-    <a href="/login">
-      <button type="button">Login</button>
-    </a>
-    <a href="/register">
-      <button type="button">Sign Up</button>
-    </a>
-  </div>
-</header>
+<% if (user) { %>
+  <%- include('partials/navbar-user') %>
+<% } else { %>
+  <header>
+    <div class="logo">HomeBitez</div>
+    <nav>
+      <a href="/">Home</a>
+      <% if (user && user.role === 'admin') { %>
+        <a href="/admin">Admin Dashboard</a>
+      <% } else { %>
+        <a href="<%= user ? '/menu' : '/login' %>">Menu</a>
+        <a href="/about">About Us</a>
+        <a href="/contact">Contact Us</a>
+      <% } %>
+    </nav>
+    <div class="header-actions">
+      <a href="/login">
+        <button type="button">Login</button>
+      </a>
+      <a href="/register">
+        <button type="button">Sign Up</button>
+      </a>
+    </div>
+  </header>
+<% } %>
 
 <section class="hero">
   <div class="hero-images">
@@ -284,7 +288,7 @@
     <p>
       Support local home chefs and enjoy freshly prepared meals made with care and heart.
     </p>
-    <button class="btn-primary" onclick="location.href='/login'">Order Food</button>
+    <button class="btn-primary" onclick="location.href='/menu'">Order Food</button>
   </div>
 </section>
 
@@ -323,7 +327,7 @@
   <div>
     <h2>Get <span>50% Off</span> On Curry</h2>
     <p>Limited-time offer on one of our most popular dishes.</p>
-    <button class="btn-primary" onclick="location.href='/login'">Order Now</button>
+    <button class="btn-primary" onclick="location.href='<%= user ? '/menu' : '/login' %>'">Order Now</button>
   </div>
 </section>
 

@@ -584,22 +584,6 @@
                 </script>
               </div>
 
-              <!-- NETS -->
-              <div class="hb-card">
-                <div class="hb-card-title">
-                  <i class="bi bi-qr-code-scan"></i>
-                  Pay with NETS
-                  <span class="hb-pill">QR</span>
-                </div>
-
-                <form id="netsForm" action="/nets-qr/request" method="POST">
-                  <input type="hidden" id="netsCartTotal" name="cartTotal" value="<%= total.toFixed(2) %>">
-                  <button class="hb-btn w-100" type="submit">
-                    <i class="bi bi-qr-code"></i> Pay with NETS
-                  </button>
-                </form>
-              </div>
-
               <!-- WALLET -->
               <div class="hb-card">
                 <div class="hb-card-title">
@@ -726,7 +710,6 @@
       const summaryTotal = document.getElementById("summaryTotal");
       const summaryMode = document.getElementById("summaryMode");
       const summaryPickup = document.getElementById("summaryPickup");
-      const netsCartTotal = document.getElementById("netsCartTotal");
       const walletPayBtn = document.getElementById("walletPayBtn");
       const walletBalanceLabel = document.getElementById("walletBalanceLabel");
       const walletFeedback = document.getElementById("walletFeedback");
@@ -874,7 +857,6 @@
           ? `${pickupDate.value || "Set date"} - ${pickupTime.value || "Set time"}`
           : "N/A";
         summaryTotal.textContent = `$${computeTotal().toFixed(2)}`;
-        if (netsCartTotal) netsCartTotal.value = computeTotal().toFixed(2);
         // Update PayPal variable used inside createOrder closure
         if (typeof currentDeliveryFee !== "undefined") {
           currentDeliveryFee = Number(currentDeliveryFeeNum.toFixed(2));
@@ -946,13 +928,6 @@
 
       handleModeChange();
       syncSummary();
-
-      const netsForm = document.getElementById("netsForm");
-      if (netsForm) {
-        netsForm.addEventListener("submit", (e) => {
-          if (!validateFulfillment()) e.preventDefault();
-        });
-      }
 
       const paylaterForm = document.querySelector("form[action='/paylater/choose']");
       if (paylaterForm) {
