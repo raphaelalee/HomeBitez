@@ -194,36 +194,21 @@ function maskEmail(email) {
     return name[0] + "***" + name[name.length - 1] + "@" + domain;
 }
 
-function maskPhone(phone) {
-    if (!phone) return '-';
-    const digits = String(phone).replace(/\D/g, '');
-    if (digits.length <= 3) return '***' + digits;
-    return '*'.repeat(Math.max(0, digits.length - 3)) + digits.slice(-3);
-}
-
-function issueTwoFactor(req, stage) {
+function issueTwoFactor(req) {
     const code = generateTwoFactorCode();
     if (!req.session.twoFactor) {
         req.session.twoFactor = {
-            stage: stage || 'phone',
-            phone: { code: null, expiresAt: null },
             email: { code: null, expiresAt: null },
-            phoneVerified: false,
             emailVerified: false
         };
     }
 
     const expiresAt = Date.now() + 5 * 60 * 1000;
-    if (stage === 'email') {
-        req.session.twoFactor.email = { code, expiresAt };
-        req.session.twoFactor.stage = 'email';
-    } else {
-        req.session.twoFactor.phone = { code, expiresAt };
-        req.session.twoFactor.stage = 'phone';
-    }
+    req.session.twoFactor.email = { code, expiresAt };
+    req.session.twoFactor.stage = 'email';
 
     req.flash('success', `Demo code: ${code}`);
-    console.log('2FA ' + stage + ' code for', req.session.user?.email || req.session.user?.username, ':', code);
+    console.log('2FA email code for', req.session.user?.email || req.session.user?.username, ':', code);
     return code;
 }
 
@@ -270,9 +255,8 @@ app.use((req, res, next) => {
     if (path.startsWith('/public') || path.startsWith('/images') || path === '/favicon.ico') return next();
 
     const tf = req.session.twoFactor || {};
-    if (!tf.phoneVerified) return res.redirect('/2fa/phone');
     if (!tf.emailVerified) return res.redirect('/2fa/email');
-    return res.redirect('/2fa/phone');
+    return next();
 });
 
 // EJS setup
@@ -456,72 +440,18 @@ app.post('/register', UsersController.register);
 app.post('/signup', UsersController.register);
 
 
-// 2FA verification (phone first, then email)
-app.get('/2fa/phone', (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
-
-    const tf = req.session.twoFactor || {};
-    const phone = tf.phone || {};
-    if (!phone.code || (phone.expiresAt && Date.now() > phone.expiresAt)) {
-        issueTwoFactor(req, 'phone');
-    }
-
-    res.render('2fa-phone', {
-        error: req.flash('error'),
-        success: req.flash('success'),
-        maskedPhone: maskPhone(req.session.user.contact),
-        maskedEmail: maskEmail(req.session.user.email)
-    });
-});
-
-app.post('/2fa/phone/verify', (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
-
-    const submitted = String(req.body.code || '').replace(/\s/g, '');
-    const tf = req.session.twoFactor || {};
-    const phone = tf.phone || {};
-
-    if (!phone.code) {
-        req.flash('error', 'Verification code not found. Please resend.');
-        return res.redirect('/2fa/phone');
-    }
-
-    if (phone.expiresAt && Date.now() > phone.expiresAt) {
-        req.flash('error', 'Code expired. Please resend.');
-        return res.redirect('/2fa/phone');
-    }
-
-    if (submitted != String(phone.code)) {
-        req.flash('error', 'Invalid code. Please try again.');
-        return res.redirect('/2fa/phone');
-    }
-
-    req.session.twoFactor.phoneVerified = true;
-    issueTwoFactor(req, 'email');
-    return res.redirect('/2fa/email');
-});
-
-app.post('/2fa/phone/resend', (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
-    issueTwoFactor(req, 'phone');
-    return res.redirect('/2fa/phone');
-});
-
 app.get('/2fa/email', (req, res) => {
     if (!req.session.user) return res.redirect('/login');
 
     const tf = req.session.twoFactor || {};
-    if (!tf.phoneVerified) return res.redirect('/2fa/phone');
-
     const email = tf.email || {};
     if (!email.code || (email.expiresAt && Date.now() > email.expiresAt)) {
-        issueTwoFactor(req, 'email');
+        issueTwoFactor(req);
     }
 
     res.render('2fa-email', {
         error: req.flash('error'),
         success: req.flash('success'),
-        maskedPhone: maskPhone(req.session.user.contact),
         maskedEmail: maskEmail(req.session.user.email)
     });
 });
@@ -558,7 +488,7 @@ app.post('/2fa/email/verify', (req, res) => {
 
 app.post('/2fa/email/resend', (req, res) => {
     if (!req.session.user) return res.redirect('/login');
-    issueTwoFactor(req, 'email');
+    issueTwoFactor(req);
     return res.redirect('/2fa/email');
 });
 

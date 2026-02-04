@@ -142,13 +142,11 @@ module.exports = {
       twoFactorVerified: false
     };
 
-    // Issue phone 2FA first, then email 2FA after phone is verified
-    const phoneCode = generateTwoFactorCode();
+    // Issue email-only 2FA
+    const emailCode = generateTwoFactorCode();
     req.session.twoFactor = {
-      stage: 'phone',
-      phone: { code: phoneCode, expiresAt: Date.now() + 5 * 60 * 1000 },
-      email: { code: null, expiresAt: null },
-      phoneVerified: false,
+      stage: 'email',
+      email: { code: emailCode, expiresAt: Date.now() + 5 * 60 * 1000 },
       emailVerified: false
     };
 
@@ -156,8 +154,8 @@ module.exports = {
     else if (user.role === 'admin') req.session.post2faRedirect = '/admin';
     else req.session.post2faRedirect = '/menu';
 
-    req.flash('success', `Demo code: ${phoneCode}`);
-    console.log('2FA phone code for', user.email || user.username, ':', phoneCode);
+    req.flash('success', `Demo code: ${emailCode}`);
+    console.log('2FA email code for', user.email || user.username, ':', emailCode);
 
     try {
       const cartRows = await CartModel.getByUserId(req.session.user.id);
@@ -171,8 +169,8 @@ module.exports = {
       console.error("Failed to load cart from DB:", err);
     }
 
-    // Redirect to 2FA verification (phone first)
-    return res.redirect('/2fa/phone');
+    // Redirect to 2FA verification (email)
+    return res.redirect('/2fa/email');
   },
 
   showRegister(req, res) {
