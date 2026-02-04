@@ -6,6 +6,15 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 require("dotenv").config();
 const stripeService = require('./services/stripe');
+const paypal = require('@paypal/checkout-server-sdk');
+
+const environment = new paypal.core.SandboxEnvironment(
+  process.env.PAYPAL_CLIENT_ID,
+  process.env.PAYPAL_SECRET
+);
+
+const paypalClient = new paypal.core.PayPalHttpClient(environment);
+
 
 // Controllers
 const UsersController = require('./Controllers/usersController');
@@ -1814,6 +1823,54 @@ app.post('/digitalwallet/topup', async (req, res) => {
 
   // After top-up, redirect back to the original page
   res.json({ success: true, redirect: req.body.redirect || '/checkout' });
+});
+
+app.get('/wallet/paypal', async (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
+
+  const amount = req.query.amount;
+
+  const request = new paypal.orders.OrdersCreateRequest();
+  request.prefer("return=representation");
+  request.requestBody({
+    intent: "CAPTURE",
+    purchase_units: [{
+      amount: {
+        currency_code: "SGD",
+        value: amount
+      }
+    }],
+    application_context: {
+      return_url: `http://localhost:3000/wallet/paypal/success?amount=${amount}`,
+      cancel_url: "http://localhost:3000/digitalwallet"
+    }
+  });
+
+  const order = await paypalClient.execute(request);
+
+  const approveLink = order.result.links.find(link => link.rel === "approve").href;
+  res.redirect(approveLink);
+});
+
+app.get('/wallet/paypal/success', async (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
+
+  const { token, amount } = req.query;
+
+  // Capture the payment
+  const request = new paypal.orders.OrdersCaptureRequest(token);
+  request.requestBody({});
+
+  await paypalClient.execute(request);
+
+  // ✅ Now safe to update wallet
+  await db.promise().query(
+    "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
+    [amount, req.session.user.id]
+  );
+
+  // Redirect back to checkout
+  res.redirect('/checkout');
 });
 
 
