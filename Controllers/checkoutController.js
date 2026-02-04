@@ -11,11 +11,50 @@ const UsersModel = require("../Models/UsersModel");
 const NETS_TXN_ID =
   "sandbox_nets|m|8ff8e5b6-d43e-4786-8ac5-7accf8c5bd9b";
 
+function getSelectedCartItems(session) {
+  const cart = session?.cart || [];
+  const selected = Array.isArray(session?.checkoutSelection) ? session.checkoutSelection : [];
+  if (!selected.length) return cart;
+  const set = new Set(selected.map(String));
+  return cart.filter(i => set.has(i.name));
+}
+
+function getRedeemForSubtotal(session, subtotal) {
+  const redeemAmount = Math.min(Number(subtotal || 0), Number(session?.cartRedeem?.amount || 0));
+  const redeemPoints = Math.min(
+    Number(session?.cartRedeem?.points || 0),
+    Math.floor(redeemAmount / 0.1)
+  );
+  return {
+    redeemAmount: Number(redeemAmount.toFixed(2)),
+    redeemPoints: Number(redeemPoints || 0)
+  };
+}
+
+async function removePurchasedItemsFromCart(req, purchasedItems) {
+  const names = [...new Set((purchasedItems || []).map(i => i.name).filter(Boolean))];
+  if (!names.length) return;
+
+  const currentCart = req.session?.cart || [];
+  req.session.cart = currentCart.filter(item => !names.includes(item.name));
+  req.session.checkoutSelection = null;
+
+  if (req.session?.user) {
+    for (const name of names) {
+      try {
+        await CartModel.removeItem(req.session.user.id, name);
+      } catch (err) {
+        console.error("Failed to remove purchased item from DB cart:", err);
+      }
+    }
+  }
+}
+
 /* =========================
    GET /checkout
 ========================= */
 exports.renderCheckout = (req, res) => {
-  const cart = req.session.cart || [];
+  const cart = getSelectedCartItems(req.session);
   const prefs = req.session.cartPrefs || {
     cutlery: false,
     pickupDate: "",
@@ -42,7 +81,7 @@ exports.renderCheckout = (req, res) => {
   const deliveryFee = 2.5;
   const initialMode = prefs.mode || "pickup";
   const initialDeliveryFee = initialMode === "delivery" ? deliveryFee : 0;
-  const redeem = Math.min(subtotal, Number(req.session.cartRedeem?.amount || 0));
+  const { redeemAmount: redeem } = getRedeemForSubtotal(req.session, subtotal);
   const total = Number((subtotal + initialDeliveryFee - redeem).toFixed(2));
 
   res.render("checkout", {
@@ -163,7 +202,7 @@ exports.choosePayLater = async (req, res) => {
     return res.redirect("/paylater");
   }
 
-  const cart = req.session.cart || [];
+  const cart = getSelectedCartItems(req.session);
   if (!cart.length) {
     req.session.paylaterError = "Cart is empty.";
     return res.redirect("/checkout");
@@ -174,7 +213,7 @@ exports.choosePayLater = async (req, res) => {
     0
   );
   const deliveryFee = prefs.mode === "delivery" ? 2.5 : 0;
-    const redeem = Math.min(subtotal, Number(req.session.cartRedeem?.amount || 0));
+    const { redeemAmount: redeem } = getRedeemForSubtotal(req.session, subtotal);
     const total = Number((subtotal + deliveryFee - redeem).toFixed(2));
 
   if (!Number.isFinite(total) || total <= 0) {
@@ -371,7 +410,7 @@ exports.capturePayLaterPaypalOrder = async (req, res) => {
 ========================= */
 exports.createPaypalOrder = async (req, res) => {
   try {
-    const cart = req.session.cart || [];
+    const cart = getSelectedCartItems(req.session);
     if (!cart.length) {
       return res.status(400).json({ error: "Cart is empty" });
     }
@@ -382,7 +421,7 @@ exports.createPaypalOrder = async (req, res) => {
     );
 
     const deliveryFee = Number(req.body.deliveryFee || 0);
-    const redeem = Math.min(subtotal, Number(req.session.cartRedeem?.amount || 0));
+    const { redeemAmount: redeem, redeemPoints } = getRedeemForSubtotal(req.session, subtotal);
     const total = Number((subtotal + deliveryFee - redeem).toFixed(2));
 
     const shippingName =
@@ -396,6 +435,7 @@ exports.createPaypalOrder = async (req, res) => {
     req.session.paypalPending = {
       paypalOrderId: order.id,
       total,
+      redeemPoints,
       createdAt: Date.now(),
     };
 
@@ -443,7 +483,7 @@ exports.capturePaypalOrder = async (req, res) => {
     };
 
     // persist order
-    const cart = req.session.cart || [];
+    const cart = getSelectedCartItems(req.session);
     const items = cart.map((i) => ({
       name: i.name,
       price: Number(i.price || 0),
@@ -469,9 +509,10 @@ exports.capturePaypalOrder = async (req, res) => {
     });
 
     // Deduct redeemed points first
-    if (req.session.user && req.session.cartRedeem?.points) {
+    const redeemedPointsUsed = Number(req.session.paypalPending?.redeemPoints || 0);
+    if (req.session.user && redeemedPointsUsed > 0) {
       try {
-        const { balance, entry } = await UsersModel.addPoints(req.session.user.id, -Number(req.session.cartRedeem.points), `Redeem order ${orderDbId}`);
+        const { balance, entry } = await UsersModel.addPoints(req.session.user.id, -redeemedPointsUsed, `Redeem order ${orderDbId}`);
         req.session.user.points = balance;
         req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);
       } catch (err) {
@@ -511,6 +552,18 @@ exports.capturePaypalOrder = async (req, res) => {
 exports.requestNetsQr = async (req, res) => {
   try {
     const cartTotal = Number(req.body.cartTotal);
+    const cart = getSelectedCartItems(req.session);
+    if (!cart.length) {
+      return res.render("netsQrFail", {
+        title: "Error",
+        errorMsg: "No selected items to checkout.",
+      });
+    }
+    const subtotal = cart.reduce(
+      (s, i) => s + Number(i.price || 0) * Number(i.quantity || i.qty || 0),
+      0
+    );
+    const { redeemPoints } = getRedeemForSubtotal(req.session, subtotal);
 
     if (!Number.isFinite(cartTotal) || cartTotal <= 0) {
       return res.render("netsQrFail", {
@@ -529,6 +582,7 @@ exports.requestNetsQr = async (req, res) => {
     if (nets.isQrSuccess(qrData)) {
       req.session.netsPending = {
         amount: cartTotal,
+        redeemPoints,
         txnRetrievalRef,
         createdAt: Date.now(),
       };
@@ -565,7 +619,7 @@ exports.renderReceipt = async (req, res) => {
     req.session.lastReceiptOrderId = latestOrderDbId;
   }
 
-  let cart = req.session?.cart || [];
+  let cart = getSelectedCartItems(req.session);
   let prefs = req.session?.cartPrefs || {
     cutlery: false,
     pickupDate: "",
@@ -642,18 +696,11 @@ exports.renderReceipt = async (req, res) => {
         payerEmail: null
       });
 
-  // hard reset session bits AFTER render
-  req.session.cart = [];
+  // clear only purchased/checked-out items from cart
+  await removePurchasedItemsFromCart(req, items);
   req.session.latestOrderDbId = null;
   req.session.paylaterPurchase = null;
   req.session.cartRedeem = null;
-  if (req.session.user) {
-    try {
-      await CartModel.clearCart(req.session.user.id);
-    } catch (err) {
-      console.error("Failed to clear cart in DB:", err);
-    }
-  }
 
   res.render("receipt", {
     brand: "HomeBitez",

@@ -12,7 +12,9 @@
   body{
       margin:0;
       font-family:Arial, sans-serif;
-      background:#f7efe3;
+      background:
+        radial-gradient(circle at 8% 0%, #fff7ea 0%, #f7efe3 42%),
+        linear-gradient(180deg, #f7efe3 0%, #f3e8d8 100%);
       color:#2f2419;
   }
 
@@ -20,6 +22,52 @@
       max-width: 1180px;
       margin: 0 auto;
       padding: 26px 20px 50px;
+  }
+
+  .cart-hero{
+      margin-bottom: 16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap: 14px;
+      flex-wrap: wrap;
+  }
+
+  .hero-title{
+      margin:0;
+      font-size:30px;
+      line-height:1.1;
+      font-family:'Sniglet', system-ui, sans-serif;
+      letter-spacing:0.2px;
+  }
+
+  .hero-sub{
+      margin:6px 0 0;
+      color:#6f5f4a;
+      font-size:14px;
+  }
+
+  .stepper{
+      display:flex;
+      align-items:center;
+      gap:8px;
+  }
+
+  .step{
+      border-radius:999px;
+      border:1px solid #dfc89f;
+      background:#fff8ec;
+      color:#76542d;
+      padding:6px 10px;
+      font-size:12px;
+      font-weight:700;
+      white-space:nowrap;
+  }
+
+  .step.active{
+      background:#d09a2e;
+      color:#fff;
+      border-color:#d09a2e;
   }
 
   .cart-layout{
@@ -30,7 +78,7 @@
   }
 
   .card-surface{
-      background: linear-gradient(145deg, #fff8ef 0%, #f1e1cd 100%);
+      background: linear-gradient(145deg, #fffaf2 0%, #f3e4cf 100%);
       border:1px solid #ead7b7;
       border-radius: 14px;
       padding: 26px 24px;
@@ -45,13 +93,20 @@
 
   .cart-row{
       display: grid;
-      grid-template-columns: 78px 1fr 120px 150px;
+      grid-template-columns: 36px 78px 1fr 130px 170px;
       gap: 14px;
       align-items: center;
       padding: 14px;
       border: 1px solid rgba(0,0,0,0.06);
       border-radius: 12px;
       background:#fff7ea;
+      position: relative;
+      transition: transform .14s ease, box-shadow .14s ease;
+  }
+
+  .cart-row:hover{
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.07);
   }
 
   .item-img{
@@ -69,6 +124,33 @@
       margin: 0;
       line-height: 1.2;
       color:#2f2a24;
+  }
+
+  .row-select{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+  }
+
+  .row-select input{
+      width:18px;
+      height:18px;
+      cursor:pointer;
+      accent-color:#d09a2e;
+  }
+
+  .row-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:24px;
+      height:24px;
+      border-radius:50%;
+      background:#fde6bd;
+      color:#7c5618;
+      font-size:12px;
+      font-weight:700;
+      margin-right:8px;
   }
 
   .item-sub{
@@ -93,10 +175,17 @@
       color:#2f2a24;
   }
 
-  .line-total{
+  .unit-price{
       font-size: 13px;
-      color:#5a5144;
-      font-weight:500;
+      color:#6d6151;
+      font-weight: 500;
+  }
+
+  .line-total{
+      font-size: 14px;
+      color:#413427;
+      font-weight:700;
+      margin-top:2px;
   }
 
   .qty-col{
@@ -115,6 +204,12 @@
       font-weight: 600;
       line-height: 1;
       cursor: pointer;
+      transition: all .12s ease;
+  }
+
+  .qty-btn:hover{
+      background:#fff2d8;
+      border-color:#d5a554;
   }
 
   .qty-display{
@@ -152,6 +247,23 @@
       top: 90px;
       border: 1px solid #ead7b7;
       background: linear-gradient(180deg, #ffefd8 0%, #f6dfbf 100%);
+  }
+
+  .summary-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+  }
+
+  .summary-pill{
+      border-radius:999px;
+      border:1px solid #dcb97b;
+      padding:5px 9px;
+      font-size:12px;
+      font-weight:700;
+      color:#7d571f;
+      background:#fff5df;
   }
 
   .summary-row{
@@ -198,6 +310,32 @@
       transition: transform .12s ease, box-shadow .12s ease;
       box-shadow:0 8px 18px rgba(0,0,0,0.08);
   }
+
+  .quick-remove{
+      position:absolute;
+      top:10px;
+      right:10px;
+      border:none;
+      background:transparent;
+      color:#8d7a5a;
+      font-size:13px;
+      font-weight:700;
+      cursor:pointer;
+      padding:4px;
+      border-radius:8px;
+  }
+
+  .quick-remove:hover{
+      color:#b94f4f;
+      background:#fff0f0;
+  }
+
+  .summary-note{
+      margin-top:10px;
+      font-size:12px;
+      color:#6f5f4a;
+      line-height:1.45;
+  }
   .btn-checkout:hover{
       transform: translateY(-1px);
       box-shadow: 0 10px 22px rgba(0,0,0,0.12);
@@ -235,8 +373,16 @@
   }
 
   @media (max-width: 640px){
+      .cart-hero{
+          align-items:flex-start;
+      }
+
+      .hero-title{
+          font-size:24px;
+      }
+
       .cart-row{
-          grid-template-columns: 70px 1fr;
+          grid-template-columns: 34px 70px 1fr;
           grid-template-rows: auto auto;
           gap: 10px;
       }
@@ -255,6 +401,18 @@
 <%- include('partials/navbar-user') %>
 
 <div class="cart-wrap">
+  <div class="cart-hero">
+    <div>
+      <h1 class="hero-title">Your Cart</h1>
+      <p class="hero-sub">Review items, update quantities, and head to checkout when ready.</p>
+    </div>
+    <div class="stepper">
+      <span class="step active">1. Cart</span>
+      <span class="step">2. Checkout</span>
+      <span class="step">3. Payment</span>
+    </div>
+  </div>
+
   <div class="cart-layout">
 
     <% if (!cart || cart.length === 0) { %>
@@ -272,11 +430,35 @@
 
       <!-- LEFT COLUMN: items + preferences -->
       <div class="card-surface">
-          <h4 style="margin:0 0 14px; font-weight:600;">Your Order</h4>
+          <h4 style="margin:0 0 4px; font-weight:700;">Your Order</h4>
+          <p style="margin:0 0 14px; color:#6f5f4a; font-size:13px;">
+            <%= cart.length %> item type(s) in your cart
+          </p>
 
         <div class="items-list">
+          <div class="section-block" style="grid-template-columns: 1fr auto; margin-bottom: 2px;">
+            <div>
+              <p class="label">Select Items For Checkout</p>
+              <p class="hint">Only checked items will be sent to checkout.</p>
+            </div>
+            <label class="d-flex align-items-center gap-2" style="margin:0; font-size:13px; color:#4d4337;">
+              <input type="checkbox" id="selectAllCartItems" style="width:18px; height:18px; accent-color:#d09a2e;">
+              Select all
+            </label>
+          </div>
+
           <% cart.forEach((item, i) => { %>
             <div class="cart-row" data-name="<%= item.name %>">
+              <button class="quick-remove" data-name="<%= item.name %>" title="Remove item">Remove</button>
+              <div class="row-select">
+                <input
+                  class="item-select"
+                  type="checkbox"
+                  data-name="<%= item.name %>"
+                  <%= (Array.isArray(checkoutSelection) && checkoutSelection.length)
+                        ? (checkoutSelection.includes(item.name) ? 'checked' : '')
+                        : 'checked' %>>
+              </div>
               <div>
                 <img class="item-img"
                      src="<%= (item.image && item.image.trim() !== '') ? item.image : '/images/flatlay-iron-skillet-with-meat-and-other-food.jpg' %>"
@@ -285,7 +467,7 @@
 
               <div>
                 <p class="item-name">
-                  <%= (i + 1) %>. <%= item.name %>
+                  <span class="row-badge"><%= i + 1 %></span><%= item.name %>
                   <a class="edit-link"
                      data-bs-toggle="modal"
                      data-bs-target="#editModal"
@@ -301,7 +483,9 @@
               </div>
 
               <div class="price-col">
+                <div class="unit-price">Unit</div>
                 $<%= Number(item.price).toFixed(2) %>
+                <div class="line-total">Line: $<%= (Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2) %></div>
               </div>
 
               <div class="qty-col">
@@ -336,10 +520,18 @@
 
       <!-- RIGHT COLUMN: summary -->
       <aside class="card-surface summary-card">
-        <h5 style="margin:0 0 10px; font-weight:600;">Order Summary</h5>
+        <div class="summary-title">
+        <h5 style="margin:0; font-weight:700;">Order Summary</h5>
+          <span class="summary-pill"><%= cart.length %> Items</span>
+        </div>
+        <div style="margin:8px 0 10px; color:#6f5f4a; font-size:13px;">Almost there - check your order details.</div>
         <div class="summary-row small">
           <span>Items (<%= cart.length %>)</span>
           <span>$<%= Number(subtotal).toFixed(2) %></span>
+        </div>
+        <div class="summary-row small">
+          <span>Selected for checkout</span>
+          <span id="selectedCountText">0 item(s)</span>
         </div>
         <div class="summary-row small">
           <span>Cutlery</span>
@@ -364,13 +556,22 @@
           </form>
         </div>
         <hr style="border-color:rgba(0,0,0,0.08); margin:12px 0;">
+        <% if (Number(redeem || 0) > 0) { %>
+          <div class="summary-row small">
+            <span>Points discount</span>
+            <span>- $<%= Number(redeem).toFixed(2) %></span>
+          </div>
+        <% } %>
         <div class="summary-row" style="font-size:18px;">
           <span>Total</span>
           <span>$<%= Number(totalAfterRedeem || subtotal).toFixed(2) %></span>
         </div>
         <div class="btn-area" style="padding-top:18px;">
-          <a href="/checkout" class="btn-checkout" style="width:100%;">Checkout</a>
+          <button type="button" class="btn-checkout" style="width:100%;" id="checkoutSelectedBtn">Checkout Selected</button>
         </div>
+        <p class="summary-note">
+          Secure checkout available via PayPal, NETS, PayLater, and card payment.
+        </p>
       </aside>
 
     <% } %>
@@ -535,6 +736,82 @@
           else alert("Failed to clear cart");
         })
         .catch(() => alert("Error clearing cart"));
+    });
+  }
+
+  // Quick remove buttons on each row
+  document.querySelectorAll(".quick-remove").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const name = btn.getAttribute("data-name");
+      fetch("/cart/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok) location.reload();
+        else alert(data.error || "Failed to remove item");
+      })
+      .catch(() => alert("Error removing item"));
+    });
+  });
+
+  const selectAllCartItems = document.getElementById("selectAllCartItems");
+  const itemSelectBoxes = Array.from(document.querySelectorAll(".item-select"));
+  const selectedCountText = document.getElementById("selectedCountText");
+  const checkoutSelectedBtn = document.getElementById("checkoutSelectedBtn");
+
+  function getSelectedItemNames() {
+    return itemSelectBoxes
+      .filter(cb => cb.checked)
+      .map(cb => cb.getAttribute("data-name"))
+      .filter(Boolean);
+  }
+
+  function syncSelectionUI() {
+    const selectedNames = getSelectedItemNames();
+    const total = itemSelectBoxes.length;
+    const selected = selectedNames.length;
+    if (selectedCountText) selectedCountText.textContent = `${selected} item(s)`;
+    if (selectAllCartItems) {
+      selectAllCartItems.checked = total > 0 && selected === total;
+      selectAllCartItems.indeterminate = selected > 0 && selected < total;
+    }
+  }
+
+  if (selectAllCartItems) {
+    selectAllCartItems.addEventListener("change", () => {
+      itemSelectBoxes.forEach(cb => { cb.checked = selectAllCartItems.checked; });
+      syncSelectionUI();
+    });
+  }
+
+  itemSelectBoxes.forEach(cb => cb.addEventListener("change", syncSelectionUI));
+  syncSelectionUI();
+
+  if (checkoutSelectedBtn) {
+    checkoutSelectedBtn.addEventListener("click", () => {
+      const names = getSelectedItemNames();
+      if (!names.length) {
+        alert("Please select at least one item to checkout.");
+        return;
+      }
+
+      fetch("/cart/selection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ names })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.ok) {
+          alert(data.error || "Failed to save selection");
+          return;
+        }
+        window.location.href = "/checkout";
+      })
+      .catch(() => alert("Error saving selected items"));
     });
   }
 </script>

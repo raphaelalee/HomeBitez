@@ -249,6 +249,26 @@ function enrichProductsForDisplay(products) {
     return (products || []).map(enrichProductForDisplay);
 }
 
+function getSelectedCartItemsFromSession(session) {
+    const cart = session?.cart || [];
+    const selected = Array.isArray(session?.checkoutSelection) ? session.checkoutSelection : [];
+    if (!selected.length) return cart;
+    const set = new Set(selected.map(String));
+    return cart.filter(i => set.has(i.name));
+}
+
+function getRedeemForSubtotalFromSession(session, subtotal) {
+    const redeemAmount = Math.min(Number(subtotal || 0), Number(session?.cartRedeem?.amount || 0));
+    const redeemPoints = Math.min(
+        Number(session?.cartRedeem?.points || 0),
+        Math.floor(redeemAmount / 0.1)
+    );
+    return {
+        redeemAmount: Number(redeemAmount.toFixed(2)),
+        redeemPoints: Number(redeemPoints || 0)
+    };
+}
+
 
 // Public routes allowed without login
 const publicPaths = [
@@ -1647,8 +1667,8 @@ app.post('/nets/complete', async (req, res) => {
                 try {
                     const UsersModel = require("./Models/UsersModel");
                     // Deduct redeemed points first if any
-                    if (req.session.cartRedeem?.points) {
-                        const { balance, entry } = await UsersModel.addPoints(req.session.user.id, -Number(req.session.cartRedeem.points), `Redeem NETS ${pending.txnRetrievalRef || ''}`.trim());
+                    if (pending.redeemPoints) {
+                        const { balance, entry } = await UsersModel.addPoints(req.session.user.id, -Number(pending.redeemPoints), `Redeem NETS ${pending.txnRetrievalRef || ''}`.trim());
                         req.session.user.points = balance;
                         req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);
                     }
@@ -1679,7 +1699,7 @@ app.post('/nets/complete', async (req, res) => {
 
 app.post('/stripe/create-checkout-session', async (req, res) => {
   try {
-    const cart = req.session.cart || [];
+    const cart = getSelectedCartItemsFromSession(req.session);
     if (!cart.length) {
       return res.status(400).json({ error: 'Cart is empty' });
     }
@@ -1692,8 +1712,7 @@ app.post('/stripe/create-checkout-session', async (req, res) => {
 
     const subtotal = items.reduce((s, it) => s + (it.price * it.qty), 0);
     const deliveryFee = Number(req.body.deliveryFee || 0);
-    const redeem = Math.min(subtotal, Number(req.session.cartRedeem?.amount || 0));
-    const redeemPoints = Number(req.session.cartRedeem?.points || 0);
+    const { redeemAmount: redeem, redeemPoints } = getRedeemForSubtotalFromSession(req.session, subtotal);
     const total = Number((subtotal + deliveryFee - redeem).toFixed(2));
 
     req.session.stripePending = {

@@ -13,12 +13,22 @@ async function hydrateCartFromDb(req) {
     }));
 }
 
+function sanitizeSelection(selection, cart) {
+    const selected = Array.isArray(selection)
+        ? selection
+        : (selection ? [selection] : []);
+    const cartNames = new Set((cart || []).map(i => i.name));
+    return [...new Set(selected.map(String))].filter(name => cartNames.has(name));
+}
+
 module.exports = {
 
     // GET /cart
     async viewCart(req, res) {
         await hydrateCartFromDb(req);
         const cart = req.session.cart || [];
+        const checkoutSelection = sanitizeSelection(req.session.checkoutSelection, cart);
+        req.session.checkoutSelection = checkoutSelection;
 
         let subtotal = 0;
         cart.forEach(item => {
@@ -48,7 +58,8 @@ module.exports = {
             totalAfterRedeem: Number((subtotal - redeem).toFixed(2)),
             prefs,
             availablePoints,
-            appliedPoints: Number(req.session.cartRedeem?.points || 0)
+            appliedPoints: Number(req.session.cartRedeem?.points || 0),
+            checkoutSelection
         });
     },
 
@@ -172,6 +183,7 @@ module.exports = {
         if (!req.session.cart) req.session.cart = [];
 
         req.session.cart = req.session.cart.filter(item => item.name !== name);
+        req.session.checkoutSelection = sanitizeSelection(req.session.checkoutSelection, req.session.cart);
         if (req.session.user) {
             await CartModel.removeItem(req.session.user.id, name);
         }
@@ -204,9 +216,24 @@ module.exports = {
         req.session.cart = [];
         req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", name: "", address: "", contact: "", notes: "" };
         req.session.cartRedeem = null;
+        req.session.checkoutSelection = null;
         if (req.session.user) {
             await CartModel.clearCart(req.session.user.id);
         }
         return res.json({ ok: true });
+    },
+
+    // POST /cart/selection
+    async saveCheckoutSelection(req, res) {
+        await hydrateCartFromDb(req);
+        const cart = req.session.cart || [];
+        const selection = sanitizeSelection(req.body.names, cart);
+
+        if (!selection.length) {
+            return res.status(400).json({ ok: false, error: "Please select at least one item." });
+        }
+
+        req.session.checkoutSelection = selection;
+        return res.json({ ok: true, count: selection.length });
     }
 };
