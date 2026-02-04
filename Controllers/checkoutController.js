@@ -127,7 +127,7 @@ async function removePurchasedItemsFromCart(req, purchasedItems) {
 /* =========================
    GET /checkout
 ========================= */
-exports.renderCheckout = (req, res) => {
+exports.renderCheckout = async (req, res) => {
   const cart = getSelectedCartItems(req.session);
   const prefs = req.session.cartPrefs || {
     cutlery: false,
@@ -157,6 +157,19 @@ exports.renderCheckout = (req, res) => {
   const initialDeliveryFee = initialMode === "delivery" ? deliveryFee : 0;
   const { redeemAmount: redeem } = getRedeemForSubtotal(req.session, subtotal);
   const total = Number((subtotal + initialDeliveryFee - redeem).toFixed(2));
+  let walletBalance = 0;
+
+  if (req.session?.user?.id) {
+    try {
+      const [rows] = await db.query(
+        "SELECT wallet_balance FROM users WHERE id = ? LIMIT 1",
+        [req.session.user.id]
+      );
+      walletBalance = Number(rows?.[0]?.wallet_balance || 0);
+    } catch (err) {
+      console.error("Failed to load wallet balance for checkout:", err);
+    }
+  }
 
   res.render("checkout", {
     brand: "HomeBitez",
@@ -167,6 +180,7 @@ exports.renderCheckout = (req, res) => {
     initialDeliveryFee,
     prefs,
     redeem,
+    walletBalance,
     user: req.session.user || null,
     paypalClientId: process.env.PAYPAL_CLIENT_ID,
     paypalCurrency: process.env.PAYPAL_CURRENCY || "SGD",

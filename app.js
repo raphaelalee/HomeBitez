@@ -1895,6 +1895,10 @@ app.get('/digitalwallet', async (req, res) => {
   if (!req.session.user) return res.redirect('/login');
 
   const redirect = req.query.redirect || '/checkout';
+  const requestedTopupRaw = Number(req.query.topup);
+  const requestedTopup = Number.isFinite(requestedTopupRaw) && requestedTopupRaw > 0
+    ? Number(requestedTopupRaw.toFixed(2))
+    : 0;
   await ensureWalletColumn();
   await ensureWalletTransactionsTable();
   const [rows] = await db.query(
@@ -1929,7 +1933,15 @@ app.get('/digitalwallet', async (req, res) => {
     console.error("wallet transactions load error:", err);
   }
 
-  res.render('digitalwallet', { balance, redirect, wallet2faVerified, transactions, dailyLimit, dailySpent });
+  res.render('digitalwallet', {
+    balance,
+    redirect,
+    wallet2faVerified,
+    transactions,
+    dailyLimit,
+    dailySpent,
+    requestedTopup
+  });
 });
 
 // POST /wallet/2fa/send

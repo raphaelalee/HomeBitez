@@ -300,6 +300,11 @@
         <div class="wallet-hero">
           <div class="wallet-title">homebitez wallet</div>
           <div class="wallet-balance">$<%= Number(balance || 0).toFixed(2) %></div>
+          <% if (Number(requestedTopup || 0) > 0) { %>
+            <div class="notice" style="margin-top:8px; color:#fff;">
+              Checkout requires an additional <strong>$<%= Number(requestedTopup).toFixed(2) %></strong>.
+            </div>
+          <% } %>
         </div>
 
         <div class="wallet-actions">
@@ -398,6 +403,7 @@
     const payBlock = document.getElementById('payBlock');
     const toast = document.getElementById('toast');
     const codeChip = document.getElementById('codeChip');
+    const requestedTopup = Number('<%= Number(requestedTopup || 0).toFixed(2) %>');
 
     let wallet2faVerified = <%= wallet2faVerified ? 'true' : 'false' %>;
 
@@ -497,6 +503,11 @@
       toast.textContent = message;
       toast.style.display = 'block';
       setTimeout(() => { toast.style.display = 'none'; }, 2000);
+    }
+
+    if (requestedTopup > 0) {
+      topupAmount.value = requestedTopup.toFixed(2);
+      openModal();
     }
   </script>
 

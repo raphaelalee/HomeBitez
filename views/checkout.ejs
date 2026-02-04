@@ -208,6 +208,105 @@
       background: #fff7e3;
       box-shadow: 0 0 0 2px rgba(221, 155, 0, 0.15);
     }
+
+    .wallet-balance-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #6b4a00;
+      background: #fff6db;
+      border: 1px solid #f3dfaa;
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+
+    .wallet-feedback {
+      margin-top: 10px;
+      border-radius: 10px;
+      padding: 10px 12px;
+      border: 1px solid #e9dcc1;
+      background: #fff9ef;
+      font-size: 13px;
+      display: none;
+    }
+
+    .wallet-feedback.success {
+      border-color: #b8dfc1;
+      background: #ecf8ef;
+      color: #145b23;
+    }
+
+    .wallet-feedback.error {
+      border-color: #f0c2c2;
+      background: #fff1f1;
+      color: #7f1f1f;
+    }
+
+    .wallet-feedback.warn {
+      border-color: #f1d9a3;
+      background: #fff8e7;
+      color: #7a5a00;
+    }
+
+    .wallet-shortage-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 18, 14, 0.48);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 9999;
+    }
+
+    .wallet-shortage-modal {
+      width: 100%;
+      max-width: 420px;
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid #ecd9b3;
+      box-shadow: 0 20px 42px rgba(0, 0, 0, 0.28);
+      padding: 18px;
+    }
+
+    .wallet-shortage-title {
+      margin: 0;
+      font-size: 20px;
+      font-family: 'Sniglet', system-ui, sans-serif;
+      color: #2a241e;
+    }
+
+    .wallet-shortage-sub {
+      margin: 10px 0 14px;
+      color: #5f5547;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .wallet-shortage-chip {
+      display: inline-block;
+      background: #fff3db;
+      border: 1px solid #f3dfaa;
+      color: #6b4a00;
+      font-weight: 800;
+      border-radius: 999px;
+      padding: 6px 12px;
+      margin-bottom: 12px;
+    }
+
+    .wallet-shortage-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .wallet-shortage-actions .hb-btn {
+      margin-top: 0;
+      width: 100%;
+      text-align: center;
+    }
   </style>
 </head>
 
@@ -497,46 +596,16 @@
                   Use your wallet to pay instantly.
                 </div>
 
-                <button class="hb-btn hb-btn-outline w-100 mt-2" type="button" onclick="useWallet()">
+                <div class="wallet-balance-note">
+                  <i class="bi bi-cash-coin"></i>
+                  Balance: $<span id="walletBalanceLabel"><%= Number(walletBalance || 0).toFixed(2) %></span>
+                </div>
+
+                <button class="hb-btn hb-btn-outline w-100 mt-2" id="walletPayBtn" type="button">
                   Use Wallet
                 </button>
+                <div class="wallet-feedback" id="walletFeedback"></div>
               </div>
-
-              <script>
-                function useWallet() {
-                  // total is passed from server
-                  const total = Number(<%= (typeof total !== "undefined" ? total.toFixed(2) : 0) %>);
-                  if (!Number.isFinite(total) || total <= 0) {
-                    alert("Invalid total amount!");
-                    return;
-                  }
-
-                  fetch('/digitalwallet/use', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ total })
-                  })
-                    .then(res => res.json())
-                    .then(data => {
-                      if (data.success) {
-                        alert(`Wallet payment successful! New balance: $${data.newBalance.toFixed(2)}`);
-                        window.location.href = '/receipt';
-                      } else if (data.needed) {
-                        // Not enough balance -> redirect to top-up
-                        alert(`Not enough funds. Please top up $${data.needed} in your HomeBitez Wallet.`);
-                        window.location.href = `/digitalwallet?redirect=/checkout`;
-                      } else if (data.error && data.error.includes('Daily wallet spend limit')) {
-                        alert(`Daily wallet transaction limit reached. Please use another payment method.`);
-                      } else {
-                        alert(data.error || "Wallet payment failed");
-                      }
-                    })
-                    .catch(err => {
-                      console.error(err);
-                      alert("An error occurred. Please try again.");
-                    });
-                }
-              </script>
 
 
               <!-- PAYLATER -->
@@ -607,6 +676,22 @@
 
     </div>
 
+    <div class="wallet-shortage-overlay" id="walletShortageOverlay">
+      <div class="wallet-shortage-modal">
+        <h3 class="wallet-shortage-title">Insufficient Wallet Balance</h3>
+        <p class="wallet-shortage-sub">
+          You do not have enough funds for this order. Top up your wallet to continue checkout.
+        </p>
+        <div class="wallet-shortage-chip">
+          Top up needed: $<span id="walletTopupNeeded">0.00</span>
+        </div>
+        <div class="wallet-shortage-actions">
+          <a id="walletTopupLink" class="hb-btn" href="/digitalwallet?redirect=/checkout">Top Up Wallet</a>
+          <button id="walletShortageCloseBtn" class="hb-btn hb-btn-outline" type="button">Choose Another</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       // Fulfillment controls
       const modePickup = document.getElementById("modePickup");
@@ -625,6 +710,13 @@
       const summaryMode = document.getElementById("summaryMode");
       const summaryPickup = document.getElementById("summaryPickup");
       const netsCartTotal = document.getElementById("netsCartTotal");
+      const walletPayBtn = document.getElementById("walletPayBtn");
+      const walletBalanceLabel = document.getElementById("walletBalanceLabel");
+      const walletFeedback = document.getElementById("walletFeedback");
+      const walletShortageOverlay = document.getElementById("walletShortageOverlay");
+      const walletTopupNeeded = document.getElementById("walletTopupNeeded");
+      const walletTopupLink = document.getElementById("walletTopupLink");
+      const walletShortageCloseBtn = document.getElementById("walletShortageCloseBtn");
 
       const subtotalValue = Number(<%= subtotal.toFixed(2) %>);
       const baseDeliveryFeeNum = Number(<%= defaultDeliveryFee.toFixed(2) %>);
@@ -654,6 +746,83 @@
 
       function computeTotal() {
         return Number((subtotalValue + currentDeliveryFeeNum - redeemAmount).toFixed(2));
+      }
+
+      function hideWalletShortage() {
+        if (walletShortageOverlay) walletShortageOverlay.style.display = "none";
+      }
+
+      function showWalletShortage(neededAmount) {
+        const needed = Number(neededAmount || 0);
+        if (walletTopupNeeded) walletTopupNeeded.textContent = needed.toFixed(2);
+        if (walletTopupLink) {
+          walletTopupLink.href = `/digitalwallet?redirect=/checkout&topup=${encodeURIComponent(needed.toFixed(2))}`;
+        }
+        if (walletShortageOverlay) walletShortageOverlay.style.display = "flex";
+      }
+
+      function showWalletFeedback(type, message) {
+        if (!walletFeedback) return;
+        walletFeedback.className = `wallet-feedback ${type || ""}`.trim();
+        walletFeedback.textContent = message;
+        walletFeedback.style.display = message ? "block" : "none";
+      }
+
+      async function useWallet() {
+        if (typeof window.validateFulfillment === "function" && !window.validateFulfillment()) {
+          return;
+        }
+
+        const total = computeTotal();
+        if (!Number.isFinite(total) || total <= 0) {
+          showWalletFeedback("error", "Invalid total amount. Please refresh and try again.");
+          return;
+        }
+
+        if (walletPayBtn) {
+          walletPayBtn.disabled = true;
+          walletPayBtn.textContent = "Processing...";
+        }
+        showWalletFeedback("", "");
+
+        try {
+          const res = await fetch("/digitalwallet/use", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ total })
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            const newBalance = Number(data.newBalance || 0);
+            if (walletBalanceLabel) walletBalanceLabel.textContent = newBalance.toFixed(2);
+            showWalletFeedback("success", `Payment successful. New balance: $${newBalance.toFixed(2)}. Redirecting...`);
+            setTimeout(() => { window.location.href = "/receipt"; }, 800);
+            return;
+          }
+
+          if (data.needed) {
+            const neededNum = Number(data.needed || 0);
+            showWalletFeedback("warn", `You need $${neededNum.toFixed(2)} more in your wallet.`);
+            showWalletShortage(neededNum);
+            return;
+          }
+
+          if (data.error && data.error.includes("Daily wallet spend limit")) {
+            showWalletFeedback("warn", "Daily wallet spend limit reached. Please use another payment method.");
+            return;
+          }
+
+          showWalletFeedback("error", data.error || "Wallet payment failed.");
+        } catch (err) {
+          console.error(err);
+          showWalletFeedback("error", "An error occurred while paying with wallet. Please try again.");
+        } finally {
+          if (walletPayBtn) {
+            walletPayBtn.disabled = false;
+            walletPayBtn.textContent = "Use Wallet";
+          }
+        }
       }
 
       function validateFulfillment(showAlerts = true) {
@@ -750,6 +919,14 @@
       if (paylaterForm) {
         paylaterForm.addEventListener("submit", (e) => {
           if (!validateFulfillment()) e.preventDefault();
+        });
+      }
+
+      if (walletPayBtn) walletPayBtn.addEventListener("click", useWallet);
+      if (walletShortageCloseBtn) walletShortageCloseBtn.addEventListener("click", hideWalletShortage);
+      if (walletShortageOverlay) {
+        walletShortageOverlay.addEventListener("click", (e) => {
+          if (e.target === walletShortageOverlay) hideWalletShortage();
         });
       }
 
