@@ -221,27 +221,16 @@
 
     <div class="hb-wrap">
 
-<<<<<<< HEAD
-      <% if (!items || items.length===0) { %>
-=======
       <% if (!items || items.length === 0) { %>
->>>>>>> bbdea7c7f9f3a0d9ac0d80fcc692638419ddc6a3
         <div class="hb-card">
           <div class="alert alert-warning mb-0">Your cart is empty.</div>
           <a class="hb-btn hb-btn-outline mt-3" href="/menu">
             <i class="bi bi-arrow-left"></i> Back to Menu
           </a>
         </div>
-<<<<<<< HEAD
-        <% } else { %>
+      <% } else { %>
 
-          <div class="hb-grid">
-=======
-
-  <% } else { %>
-
-  <div class="hb-grid">
->>>>>>> bbdea7c7f9f3a0d9ac0d80fcc692638419ddc6a3
+      <div class="hb-grid">
 
             <!-- LEFT -->
             <div class="d-flex flex-column gap-4">
@@ -515,18 +504,12 @@
 
               <script>
                 function useWallet() {
-<<<<<<< HEAD
-                  // Make sure totalAmount is defined; default to 0
-                  const total = <%= typeof totalAmount !== 'undefined' ? totalAmount : 0 %>;
-
-                  if (total <= 0) {
+                  // total is passed from server
+                  const total = Number(<%= (typeof total !== "undefined" ? total.toFixed(2) : 0) %>);
+                  if (!Number.isFinite(total) || total <= 0) {
                     alert("Invalid total amount!");
                     return;
                   }
-=======
-                  // total is passed from server: e.g., res.render("checkout", { total })
-                  const total = Number(<%= (typeof total !== "undefined" ? total.toFixed(2) : 0) %>);
->>>>>>> bbdea7c7f9f3a0d9ac0d80fcc692638419ddc6a3
 
                   fetch('/digitalwallet/use', {
                     method: 'POST',
@@ -539,11 +522,7 @@
                         alert(`Wallet payment successful! New balance: $${data.newBalance.toFixed(2)}`);
                         window.location.href = '/receipt';
                       } else if (data.needed) {
-<<<<<<< HEAD
-                        // Not enough balance → redirect to top-up page
-=======
-        // Not enough balance -> redirect to top-up
->>>>>>> bbdea7c7f9f3a0d9ac0d80fcc692638419ddc6a3
+                        // Not enough balance -> redirect to top-up
                         alert(`Insufficient balance. Please top up $${data.needed}`);
                         window.location.href = `/digitalwallet?redirect=/checkout`;
                       } else {
@@ -558,10 +537,6 @@
               </script>
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> bbdea7c7f9f3a0d9ac0d80fcc692638419ddc6a3
               <!-- PAYLATER -->
               <div class="hb-card">
                 <div class="hb-card-title">
@@ -813,12 +788,6 @@
       }
     </script>
 
-<<<<<<< HEAD
-
 </body>
 
-=======
-</body>
-
->>>>>>> bbdea7c7f9f3a0d9ac0d80fcc692638419ddc6a3
 </html>
