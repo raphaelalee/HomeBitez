@@ -41,6 +41,35 @@ function addOrderMeta(order) {
   return { ...order, ...payment, fulfillmentStatus, completedAt, deliveryFee, subtotal, total, fulfillmentMode };
 }
 
+function normalizeDiscountPercent(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(90, Number(n.toFixed(2))));
+}
+
+function parseTagList(selectedValues, customValues) {
+  const selected = Array.isArray(selectedValues)
+    ? selectedValues
+    : (selectedValues ? [selectedValues] : []);
+
+  const custom = String(customValues || "")
+    .split(",")
+    .map(v => v.trim())
+    .filter(Boolean);
+
+  const merged = [...selected, ...custom];
+  const uniqueByLower = new Map();
+
+  merged.forEach(tag => {
+    const clean = String(tag || "").trim();
+    if (!clean) return;
+    const key = clean.toLowerCase();
+    if (!uniqueByLower.has(key)) uniqueByLower.set(key, clean);
+  });
+
+  return Array.from(uniqueByLower.values()).join(", ");
+}
+
 // ------------------------------------
 // DASHBOARD
 // ------------------------------------
@@ -129,15 +158,31 @@ exports.addProduct = async (req, res) => {
         if (req.file) imageFilename = req.file.filename;
 
         const productName = (req.body.productName || "").trim();
+        const description = (req.body.description || "").trim();
         const category = (req.body.category || "").trim();
         const price = parseFloat(req.body.price);
         const quantity = Math.max(0, parseInt(req.body.quantity, 10) || 0);
+        const isBestSeller = req.body.isBestSeller === "1";
+        const discountPercent = normalizeDiscountPercent(req.body.discountPercent);
+        const dietaryTags = parseTagList(req.body.dietaryTags, req.body.dietaryTagsCustom);
+        const allergenTags = parseTagList(req.body.allergenTags, req.body.allergenTagsCustom);
 
     if (!productName) return res.redirect("/bizowner/add");
     if (!category) return res.redirect("/bizowner/add");
     if (Number.isNaN(price) || price < 0) return res.redirect("/bizowner/add");
 
-    const product = { productName, category, price, image: imageFilename, quantity };
+    const product = {
+      productName,
+      description,
+      category,
+      price,
+      image: imageFilename,
+      quantity,
+      isBestSeller,
+      discountPercent,
+      dietaryTags,
+      allergenTags
+    };
 
     await ProductModel.create(product);
     req.flash("success", "Product added successfully.");
@@ -184,14 +229,29 @@ exports.updateProduct = async (req, res) => {
     if (req.file) imageFilename = req.file.filename;
 
     const productName = (req.body.productName || "").trim();
+    const description = (req.body.description || "").trim();
     const category = (req.body.category || "").trim();
     const price = parseFloat(req.body.price);
+    const isBestSeller = req.body.isBestSeller === "1";
+    const discountPercent = normalizeDiscountPercent(req.body.discountPercent);
+    const dietaryTags = parseTagList(req.body.dietaryTags, req.body.dietaryTagsCustom);
+    const allergenTags = parseTagList(req.body.allergenTags, req.body.allergenTagsCustom);
 
     if (!productName) return res.redirect(`/bizowner/edit/${id}`);
     if (!category) return res.redirect(`/bizowner/edit/${id}`);
     if (Number.isNaN(price) || price < 0) return res.redirect(`/bizowner/edit/${id}`);
 
-    const product = { productName, category, price, image: imageFilename };
+    const product = {
+      productName,
+      description,
+      category,
+      price,
+      image: imageFilename,
+      isBestSeller,
+      discountPercent,
+      dietaryTags,
+      allergenTags
+    };
 
     await ProductModel.update(id, product);
     req.flash("success", "Product updated successfully.");

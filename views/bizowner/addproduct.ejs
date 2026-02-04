@@ -58,6 +58,7 @@
         input[type="text"],
         input[type="number"],
         input[type="file"],
+        textarea,
         select {
             width: 100%;
             padding: 12px;
@@ -66,6 +67,57 @@
             border: 1px solid #ccc;
             font-size: 14px;
             background: #fafafa;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 96px;
+            line-height: 1.4;
+        }
+
+        .check-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .check-line input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+            transform: scale(1.05);
+        }
+
+        .tag-grid {
+            margin-top: 8px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .tag-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border: 1px solid #e8e0d4;
+            border-radius: 10px;
+            background: #fff;
+            font-size: 13px;
+            color: #4f4f4f;
+        }
+
+        .tag-item input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .hint {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #777;
         }
 
         select {
@@ -157,6 +209,9 @@
             <label>Product Name</label>
             <input type="text" name="productName" required>
 
+            <label>Description</label>
+            <textarea name="description" placeholder="Describe the dish, key ingredients, or flavor profile..." required></textarea>
+
             <label>Category</label>
             <div class="select-wrapper">
                 <select name="category" required>
@@ -174,6 +229,38 @@
 
             <label>Quantity</label>
             <input type="number" min="0" step="1" name="quantity" value="0" required>
+
+            <label>Best Seller</label>
+            <label class="check-line">
+                <input type="checkbox" name="isBestSeller" value="1">
+                Mark this product as a Best Seller
+            </label>
+
+            <label>Discount (%)</label>
+            <input type="number" min="0" max="90" step="1" name="discountPercent" value="0">
+            <div class="hint">Set 0 if no discount.</div>
+
+            <label>Dietary / Food Tags</label>
+            <div class="tag-grid">
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Spicy"> Spicy</label>
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Vegetarian"> Vegetarian</label>
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Vegan"> Vegan</label>
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Contains Beef"> Contains Beef</label>
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Contains Chicken"> Contains Chicken</label>
+                <label class="tag-item"><input type="checkbox" name="dietaryTags" value="Contains Seafood"> Contains Seafood</label>
+            </div>
+            <input type="text" name="dietaryTagsCustom" placeholder="Custom dietary tags (comma separated)">
+
+            <label>Allergen Tags</label>
+            <div class="tag-grid">
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Gluten"> Gluten</label>
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Dairy"> Dairy</label>
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Egg"> Egg</label>
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Nuts"> Nuts</label>
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Shellfish"> Shellfish</label>
+                <label class="tag-item"><input type="checkbox" name="allergenTags" value="Soy"> Soy</label>
+            </div>
+            <input type="text" name="allergenTagsCustom" placeholder="Custom allergen tags (comma separated)">
 
             <label>Product Image</label>
             <input type="file" name="imageFile" accept="image/*" onchange="showPreview(event)" required>

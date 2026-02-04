@@ -461,8 +461,16 @@ function showToast(message, isError = false) {
     alert(message);
 }
 
+const isLoggedIn = <%= user ? 'true' : 'false' %>;
+
 document.querySelectorAll('.add-to-cart').forEach(btn => {
     btn.addEventListener('click', () => {
+        if (!isLoggedIn) {
+            showToast("Please login or sign up to add items to cart.", true);
+            window.location.href = "/login";
+            return;
+        }
+
         fetch("/cart/add", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

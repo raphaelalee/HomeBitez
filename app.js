@@ -212,76 +212,36 @@ function issueTwoFactor(req) {
     return code;
 }
 
-const PRODUCT_DISPLAY_OVERRIDES = {
-    "curry": {
-        bestSeller: true,
-        discountPercent: 20,
-        dietaryTags: ["Spicy"],
-        allergenTags: ["Contains Beef"]
-    },
-    "shrimp fried rice": {
-        bestSeller: true,
-        dietaryTags: ["Spicy"],
-        allergenTags: ["Shellfish"]
-    },
-    "nasi lemak": {
-        bestSeller: true,
-        dietaryTags: ["Spicy"],
-        allergenTags: ["Egg"]
-    },
-    "papaya salad": {
-        dietaryTags: ["Spicy", "Vegetarian"],
-        allergenTags: []
-    },
-    "pandan chiffon cake": {
-        dietaryTags: ["Vegetarian"],
-        allergenTags: ["Egg", "Dairy", "Gluten"]
-    },
-    "pho": {
-        dietaryTags: ["Contains Beef"],
-        allergenTags: ["Gluten"]
-    },
-    "bagel": {
-        dietaryTags: ["Vegetarian"],
-        allergenTags: ["Gluten"]
-    },
-    "strawberry matcha": {
-        dietaryTags: ["Vegetarian"],
-        allergenTags: ["Dairy"]
-    }
-};
-
-function normalizeProductKey(name) {
-    return String(name || "").trim().toLowerCase();
-}
-
-function getProductOverride(productName) {
-    const key = normalizeProductKey(productName);
-    if (PRODUCT_DISPLAY_OVERRIDES[key]) return PRODUCT_DISPLAY_OVERRIDES[key];
-    if (key.includes("curry")) return PRODUCT_DISPLAY_OVERRIDES["curry"];
-    return {};
-}
-
 function toUniqueTags(tags) {
     return [...new Set((tags || []).map(t => String(t || "").trim()).filter(Boolean))];
 }
 
+function parseTags(value) {
+    if (Array.isArray(value)) return toUniqueTags(value);
+    return toUniqueTags(String(value || "").split(","));
+}
+
+function clampDiscount(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(0, Math.min(90, Number(n.toFixed(2))));
+}
+
 function enrichProductForDisplay(product) {
-    const override = getProductOverride(product.productName);
     const basePrice = Number(product.price || 0);
-    const discountPercent = Number(override.discountPercent || 0);
+    const discountPercent = clampDiscount(product.discountPercent);
     const finalPrice = discountPercent > 0
         ? Number((basePrice * (1 - discountPercent / 100)).toFixed(2))
         : Number(basePrice.toFixed(2));
 
     return {
         ...product,
-        isBestSeller: Boolean(override.bestSeller),
+        isBestSeller: Boolean(Number(product.isBestSeller || 0)),
         discountPercent,
         originalPrice: Number(basePrice.toFixed(2)),
         finalPrice,
-        dietaryTags: toUniqueTags(override.dietaryTags || []),
-        allergenTags: toUniqueTags(override.allergenTags || [])
+        dietaryTags: parseTags(product.dietaryTags),
+        allergenTags: parseTags(product.allergenTags)
     };
 }
 

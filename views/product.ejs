@@ -396,6 +396,7 @@
       alert(message);
     }
 
+    const isLoggedIn = <%= user ? 'true' : 'false' %>;
     const qtyInput = document.getElementById("qtyInput");
     const minusBtn = document.getElementById("qtyMinus");
     const plusBtn = document.getElementById("qtyPlus");
@@ -431,6 +432,12 @@
 
     if (addBtn) {
       addBtn.addEventListener("click", () => {
+        if (!isLoggedIn) {
+          showToast("Please login or sign up to add items to cart.", true);
+          window.location.href = "/login";
+          return;
+        }
+
         const qty = clampQty();
         fetch("/cart/add", {
           method: "POST",

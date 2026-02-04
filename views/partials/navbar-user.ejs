@@ -127,20 +127,28 @@
 
   <!-- Icons -->
   <div class="hb-icons">
-    <a href="/cart" title="Cart">
+    <a href="<%= user ? '/cart' : '/login' %>" title="<%= user ? 'Cart' : 'Login to view cart' %>">
       <i class="bi bi-cart3"></i>
     </a>
-
-    <a href="/user/profile" title="Profile" class="profile-avatar-navbar">
-      <img
-        id="navbar-avatar"
-        src="<%= user?.avatar || '/images/default-avatar.png' %>"
-        alt="Profile"
-      >
-    </a>
-    <a href="/logout" title="Logout">
-      <i class="bi bi-box-arrow-right"></i>
-    </a>
+    <% if (user) { %>
+      <a href="/user/profile" title="Profile" class="profile-avatar-navbar">
+        <img
+          id="navbar-avatar"
+          src="<%= user?.avatar || '/images/default-avatar.png' %>"
+          alt="Profile"
+        >
+      </a>
+      <a href="/logout" title="Logout">
+        <i class="bi bi-box-arrow-right"></i>
+      </a>
+    <% } else { %>
+      <a href="/login" title="Login">
+        <i class="bi bi-person-circle"></i>
+      </a>
+      <a href="/register" title="Sign Up">
+        <i class="bi bi-person-plus"></i>
+      </a>
+    <% } %>
   </div>
 </div>
 
