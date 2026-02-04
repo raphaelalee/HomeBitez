@@ -212,6 +212,83 @@ function issueTwoFactor(req) {
     return code;
 }
 
+const PRODUCT_DISPLAY_OVERRIDES = {
+    "curry": {
+        bestSeller: true,
+        discountPercent: 20,
+        dietaryTags: ["Spicy"],
+        allergenTags: ["Contains Beef"]
+    },
+    "shrimp fried rice": {
+        bestSeller: true,
+        dietaryTags: ["Spicy"],
+        allergenTags: ["Shellfish"]
+    },
+    "nasi lemak": {
+        bestSeller: true,
+        dietaryTags: ["Spicy"],
+        allergenTags: ["Egg"]
+    },
+    "papaya salad": {
+        dietaryTags: ["Spicy", "Vegetarian"],
+        allergenTags: []
+    },
+    "pandan chiffon cake": {
+        dietaryTags: ["Vegetarian"],
+        allergenTags: ["Egg", "Dairy", "Gluten"]
+    },
+    "pho": {
+        dietaryTags: ["Contains Beef"],
+        allergenTags: ["Gluten"]
+    },
+    "bagel": {
+        dietaryTags: ["Vegetarian"],
+        allergenTags: ["Gluten"]
+    },
+    "strawberry matcha": {
+        dietaryTags: ["Vegetarian"],
+        allergenTags: ["Dairy"]
+    }
+};
+
+function normalizeProductKey(name) {
+    return String(name || "").trim().toLowerCase();
+}
+
+function getProductOverride(productName) {
+    const key = normalizeProductKey(productName);
+    if (PRODUCT_DISPLAY_OVERRIDES[key]) return PRODUCT_DISPLAY_OVERRIDES[key];
+    if (key.includes("curry")) return PRODUCT_DISPLAY_OVERRIDES["curry"];
+    return {};
+}
+
+function toUniqueTags(tags) {
+    return [...new Set((tags || []).map(t => String(t || "").trim()).filter(Boolean))];
+}
+
+function enrichProductForDisplay(product) {
+    const override = getProductOverride(product.productName);
+    const basePrice = Number(product.price || 0);
+    const discountPercent = Number(override.discountPercent || 0);
+    const finalPrice = discountPercent > 0
+        ? Number((basePrice * (1 - discountPercent / 100)).toFixed(2))
+        : Number(basePrice.toFixed(2));
+
+    return {
+        ...product,
+        isBestSeller: Boolean(override.bestSeller),
+        discountPercent,
+        originalPrice: Number(basePrice.toFixed(2)),
+        finalPrice,
+        dietaryTags: toUniqueTags(override.dietaryTags || []),
+        allergenTags: toUniqueTags(override.allergenTags || [])
+    };
+}
+
+function enrichProductsForDisplay(products) {
+    return (products || []).map(enrichProductForDisplay);
+}
+
 
 // Public routes allowed without login
 const publicPaths = [
@@ -496,7 +573,7 @@ app.post('/2fa/email/resend', (req, res) => {
 app.get('/menu', async (req, res) => {
     try {
         const [rows] = await ProductModel.getAll();
-        const products = rows || [];
+        const products = enrichProductsForDisplay(rows || []);
 
         res.render('menu', {
             user: req.session.user || null,
@@ -505,6 +582,33 @@ app.get('/menu', async (req, res) => {
     } catch (err) {
         console.error('Menu load error:', err);
         res.render('menu', { user: req.session.user || null, products: [] });
+    }
+});
+
+app.get('/menu/product/:id', async (req, res) => {
+    const productId = Number(req.params.id);
+    if (!Number.isInteger(productId) || productId <= 0) {
+        req.flash('error', 'Invalid product.');
+        return res.redirect('/menu');
+    }
+
+    try {
+        const [rows] = await ProductModel.getById(productId);
+        const product = rows && rows[0] ? enrichProductForDisplay(rows[0]) : null;
+
+        if (!product) {
+            req.flash('error', 'Product not found.');
+            return res.redirect('/menu');
+        }
+
+        return res.render('product', {
+            user: req.session.user || null,
+            product
+        });
+    } catch (err) {
+        console.error('Product page load error:', err);
+        req.flash('error', 'Unable to load product details.');
+        return res.redirect('/menu');
     }
 });
 

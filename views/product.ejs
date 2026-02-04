@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= product.productName %> | HomeBitez</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Sniglet:wght@700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      background: #faefe5;
+      font-family: "Outfit", Arial, sans-serif;
+      color: #2d2418;
+    }
+
+    .product-wrap {
+      max-width: 1100px;
+      margin: 26px auto 40px;
+      padding: 0 18px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #7a5300;
+      font-weight: 600;
+      text-decoration: none;
+      margin-bottom: 14px;
+    }
+
+    .back-link:hover {
+      color: #c98c00;
+    }
+
+    .product-shell {
+      display: grid;
+      grid-template-columns: 1.08fr 1fr;
+      gap: 22px;
+      background: #fffdf9;
+      border: 1px solid #ecdcc5;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(24, 14, 0, 0.08);
+    }
+
+    .media-pane {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #f7ead7;
+      min-height: 380px;
+    }
+
+    .media-pane img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .category-chip {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      background: rgba(34, 26, 14, 0.78);
+      color: #fff;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+    .top-badges {
+      margin-bottom: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+    .badge-pill.best {
+      background: #fef0c7;
+      color: #8a5a00;
+      border-color: #f3ce74;
+    }
+    .badge-pill.discount {
+      background: #ffe8e8;
+      color: #a13030;
+      border-color: #f4b7b7;
+    }
+
+    .content-pane h1 {
+      margin: 0 0 8px;
+      font-family: "Sniglet", system-ui, sans-serif;
+      font-size: 34px;
+      line-height: 1.1;
+    }
+
+    .price {
+      font-size: 30px;
+      font-weight: 800;
+      color: #dd9b00;
+      margin-bottom: 12px;
+    }
+    .price-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .price-old {
+      color: #7d7264;
+      font-size: 16px;
+      text-decoration: line-through;
+      font-weight: 600;
+    }
+
+    .desc {
+      margin: 0;
+      color: #51493f;
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0 18px;
+    }
+    .tag-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 14px 0 2px;
+    }
+    .food-tag {
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+    .food-tag.diet {
+      background: #ecf8ed;
+      color: #22623a;
+      border-color: #bfe4c6;
+    }
+    .food-tag.allergen {
+      background: #fff2e8;
+      color: #8b4a1f;
+      border-color: #f2cfb5;
+    }
+
+    .meta-item {
+      border: 1px solid #efdfc7;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fff8ee;
+    }
+
+    .meta-item span {
+      display: block;
+      font-size: 12px;
+      color: #7f6f5d;
+      margin-bottom: 3px;
+    }
+
+    .meta-item strong {
+      font-size: 14px;
+      color: #2f261a;
+    }
+
+    .meta-item strong.warn {
+      color: #a43a2f;
+    }
+
+    .buy-panel {
+      margin-top: 6px;
+      border: 1px solid #efdfc7;
+      background: #fff;
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .qty-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #6c5d4e;
+      font-weight: 600;
+    }
+
+    .qty-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .qty-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid #e8d8bf;
+      background: #fff8eb;
+      color: #664700;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .qty-input {
+      width: 72px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid #e8d8bf;
+      text-align: center;
+      font-weight: 700;
+      color: #2d2418;
+    }
+
+    .add-btn {
+      width: 100%;
+      border: none;
+      border-radius: 999px;
+      background: #dd9b00;
+      color: #fff;
+      font-weight: 700;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .add-btn:hover {
+      background: #c58b00;
+    }
+
+    .add-btn:disabled {
+      background: #b8ab92;
+      cursor: not-allowed;
+    }
+
+    .note {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #796c5a;
+    }
+
+    @media (max-width: 920px) {
+      .product-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .media-pane {
+        min-height: 280px;
+      }
+
+      .content-pane h1 {
+        font-size: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar-user') %>
+
+  <%
+    const imageName = product.image || '';
+    const fallbackImage = '/images/flatlay-iron-skillet-with-meat-and-other-food.jpg';
+    const imagePath = imageName
+      ? (imageName.startsWith('/') ? imageName : `/images/${imageName}`)
+      : fallbackImage;
+    const stockQty = Number(product.quantity || 0);
+    const isOutOfStock = stockQty <= 0;
+    const maxQty = stockQty > 0 ? Math.min(stockQty, 10) : 1;
+    const safeDescription = (product.description || '').trim() || 'Freshly prepared and packed with flavor.';
+    const discountPercent = Number(product.discountPercent || 0);
+    const displayPrice = Number(product.finalPrice ?? product.price ?? 0).toFixed(2);
+    const originalPrice = Number(product.originalPrice ?? product.price ?? 0).toFixed(2);
+    const dietaryTags = Array.isArray(product.dietaryTags) ? product.dietaryTags : [];
+    const allergenTags = Array.isArray(product.allergenTags) ? product.allergenTags : [];
+  %>
+
+  <main class="product-wrap">
+    <a href="/menu" class="back-link">
+      <i class="bi bi-arrow-left"></i> Back to Menu
+    </a>
+
+    <section class="product-shell">
+      <div class="media-pane">
+        <img src="<%= imagePath %>" alt="<%= product.productName %>">
+        <span class="category-chip"><%= product.category || 'House Special' %></span>
+      </div>
+
+      <div class="content-pane">
+        <h1><%= product.productName %></h1>
+        <div class="top-badges">
+          <% if (product.isBestSeller) { %>
+            <span class="badge-pill best">Best Seller</span>
+          <% } %>
+          <% if (discountPercent > 0) { %>
+            <span class="badge-pill discount"><%= discountPercent %>% OFF</span>
+          <% } %>
+        </div>
+        <div class="price-wrap">
+          <div class="price">$<%= displayPrice %></div>
+          <% if (discountPercent > 0) { %>
+            <div class="price-old">$<%= originalPrice %></div>
+          <% } %>
+        </div>
+
+        <p class="desc"><%= safeDescription %></p>
+        <div class="tag-wrap">
+          <% dietaryTags.forEach(tag => { %>
+            <span class="food-tag diet"><%= tag %></span>
+          <% }) %>
+          <% allergenTags.forEach(tag => { %>
+            <span class="food-tag allergen"><%= tag %></span>
+          <% }) %>
+        </div>
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span>Availability</span>
+            <strong class="<%= isOutOfStock ? 'warn' : '' %>">
+              <%= isOutOfStock ? 'Out of stock' : (stockQty + ' item(s) left') %>
+            </strong>
+          </div>
+          <div class="meta-item">
+            <span>Estimated Prep</span>
+            <strong>15-25 minutes</strong>
+          </div>
+        </div>
+
+        <div class="buy-panel">
+          <label for="qtyInput" class="qty-label">Quantity</label>
+          <div class="qty-row">
+            <button
+              type="button"
+              class="qty-btn"
+              id="qtyMinus"
+              aria-label="Decrease quantity"
+              <%= isOutOfStock ? 'disabled' : '' %>>-</button>
+            <input
+              id="qtyInput"
+              class="qty-input"
+              type="number"
+              min="1"
+              max="<%= maxQty %>"
+              value="1"
+              <%= isOutOfStock ? 'disabled' : '' %>
+            >
+            <button
+              type="button"
+              class="qty-btn"
+              id="qtyPlus"
+              aria-label="Increase quantity"
+              <%= isOutOfStock ? 'disabled' : '' %>>+</button>
+          </div>
+
+          <button
+            id="addToCartBtn"
+            class="add-btn"
+            data-name="<%= product.productName %>"
+            data-price="<%= displayPrice %>"
+            data-image="<%= imagePath %>"
+            <%= isOutOfStock ? 'disabled' : '' %>>
+            <%= isOutOfStock ? 'Currently Unavailable' : 'Add to Cart' %>
+          </button>
+        </div>
+
+        <div class="note">
+          Allergies or preferences? Add notes during checkout.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function showToast(message, isError = false) {
+      if (window.pushFlash) {
+        window.pushFlash(message, isError ? "error" : "success");
+        return;
+      }
+      alert(message);
+    }
+
+    const qtyInput = document.getElementById("qtyInput");
+    const minusBtn = document.getElementById("qtyMinus");
+    const plusBtn = document.getElementById("qtyPlus");
+    const addBtn = document.getElementById("addToCartBtn");
+
+    function clampQty() {
+      if (!qtyInput) return 1;
+      const min = Number(qtyInput.min || 1);
+      const max = Number(qtyInput.max || 1);
+      let value = Number(qtyInput.value || min);
+      if (!Number.isFinite(value)) value = min;
+      if (value < min) value = min;
+      if (value > max) value = max;
+      qtyInput.value = value;
+      return value;
+    }
+
+    if (minusBtn && qtyInput) {
+      minusBtn.addEventListener("click", () => {
+        qtyInput.value = Number(qtyInput.value || 1) - 1;
+        clampQty();
+      });
+    }
+
+    if (plusBtn && qtyInput) {
+      plusBtn.addEventListener("click", () => {
+        qtyInput.value = Number(qtyInput.value || 1) + 1;
+        clampQty();
+      });
+    }
+
+    if (qtyInput) qtyInput.addEventListener("change", clampQty);
+
+    if (addBtn) {
+      addBtn.addEventListener("click", () => {
+        const qty = clampQty();
+        fetch("/cart/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: addBtn.dataset.name,
+            price: addBtn.dataset.price,
+            qty,
+            image: addBtn.dataset.image
+          })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.ok) showToast("Added to cart!");
+            else showToast(data.error || "Failed to add", true);
+          })
+          .catch(() => showToast("Server error", true));
+      });
+    }
+  </script>
+</body>
+</html>

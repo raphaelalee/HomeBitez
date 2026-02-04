@@ -6,6 +6,7 @@
 <title>HomeBitez Menu</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
@@ -13,12 +14,13 @@
 body{
     margin:0;
     background:#faefe5;
-    font-family: Arial, sans-serif;
+    font-family: "Outfit", Arial, sans-serif;
 }
 
 /* TITLE */
 .title{
     text-align:center;
+    font-family:'Sniglet', system-ui, sans-serif;
     font-size:28px;
     margin-top:10px;
 }
@@ -79,6 +81,41 @@ body{
     border-radius:999px;
     font-size:12px;
 }
+.section-label{
+    max-width:1200px;
+    margin:22px auto 8px;
+    padding:0 52px;
+    color:#5f4a2c;
+    font-weight:700;
+    letter-spacing:0.2px;
+}
+.feature-strip{
+    max-width:1200px;
+    margin:0 auto 4px;
+    padding:0 50px;
+    display:flex;
+    gap:10px;
+    overflow:auto;
+}
+.feature-item{
+    flex:0 0 auto;
+    text-decoration:none;
+    border:1px solid #efdcb9;
+    background:#fff9ef;
+    border-radius:999px;
+    padding:7px 12px;
+    color:#5b4527;
+    font-size:13px;
+    font-weight:600;
+    white-space:nowrap;
+}
+.feature-item strong{
+    color:#0b7a44;
+}
+@media (max-width: 768px){
+    .section-label{ padding:0 20px; }
+    .feature-strip{ padding:0 20px; }
+}
 
 /* GRID */
 .grid{
@@ -94,9 +131,15 @@ body{
     background:white;
     border-radius:14px;
     padding:15px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    border:1px solid #ecdcc5;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
     display:flex;
     flex-direction:column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 8px 20px rgba(0,0,0,0.12);
 }
 .card img{
     width:100%;
@@ -107,23 +150,109 @@ body{
 }
 .card h5{
     margin-top:12px;
+    margin-bottom:8px;
+    font-weight:700;
+    color:#2d2418;
 }
-.card p{
+.meta-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:8px;
+    gap:8px;
+}
+.chip{
+    display:inline-flex;
+    align-items:center;
+    padding:4px 10px;
+    border-radius:999px;
+    background:#fff6e4;
+    color:#7a5300;
+    border:1px solid #f2d8a1;
+    font-size:12px;
+    font-weight:600;
+}
+.chip.best{
+    background:#fef0c7;
+    color:#8a5a00;
+    border-color:#f3ce74;
+}
+.chip.discount{
+    background:#ffe8e8;
+    color:#a13030;
+    border-color:#f4b7b7;
+}
+.stock{
+    font-size:12px;
+    font-weight:600;
+    color:#2f7a46;
+}
+.stock.out{
+    color:#b23a2f;
+}
+.desc{
     font-size:13px;
     color:#555;
     margin:4px 0;
+    min-height:38px;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
 }
 .price{
     font-weight:bold;
     margin-top:6px;
+    color:#2d2418;
+    font-size:16px;
+}
+.price-stack{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+}
+.price-old{
+    font-size:13px;
+    color:#8b8174;
+    text-decoration:line-through;
+}
+.flag-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:2px;
+    margin-bottom:6px;
+}
+.flag{
+    border-radius:999px;
+    padding:3px 8px;
+    font-size:11px;
+    font-weight:600;
+}
+.flag.diet{
+    background:#ecf8ed;
+    color:#22623a;
+    border:1px solid #bfe4c6;
+}
+.flag.allergen{
+    background:#fff2e8;
+    color:#8b4a1f;
+    border:1px solid #f2cfb5;
 }
 .btn-view{
+    display:block;
+    text-align:center;
     background:#dd9b00;
     color:white;
     border:none;
     padding:6px 14px;
     border-radius:20px;
     font-size:13px;
+    text-decoration:none;
+}
+.btn-view:hover{
+    background:#c98c00;
+    color:#fff;
 }
 .btn.add-to-cart{
     margin-top:8px;
@@ -171,26 +300,83 @@ body{
     </div>
 </div>
 
+<% const bestSellers = products.filter(p => p.isBestSeller); %>
+<% if (bestSellers.length) { %>
+<div class="section-label">Best Sellers & Deals</div>
+<div class="feature-strip">
+    <% bestSellers.forEach(item => { %>
+        <a class="feature-item" href="/menu/product/<%= item.id %>">
+            <%= item.productName %>
+            <% if (Number(item.discountPercent || 0) > 0) { %>
+                - <strong><%= Number(item.discountPercent) %>% OFF</strong>
+            <% } %>
+        </a>
+    <% }) %>
+</div>
+<% } %>
+
 <div class="grid" id="menuGrid">
     <% products.forEach(product => { %>
         <% 
           const imageName = product.image || '';
           const fallbackImage = '/images/flatlay-iron-skillet-with-meat-and-other-food.jpg';
+          const productDescription = (product.description || '').trim() || 'Freshly prepared and packed with flavor.';
           const imagePath = imageName
             ? (imageName.startsWith('/') ? imageName : `/images/${imageName}`)
             : fallbackImage;
+          const stockQty = Number(product.quantity || 0);
+          const discountPercent = Number(product.discountPercent || 0);
+          const displayPrice = Number(product.finalPrice ?? product.price ?? 0).toFixed(2);
+          const originalPrice = Number(product.originalPrice ?? product.price ?? 0).toFixed(2);
+          const dietaryTags = Array.isArray(product.dietaryTags) ? product.dietaryTags : [];
+          const allergenTags = Array.isArray(product.allergenTags) ? product.allergenTags : [];
         %>
-        <div class="card" data-category="<%= product.category || '' %>" data-name="<%= product.productName || '' %>">
+        <div class="card"
+            data-category="<%= product.category || '' %>"
+            data-name="<%= product.productName || '' %>"
+            data-description="<%= productDescription %>"
+            data-tags="<%= [...dietaryTags, ...allergenTags].join(' ') %>">
             <img src="<%= imagePath %>" alt="<%= product.productName %>">
             <h5><%= product.productName %></h5>
-            <p><%= product.description %></p>
-            <p class="price">$<%= product.price %></p>
-            <button class="btn-view">View Product</button>
+            <div class="meta-row">
+                <span class="chip"><%= product.category || 'House Special' %></span>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <% if (product.isBestSeller) { %>
+                        <span class="chip best">Best Seller</span>
+                    <% } %>
+                    <% if (discountPercent > 0) { %>
+                        <span class="chip discount"><%= discountPercent %>% OFF</span>
+                    <% } %>
+                </div>
+            </div>
+            <div class="flag-row">
+                <% dietaryTags.forEach(tag => { %>
+                    <span class="flag diet"><%= tag %></span>
+                <% }) %>
+                <% allergenTags.forEach(tag => { %>
+                    <span class="flag allergen"><%= tag %></span>
+                <% }) %>
+            </div>
+            <p class="desc"><%= productDescription %></p>
+            <div class="meta-row" style="margin-top:4px;">
+                <div class="price-stack">
+                    <p class="price">$<%= displayPrice %></p>
+                    <% if (discountPercent > 0) { %>
+                        <span class="price-old">$<%= originalPrice %></span>
+                    <% } %>
+                </div>
+                <span class="stock <%= stockQty > 0 ? '' : 'out' %>">
+                    <%= stockQty > 0 ? (stockQty + ' left') : 'Sold out' %>
+                </span>
+            </div>
+            <a class="btn-view" href="/menu/product/<%= product.id %>">View Product</a>
             <button class="btn add-to-cart"
                 data-id="<%=product.id %>"
                 data-name="<%= product.productName %>"
-                data-price="<%= product.price %>"
-                data-image="<%= imagePath %>">
+                data-price="<%= displayPrice %>"
+                data-image="<%= imagePath %>"
+                data-stock="<%= stockQty %>"
+                <%= stockQty > 0 ? '' : 'disabled' %>>
                 Add to Cart
             </button>
         </div>
@@ -208,16 +394,33 @@ emptyState.textContent = "No items match your filters.";
 
 let activeCategory = "All";
 
+function normalizeCategory(value) {
+    const normalized = (value || "").trim().toLowerCase();
+    if (normalized === "sides") return "side dishes";
+    if (normalized === "beverage") return "drinks";
+    return normalized;
+}
+
 function applyFilters() {
     const term = (searchInput.value || "").trim().toLowerCase();
     let visibleCount = 0;
 
     cards.forEach(card => {
-        const category = (card.dataset.category || "").toLowerCase();
+        const category = normalizeCategory(card.dataset.category || "");
         const name = (card.dataset.name || "").toLowerCase();
+        const description = (card.dataset.description || "").toLowerCase();
+        const tags = (card.dataset.tags || "").toLowerCase();
+        const normalizedActive = normalizeCategory(activeCategory);
+        const hasCategory = Boolean(category);
 
-        const matchesCategory = activeCategory === "All" || category === activeCategory.toLowerCase();
-        const matchesSearch = !term || name.includes(term);
+        const matchesCategory =
+            normalizedActive === "all" ||
+            (hasCategory && (
+                category === normalizedActive ||
+                category.includes(normalizedActive) ||
+                normalizedActive.includes(category)
+            ));
+        const matchesSearch = !term || name.includes(term) || description.includes(term) || tags.includes(term);
 
         const show = matchesCategory && matchesSearch;
         card.style.display = show ? "flex" : "none";
@@ -243,6 +446,10 @@ tabs.forEach(tab => {
 
 searchBtn.addEventListener("click", applyFilters);
 searchInput.addEventListener("input", applyFilters);
+searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") applyFilters();
+});
+applyFilters();
 </script>
 
 <script>
