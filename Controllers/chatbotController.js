@@ -7,7 +7,8 @@ function getSelectedCartItems(session) {
 }
 
 function getCheckoutSnapshot(session) {
-  const baseDeliveryFee = 2.5;
+  const normalDeliveryFee = 2.5;
+  const urgentDeliveryFee = 6;
   const cart = getSelectedCartItems(session);
   const subtotal = cart.reduce((sum, item) => {
     const price = Number(item.price || 0);
@@ -15,6 +16,8 @@ function getCheckoutSnapshot(session) {
     return sum + price * qty;
   }, 0);
   const mode = session?.cartPrefs?.mode === "delivery" ? "delivery" : "pickup";
+  const deliveryType = session?.cartPrefs?.deliveryType === "urgent" ? "urgent" : "normal";
+  const baseDeliveryFee = deliveryType === "urgent" ? urgentDeliveryFee : normalDeliveryFee;
   const deliveryFee = mode === "delivery" ? baseDeliveryFee : 0;
   const redeem = Math.min(subtotal, Number(session?.cartRedeem?.amount || 0));
   const total = Number((subtotal + deliveryFee - redeem).toFixed(2));
@@ -22,8 +25,11 @@ function getCheckoutSnapshot(session) {
   return {
     itemCount: cart.length,
     subtotal: Number(subtotal.toFixed(2)),
+    normalDeliveryFee: Number(normalDeliveryFee.toFixed(2)),
+    urgentDeliveryFee: Number(urgentDeliveryFee.toFixed(2)),
     baseDeliveryFee: Number(baseDeliveryFee.toFixed(2)),
     deliveryFee: Number(deliveryFee.toFixed(2)),
+    deliveryType,
     redeem: Number(redeem.toFixed(2)),
     total,
     mode,
@@ -47,7 +53,7 @@ function buildReply(rawMessage, snapshot) {
   }
 
   if (/\b(delivery|pickup|fee|shipping)\b/.test(message)) {
-    return `Delivery fee is ${money(snapshot.baseDeliveryFee)}. Pickup has no fee. Your current mode is ${snapshot.mode}, so your applied fee is ${money(snapshot.deliveryFee)}.`;
+    return `Normal delivery is ${money(snapshot.normalDeliveryFee)}, urgent delivery is ${money(snapshot.urgentDeliveryFee)}, and pickup has no fee. Your current mode is ${snapshot.mode}${snapshot.mode === "delivery" ? ` (${snapshot.deliveryType})` : ""}, so your applied fee is ${money(snapshot.deliveryFee)}.`;
   }
 
   if (/\b(point|reward|redeem|loyalty)\b/.test(message)) {
