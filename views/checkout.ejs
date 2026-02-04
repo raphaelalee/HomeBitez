@@ -383,12 +383,28 @@
                     )==='delivery' ? 'checked' : '' %>>
                   <label for="modeDelivery" class="mb-0">
                     <strong>Delivery</strong><br>
-                    <span class="small-note">Flat fee $<%= defaultDeliveryFee.toFixed(2) %>.</span>
+                    <span class="small-note">Choose normal or urgent island-wide delivery.</span>
                   </label>
                 </div>
 
                 <div id="deliveryFields"
                   style="display:<%= (prefs?.mode || 'pickup') === 'delivery' ? 'block' : 'none' %>;">
+                  <div class="option-block" style="margin-bottom:12px;">
+                    <input type="radio" name="deliveryType" id="deliveryTypeNormal" value="normal" <%= selectedDeliveryType === 'normal' ? 'checked' : '' %>>
+                    <label for="deliveryTypeNormal" class="mb-0">
+                      <strong>Normal Delivery</strong><br>
+                      <span class="small-note">Island-wide flat fee $<%= normalDeliveryFee.toFixed(2) %>.</span>
+                    </label>
+                  </div>
+
+                  <div class="option-block" style="margin-bottom:12px;">
+                    <input type="radio" name="deliveryType" id="deliveryTypeUrgent" value="urgent" <%= selectedDeliveryType === 'urgent' ? 'checked' : '' %>>
+                    <label for="deliveryTypeUrgent" class="mb-0">
+                      <strong>Urgent Delivery</strong><br>
+                      <span class="small-note">Island-wide flat fee $<%= urgentDeliveryFee.toFixed(2) %>.</span>
+                    </label>
+                  </div>
+
                   <div class="row g-2">
                     <div class="col-md-6">
                       <label class="muted-label">Name</label>
@@ -469,7 +485,7 @@
                         <div class="hb-line">
                           <span>Fulfillment</span>
                           <span id="summaryMode">
-                            <%= (prefs?.mode || 'pickup' )==='delivery' ? 'Delivery' : 'Pickup' %>
+                            <%= (prefs?.mode || 'pickup' )==='delivery' ? (selectedDeliveryType === 'urgent' ? 'Urgent Delivery' : 'Normal Delivery') : 'Pickup' %>
                           </span>
                         </div>
                         <div class="hb-line">
@@ -509,7 +525,6 @@
                 <script>
                   const checkoutItems = <%- JSON.stringify(items) %>;
                   const checkoutSubtotal = <%= subtotal.toFixed(2) %>;
-                  const baseDeliveryFee = <%= defaultDeliveryFee.toFixed(2) %>;
                   let currentDeliveryFee = <%= initialDeliveryFee.toFixed(2) %>;
 
                   function renderPaypal() {
@@ -704,6 +719,8 @@
       const deliveryContact = document.getElementById("deliveryContact");
       const deliveryAddress = document.getElementById("deliveryAddress");
       const deliveryNotes = document.getElementById("deliveryNotes");
+      const deliveryTypeNormal = document.getElementById("deliveryTypeNormal");
+      const deliveryTypeUrgent = document.getElementById("deliveryTypeUrgent");
 
       const summaryDeliveryFee = document.getElementById("summaryDeliveryFee");
       const summaryTotal = document.getElementById("summaryTotal");
@@ -719,9 +736,14 @@
       const walletShortageCloseBtn = document.getElementById("walletShortageCloseBtn");
 
       const subtotalValue = Number(<%= subtotal.toFixed(2) %>);
-      const baseDeliveryFeeNum = Number(<%= defaultDeliveryFee.toFixed(2) %>);
+      const normalDeliveryFeeNum = Number(<%= normalDeliveryFee.toFixed(2) %>);
+      const urgentDeliveryFeeNum = Number(<%= urgentDeliveryFee.toFixed(2) %>);
       let currentDeliveryFeeNum = Number(<%= initialDeliveryFee.toFixed(2) %>);
       const redeemAmount = Number(<%=(redeem || 0).toFixed(2) %>);
+
+      function getSelectedDeliveryType() {
+        return deliveryTypeUrgent && deliveryTypeUrgent.checked ? "urgent" : "normal";
+      }
 
       // Enforce pickup date between today and +2 months
       if (pickupDate) {
@@ -845,7 +867,9 @@
 
       function syncSummary() {
         summaryDeliveryFee.textContent = `$${currentDeliveryFeeNum.toFixed(2)}`;
-        summaryMode.textContent = modeDelivery.checked ? "Delivery" : "Pickup";
+        summaryMode.textContent = modeDelivery.checked
+          ? (getSelectedDeliveryType() === "urgent" ? "Urgent Delivery" : "Normal Delivery")
+          : "Pickup";
         summaryPickup.textContent = modePickup.checked
           ? `${pickupDate.value || "Set date"} - ${pickupTime.value || "Set time"}`
           : "N/A";
@@ -860,6 +884,7 @@
       function savePrefs() {
         const payload = {
           mode: modeDelivery.checked ? "delivery" : "pickup",
+          deliveryType: getSelectedDeliveryType(),
           pickupDate: pickupDate ? pickupDate.value : "",
           pickupTime: pickupTime ? pickupTime.value : "",
           name: deliveryName ? deliveryName.value : "",
@@ -879,7 +904,7 @@
         if (modeDelivery.checked) {
           pickupFields.style.display = "none";
           deliveryFields.style.display = "block";
-          currentDeliveryFeeNum = baseDeliveryFeeNum;
+          currentDeliveryFeeNum = getSelectedDeliveryType() === "urgent" ? urgentDeliveryFeeNum : normalDeliveryFeeNum;
           [deliveryName, deliveryContact, deliveryAddress].forEach(el => { if (el) el.required = true; });
           if (pickupDate) pickupDate.required = false;
           if (pickupTime) pickupTime.required = false;
@@ -900,6 +925,20 @@
 
       if (pickupDate) pickupDate.addEventListener("change", () => { syncSummary(); savePrefs(); });
       if (pickupTime) pickupTime.addEventListener("change", () => { syncSummary(); savePrefs(); });
+      if (deliveryTypeNormal) deliveryTypeNormal.addEventListener("change", () => {
+        if (modeDelivery && modeDelivery.checked) {
+          currentDeliveryFeeNum = normalDeliveryFeeNum;
+          syncSummary();
+        }
+        savePrefs();
+      });
+      if (deliveryTypeUrgent) deliveryTypeUrgent.addEventListener("change", () => {
+        if (modeDelivery && modeDelivery.checked) {
+          currentDeliveryFeeNum = urgentDeliveryFeeNum;
+          syncSummary();
+        }
+        savePrefs();
+      });
       if (deliveryName) deliveryName.addEventListener("change", savePrefs);
       if (deliveryContact) deliveryContact.addEventListener("change", savePrefs);
       if (deliveryAddress) deliveryAddress.addEventListener("change", savePrefs);

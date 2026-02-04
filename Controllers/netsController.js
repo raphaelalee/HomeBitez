@@ -13,7 +13,9 @@ exports.renderNetsQr = async (req, res) => {
       0
     );
 
-    const deliveryFee = 2.5;
+    const mode = req.session?.cartPrefs?.mode === "delivery" ? "delivery" : "pickup";
+    const deliveryType = req.session?.cartPrefs?.deliveryType === "urgent" ? "urgent" : "normal";
+    const deliveryFee = mode === "delivery" ? (deliveryType === "urgent" ? 6 : 2.5) : 0;
     const amount = Number((subtotal + deliveryFee).toFixed(2));
 
     // create NETS QR transaction

@@ -11,6 +11,22 @@ const db = require("../db");
 // NETS sandbox txn id (keep yours)
 const NETS_TXN_ID =
   "sandbox_nets|m|8ff8e5b6-d43e-4786-8ac5-7accf8c5bd9b";
+const NORMAL_DELIVERY_FEE = 2.5;
+const URGENT_DELIVERY_FEE = 6;
+
+function getDeliveryTypeFromPrefs(prefs) {
+  const rawType = String(prefs?.deliveryType || "").toLowerCase();
+  if (rawType === "normal" || rawType === "urgent") return rawType;
+  // Backward compatibility: older sessions only had one delivery option.
+  return (prefs?.mode || "pickup") === "delivery" ? "urgent" : "normal";
+}
+
+function getDeliveryFeeFromPrefs(prefs) {
+  if ((prefs?.mode || "pickup") !== "delivery") return 0;
+  return getDeliveryTypeFromPrefs(prefs) === "urgent"
+    ? URGENT_DELIVERY_FEE
+    : NORMAL_DELIVERY_FEE;
+}
 
 function getSelectedCartItems(session) {
   const cart = session?.cart || [];
@@ -134,6 +150,7 @@ exports.renderCheckout = async (req, res) => {
     pickupDate: "",
     pickupTime: "",
     mode: "pickup",
+    deliveryType: "normal",
     name: "",
     address: "",
     contact: "",
@@ -152,9 +169,13 @@ exports.renderCheckout = async (req, res) => {
   });
 
   const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
-  const deliveryFee = 2.5;
   const initialMode = prefs.mode || "pickup";
-  const initialDeliveryFee = initialMode === "delivery" ? deliveryFee : 0;
+  const selectedDeliveryType = getDeliveryTypeFromPrefs({ ...prefs, mode: initialMode });
+  const initialDeliveryFee = getDeliveryFeeFromPrefs({
+    ...prefs,
+    mode: initialMode,
+    deliveryType: selectedDeliveryType
+  });
   const { redeemAmount: redeem } = getRedeemForSubtotal(req.session, subtotal);
   const total = Number((subtotal + initialDeliveryFee - redeem).toFixed(2));
   let walletBalance = 0;
@@ -176,7 +197,9 @@ exports.renderCheckout = async (req, res) => {
     items,
     subtotal: Number(subtotal.toFixed(2)),
     total,                          // total based on initial mode minus redeem
-    defaultDeliveryFee: deliveryFee, // base delivery fee
+    normalDeliveryFee: NORMAL_DELIVERY_FEE,
+    urgentDeliveryFee: URGENT_DELIVERY_FEE,
+    selectedDeliveryType,
     initialDeliveryFee,
     prefs,
     redeem,
@@ -295,14 +318,14 @@ exports.choosePayLater = async (req, res) => {
     req.session.paylaterError = "Cart is empty.";
     return res.redirect("/checkout");
   }
-  const prefs = req.session.cartPrefs || { mode: "pickup" };
+  const prefs = req.session.cartPrefs || { mode: "pickup", deliveryType: "normal" };
   const subtotal = cart.reduce(
     (s, i) => s + Number(i.price || 0) * Number(i.quantity || i.qty || 0),
     0
   );
-  const deliveryFee = prefs.mode === "delivery" ? 2.5 : 0;
-    const { redeemAmount: redeem } = getRedeemForSubtotal(req.session, subtotal);
-    const total = Number((subtotal + deliveryFee - redeem).toFixed(2));
+  const deliveryFee = getDeliveryFeeFromPrefs(prefs);
+  const { redeemAmount: redeem } = getRedeemForSubtotal(req.session, subtotal);
+  const total = Number((subtotal + deliveryFee - redeem).toFixed(2));
 
   if (!Number.isFinite(total) || total <= 0) {
     req.session.paylaterError = "Cart total is invalid for PayLater.";
@@ -713,6 +736,7 @@ exports.renderReceipt = async (req, res) => {
     pickupDate: "",
     pickupTime: "",
     mode: "pickup",
+    deliveryType: "normal",
     name: "",
     address: "",
     contact: "",
@@ -766,7 +790,9 @@ exports.renderReceipt = async (req, res) => {
   const paymentMethod = paylaterPurchase
     ? "PayLater"
     : (paypalCapture ? "PayPal" : (stripeCapture ? "Stripe" : "NETS / Other"));
-  const fulfillment = prefs.mode === "delivery" ? "Delivery" : "Pickup";
+  const fulfillment = prefs.mode === "delivery"
+    ? (getDeliveryTypeFromPrefs(prefs) === "urgent" ? "Urgent Delivery" : "Normal Delivery")
+    : "Pickup";
   const isPaid = !!(paypalCapture || stripeCapture || paylaterPurchase);
   const paymentMeta = paypalCapture
     ? {

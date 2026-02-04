@@ -43,6 +43,7 @@ module.exports = {
             pickupDate: "",
             pickupTime: "",
             mode: "pickup",
+            deliveryType: "normal",
             name: "",
             address: "",
             contact: "",
@@ -193,20 +194,21 @@ module.exports = {
 
     // POST /cart/preferences
     savePreferences(req, res) {
-        const { cutlery, pickupDate, pickupTime, mode, name, address, contact, notes } = req.body;
+        const { cutlery, pickupDate, pickupTime, mode, deliveryType, name, address, contact, notes } = req.body;
 
         if (!req.session.cartPrefs) {
-            req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", name: "", address: "", contact: "", notes: "" };
+            req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", deliveryType: "normal", name: "", address: "", contact: "", notes: "" };
         }
 
-        req.session.cartPrefs.cutlery = !!cutlery;
-        req.session.cartPrefs.pickupDate = pickupDate || "";
-        req.session.cartPrefs.pickupTime = pickupTime || "";
-        req.session.cartPrefs.mode = mode || "pickup";
-        req.session.cartPrefs.name = name || "";
-        req.session.cartPrefs.address = address || "";
-        req.session.cartPrefs.contact = contact || "";
-        req.session.cartPrefs.notes = notes || "";
+        if (typeof cutlery !== "undefined") req.session.cartPrefs.cutlery = !!cutlery;
+        if (typeof pickupDate !== "undefined") req.session.cartPrefs.pickupDate = pickupDate || "";
+        if (typeof pickupTime !== "undefined") req.session.cartPrefs.pickupTime = pickupTime || "";
+        if (mode === "pickup" || mode === "delivery") req.session.cartPrefs.mode = mode;
+        if (deliveryType === "normal" || deliveryType === "urgent") req.session.cartPrefs.deliveryType = deliveryType;
+        if (typeof name !== "undefined") req.session.cartPrefs.name = name || "";
+        if (typeof address !== "undefined") req.session.cartPrefs.address = address || "";
+        if (typeof contact !== "undefined") req.session.cartPrefs.contact = contact || "";
+        if (typeof notes !== "undefined") req.session.cartPrefs.notes = notes || "";
 
         return res.json({ ok: true });
     },
@@ -214,7 +216,7 @@ module.exports = {
     // POST /cart/clear
     async clearCart(req, res) {
         req.session.cart = [];
-        req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", name: "", address: "", contact: "", notes: "" };
+        req.session.cartPrefs = { cutlery: false, pickupDate: "", pickupTime: "", mode: "pickup", deliveryType: "normal", name: "", address: "", contact: "", notes: "" };
         req.session.cartRedeem = null;
         req.session.checkoutSelection = null;
         if (req.session.user) {

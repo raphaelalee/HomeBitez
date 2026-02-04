@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -179,13 +179,6 @@
       font-size: 13px;
       color:#6d6151;
       font-weight: 500;
-  }
-
-  .line-total{
-      font-size: 14px;
-      color:#413427;
-      font-weight:700;
-      margin-top:2px;
   }
 
   .qty-col{
@@ -430,7 +423,6 @@
 
       <!-- LEFT COLUMN: items + preferences -->
       <div class="card-surface">
-          <h4 style="margin:0 0 4px; font-weight:700;">Your Order</h4>
           <p style="margin:0 0 14px; color:#6f5f4a; font-size:13px;">
             <%= cart.length %> item type(s) in your cart
           </p>
@@ -478,14 +470,13 @@
                 </p>
 
                 <% if (item.notes) { %>
-                  <p class="item-sub">• <%= item.notes %></p>
+                  <p class="item-sub">â€¢ <%= item.notes %></p>
                 <% } %>
               </div>
 
               <div class="price-col">
                 <div class="unit-price">Unit</div>
                 $<%= Number(item.price).toFixed(2) %>
-                <div class="line-total">Line: $<%= (Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2) %></div>
               </div>
 
               <div class="qty-col">
@@ -514,7 +505,6 @@
         <div class="btn-area" style="justify-content:flex-start; gap:10px; padding-top:16px;">
           <button type="button" class="btn-back" id="clearCartBtn">Clear Cart</button>
           <a href="/menu" class="btn-back">Back to Menu</a>
-          <span style="font-size:12px; color:#6b5d4a; margin-left:auto;">Checkout on the right &rarr;</span>
         </div>
       </div>
 
@@ -818,6 +808,7 @@
 
 </body>
 </html>
+
 
 
 
