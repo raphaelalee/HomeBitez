@@ -172,9 +172,59 @@ async function captureOrder(orderId) {
 }
 
 /* -----------------------------
+   REFUND CAPTURE
+----------------------------- */
+async function refundCapture(captureId, amount, options = {}) {
+  const { PAYPAL_API } = getConfig();
+  const accessToken = await getAccessToken();
+
+  if (!captureId) {
+    throw new Error("Missing captureId for PayPal refund");
+  }
+
+  const valueNum = Number(amount);
+  if (!Number.isFinite(valueNum) || valueNum <= 0) {
+    throw new Error(`Invalid PayPal refund amount: ${amount}`);
+  }
+
+  const payload = {
+    amount: {
+      currency_code: options.currency || DEFAULT_CURRENCY,
+      value: valueNum.toFixed(2),
+    },
+  };
+
+  const res = await fetch(
+    `${PAYPAL_API}/v2/payments/captures/${captureId}/refund`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    console.error("PayPal refundCapture failed:", {
+      status: res.status,
+      body: data,
+      captureId,
+    });
+    throw new Error("PayPal refund failed");
+  }
+
+  return data;
+}
+
+/* -----------------------------
    EXPORTS
 ----------------------------- */
 module.exports = {
   createOrder,
   captureOrder,
+  refundCapture,
 };

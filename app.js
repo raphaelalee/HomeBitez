@@ -9,6 +9,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const stripeService = require('./services/stripe');
+const paypalService = require('./services/paypal');
 const nets = require("./services/nets");
 const paypal = require('@paypal/checkout-server-sdk');
 const { sendEmail } = require("./services/email");
@@ -522,6 +523,17 @@ function maskPhone(phone) {
     if (!digits) return '-';
     const tail = digits.slice(-4);
     return "***" + tail;
+}
+
+function normalizeMoney(value) {
+    if (value === null || value === undefined) return NaN;
+    if (typeof value === 'number') return value;
+    const str = String(value).trim();
+    if (!str) return NaN;
+    const match = str.match(/-?\d+(?:\.\d+)?/);
+    if (!match) return NaN;
+    const num = Number(match[0]);
+    return Number.isFinite(num) ? num : NaN;
 }
 
 async function issueTwoFactor(req) {
@@ -1098,7 +1110,7 @@ app.post('/refund', async (req, res) => {
     const cleanDetails = (details || '').trim();
     const cleanRefundMethod = (refundMethod || '').trim();
     const orderIdNum = Number(orderId);
-    const amountNum = 0;
+    let amountNum = 0;
 
     if (!cleanName || !email || !Number.isFinite(orderIdNum) || !cleanReason || !cleanDetails) {
         req.flash('error', 'Please fill out all fields.');
@@ -1115,6 +1127,34 @@ app.post('/refund', async (req, res) => {
         const allowedIds = new Set((userOrders || []).map(o => String(o.id)));
         if (!allowedIds.has(String(orderIdNum))) {
             req.flash('error', 'Order ID must be one of your own orders.');
+            return res.redirect('/refund');
+        }
+
+        const orderMatch = (userOrders || []).find(o => String(o.id) === String(orderIdNum));
+        amountNum = normalizeMoney(orderMatch?.total);
+        if (!Number.isFinite(amountNum) || amountNum <= 0) {
+            const calc = Number(orderMatch?.subtotal || 0) + Number(orderMatch?.delivery_fee || orderMatch?.deliveryFee || 0);
+            if (Number.isFinite(calc) && calc > 0) amountNum = calc;
+        }
+        if (!Number.isFinite(amountNum) || amountNum <= 0) {
+            const orderFromDb = await OrdersModel.getById(orderIdNum);
+            amountNum = normalizeMoney(orderFromDb?.total);
+            if (!Number.isFinite(amountNum) || amountNum <= 0) {
+                const calcDb = Number(orderFromDb?.subtotal || 0) + Number(orderFromDb?.delivery_fee || orderFromDb?.deliveryFee || 0);
+                if (Number.isFinite(calcDb) && calcDb > 0) amountNum = calcDb;
+            }
+        }
+        if (!Number.isFinite(amountNum) || amountNum <= 0) {
+            req.flash('error', 'Unable to determine order amount for refund.');
+            return res.redirect('/refund');
+        }
+
+        const [existingRefunds] = await db.query(
+            "SELECT id, status FROM refund_requests WHERE user_id = ? AND order_id = ? LIMIT 1",
+            [req.session.user.id, orderIdNum]
+        );
+        if ((existingRefunds || []).length > 0) {
+            req.flash('error', 'Refund has already been requested.');
             return res.redirect('/refund');
         }
 
@@ -2132,6 +2172,199 @@ app.post('/admin/issues/:id/resolve', async (req, res) => {
     return res.redirect('/admin/issues');
 });
 
+// Admin refunds
+app.get('/admin/refunds', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    let refunds = [];
+    try {
+        await ensureRefundTable();
+    const [rows] = await db.query(
+        `SELECT rr.id, rr.user_id, rr.order_id, rr.name, rr.email, rr.amount, rr.reason,
+                rr.refund_method, rr.details, rr.status, rr.created_at, u.contact, u.username
+         FROM refund_requests rr
+         LEFT JOIN users u ON u.id = rr.user_id
+         ORDER BY rr.created_at DESC`
+    );
+
+        const enriched = [];
+        for (const r of (rows || [])) {
+            let order = null;
+            try {
+                order = await OrdersModel.getById(r.order_id);
+            } catch (err) {
+                order = null;
+            }
+
+            const itemList = Array.isArray(order?.items)
+                ? order.items.map(i => {
+                    const qty = Number(i.quantity || i.qty || 1);
+                    const name = i.name || i.title || 'Item';
+                    return `${qty}x ${name}`;
+                }).join(', ')
+                : '';
+            const orderTotalNum = (() => {
+                const n = normalizeMoney(order?.total);
+                if (Number.isFinite(n) && n > 0) return n;
+                const calc = Number(order?.subtotal || 0) + Number(order?.delivery_fee || order?.deliveryFee || 0);
+                return Number.isFinite(calc) ? calc : null;
+            })();
+
+            enriched.push({
+                ...r,
+                order_email: order?.payer_email || order?.email || '',
+                order_total: order?.total ?? null,
+                order_total_num: orderTotalNum,
+                order_capture_id: order?.paypal_capture_id || null,
+                order_stripe_intent: order?.stripe_payment_intent || null,
+                order_status: order?.status || '',
+                order_items: itemList,
+                order_created_at: order?.created_at || null
+            });
+        }
+
+        refunds = enriched;
+    } catch (err) {
+        console.error("Admin refunds error:", err);
+    }
+
+    res.render('admin-refunds', {
+        refunds,
+        adminName: req.session.user?.username || 'Admin',
+        success: req.flash('success'),
+        error: req.flash('error')
+    });
+});
+
+app.post('/admin/refunds/:id/approve', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    const refundId = Number(req.params.id);
+    if (!Number.isFinite(refundId)) {
+        req.flash('error', 'Invalid refund ID.');
+        return res.redirect('/admin/refunds');
+    }
+
+    try {
+        await ensureRefundTable();
+
+        const [rows] = await db.query(
+            "SELECT id, user_id, order_id, refund_method, amount, status FROM refund_requests WHERE id = ? LIMIT 1",
+            [refundId]
+        );
+        const refund = rows && rows[0] ? rows[0] : null;
+        if (!refund) {
+            req.flash('error', 'Refund request not found.');
+            return res.redirect('/admin/refunds');
+        }
+        if (String(refund.status || '').toLowerCase() === 'approved') {
+            req.flash('success', 'Refund already approved.');
+            return res.redirect('/admin/refunds');
+        }
+        if (String(refund.status || '').toLowerCase() === 'rejected') {
+            req.flash('error', 'Refund already rejected.');
+            return res.redirect('/admin/refunds');
+        }
+
+        const order = await OrdersModel.getById(refund.order_id);
+        let computedAmount = normalizeMoney(refund.amount);
+        if (!Number.isFinite(computedAmount) || computedAmount <= 0) {
+            computedAmount = normalizeMoney(order?.total);
+        }
+        if (!Number.isFinite(computedAmount) || computedAmount <= 0) {
+            const calc = Number(order?.subtotal || 0) + Number(order?.delivery_fee || order?.deliveryFee || 0);
+            if (Number.isFinite(calc) && calc > 0) computedAmount = calc;
+        }
+        if (!Number.isFinite(computedAmount) || computedAmount <= 0) {
+            req.flash('error', 'Cannot refund: invalid order amount.');
+            return res.redirect('/admin/refunds');
+        }
+
+        if (String(refund.refund_method || 'original') === 'wallet') {
+            await ensureWalletColumn();
+            await ensureWalletTransactionsTable();
+            await db.query(
+                "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
+                [computedAmount, refund.user_id]
+            );
+            const [balRows] = await db.query(
+                "SELECT wallet_balance FROM users WHERE id=?",
+                [refund.user_id]
+            );
+            const balanceAfter = balRows?.[0]?.wallet_balance ?? computedAmount;
+            await recordWalletTxn(refund.user_id, 'topup', 'refund', computedAmount, balanceAfter);
+        } else {
+            if (order?.paypal_capture_id) {
+                await paypalService.refundCapture(order.paypal_capture_id, computedAmount);
+            } else if (order?.stripe_payment_intent) {
+                await stripeService.refundPaymentIntent({
+                    paymentIntentId: order.stripe_payment_intent,
+                    amount: computedAmount
+                });
+            } else {
+                req.flash('error', 'Cannot refund: missing payment reference.');
+                return res.redirect('/admin/refunds');
+            }
+        }
+
+        await db.query(
+            "UPDATE refund_requests SET status = 'approved', amount = ? WHERE id = ?",
+            [computedAmount, refundId]
+        );
+        req.flash('success', 'Refund approved and processed.');
+    } catch (err) {
+        console.error("Admin approve refund error:", err);
+        req.flash('error', 'Failed to approve refund.');
+    }
+
+    return res.redirect('/admin/refunds');
+});
+
+app.post('/admin/refunds/:id/reject', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    const refundId = Number(req.params.id);
+    if (!Number.isFinite(refundId)) {
+        req.flash('error', 'Invalid refund ID.');
+        return res.redirect('/admin/refunds');
+    }
+
+    try {
+        await ensureRefundTable();
+        await db.query(
+            "UPDATE refund_requests SET status = 'rejected' WHERE id = ?",
+            [refundId]
+        );
+        req.flash('success', 'Refund rejected.');
+    } catch (err) {
+        console.error("Admin reject refund error:", err);
+        req.flash('error', 'Failed to reject refund.');
+    }
+
+    return res.redirect('/admin/refunds');
+});
+
 // Logout
 app.get('/logout', (req, res) => {
     req.session.destroy(() => {
@@ -2809,7 +3042,8 @@ app.get('/stripe/success', async (req, res) => {
       subtotal,
       deliveryFee,
       total,
-      status: "paid"
+      status: "paid",
+      stripePaymentIntent: session.payment_intent?.id || null
     });
 
     // Deduct redeemed points first
