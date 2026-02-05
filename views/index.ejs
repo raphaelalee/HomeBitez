@@ -3,12 +3,11 @@ I declare that this code was written by me.
 I will not copy or allow others to copy my code.
 I understand that copying code is considered as plagiarism.
 
-Student Name: Wee Kee
-Student ID: 24014304
+Student Name: Jeffery
+Student ID: 24016580 
 Class: E63C c004
-Date created: January 16, 2026
+Date created: February 3, 2026
 -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -269,31 +268,33 @@ Date created: January 16, 2026
 
 <body>
 
-<% if (user) { %>
-  <%- include('partials/navbar-user') %>
-<% } else { %>
-  <header>
-    <div class="logo">HomeBitez</div>
-    <nav>
-      <a href="/">Home</a>
-      <% if (user && user.role === 'admin') { %>
-        <a href="/admin">Admin Dashboard</a>
-      <% } else { %>
-        <a href="<%= user ? '/menu' : '/login' %>">Menu</a>
-        <a href="/about">About Us</a>
-        <a href="/contact">Contact Us</a>
-      <% } %>
-    </nav>
-    <div class="header-actions">
+<header>
+  <div class="logo">HomeBitez</div>
+  <nav>
+    <a href="/">Home</a>
+    <a href="<%= user ? '/menu' : '/login' %>">Menu</a>
+    <a href="/contact">Contact</a>
+    <a href="/report">Report Issue</a>
+    <a href="/refund">Refund</a>
+    <% if (user && user.role === 'admin') { %>
+      <a href="/admin">Admin Dashboard</a>
+    <% } %>
+  </nav>
+  <div class="header-actions">
+    <% if (user) { %>
+      <a href="/logout">
+        <button type="button">Logout</button>
+      </a>
+    <% } else { %>
       <a href="/login">
         <button type="button">Login</button>
       </a>
       <a href="/register">
         <button type="button">Sign Up</button>
       </a>
-    </div>
-  </header>
-<% } %>
+    <% } %>
+  </div>
+</header>
 
 <section class="hero">
   <div class="hero-images">
@@ -373,4 +374,3 @@ Date created: January 16, 2026
 
 </body>
 </html>
-

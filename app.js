@@ -531,6 +531,35 @@ function maskPhone(phone) {
     return "***" + tail;
 }
 
+function normalizeDiscountPercent(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(0, Math.min(90, Number(n.toFixed(2))));
+}
+
+function parseTagList(selectedValues, customValues) {
+    const selected = Array.isArray(selectedValues)
+        ? selectedValues
+        : (selectedValues ? [selectedValues] : []);
+
+    const custom = String(customValues || "")
+        .split(",")
+        .map(v => v.trim())
+        .filter(Boolean);
+
+    const merged = [...selected, ...custom];
+    const uniqueByLower = new Map();
+
+    merged.forEach(tag => {
+        const clean = String(tag || "").trim();
+        if (!clean) return;
+        const key = clean.toLowerCase();
+        if (!uniqueByLower.has(key)) uniqueByLower.set(key, clean);
+    });
+
+    return Array.from(uniqueByLower.values()).join(", ");
+}
+
 function normalizeMoney(value) {
     if (value === null || value === undefined) return NaN;
     if (typeof value === 'number') return value;
@@ -1692,6 +1721,7 @@ app.get('/admin', async (req, res) => {
     });
 });
 
+
 // Admin profile
 app.get('/admin/profile', async (req, res) => {
     if (!req.session.user) {
@@ -1992,8 +2022,179 @@ app.get('/admin/inventory', async (req, res) => {
 
     res.render('admin-inventory', {
         products,
-        adminName: req.session.user?.username || 'Admin'
+        adminName: req.session.user?.username || 'Admin',
+        success: req.flash('success'),
+        error: req.flash('error')
     });
+});
+
+// Admin add product
+app.get('/admin/products/add', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    return res.render('admin-addproduct', {
+        adminName: req.session.user?.username || 'Admin',
+        success: req.flash('success'),
+        error: req.flash('error')
+    });
+});
+
+app.post('/admin/products/add', upload.single("imageFile"), async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    try {
+        let imageFilename = "default.png";
+        if (req.file) imageFilename = req.file.filename;
+
+        const productName = (req.body.productName || "").trim();
+        const description = (req.body.description || "").trim();
+        const category = (req.body.category || "").trim();
+        const price = parseFloat(req.body.price);
+        const quantity = Math.max(0, parseInt(req.body.quantity, 10) || 0);
+        const isBestSeller = req.body.isBestSeller === "1";
+        const discountPercent = normalizeDiscountPercent(req.body.discountPercent);
+        const dietaryTags = parseTagList(req.body.dietaryTags, req.body.dietaryTagsCustom);
+        const allergenTags = parseTagList(req.body.allergenTags, req.body.allergenTagsCustom);
+
+        if (!productName) return res.redirect("/admin/products/add");
+        if (!category) return res.redirect("/admin/products/add");
+        if (Number.isNaN(price) || price < 0) return res.redirect("/admin/products/add");
+
+        const product = {
+            productName,
+            description,
+            category,
+            price,
+            image: imageFilename,
+            quantity,
+            isBestSeller,
+            discountPercent,
+            dietaryTags,
+            allergenTags
+        };
+
+        await ProductModel.create(product);
+        req.flash('success', 'Product added successfully.');
+        return res.redirect('/admin/inventory');
+    } catch (err) {
+        console.error("Admin add product error:", err);
+        req.flash('error', 'Failed to add product.');
+        return res.redirect('/admin/products/add');
+    }
+});
+
+// Admin edit product
+app.get('/admin/products/edit/:id', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    const productId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(productId)) return res.redirect('/admin/inventory');
+
+    try {
+        const [rows] = await ProductModel.getById(productId);
+        if (!rows || !rows[0]) return res.redirect('/admin/inventory');
+        return res.render('admin-editproduct', { product: rows[0] });
+    } catch (err) {
+        console.error("Admin edit product error:", err);
+        return res.status(500).send("Server error");
+    }
+});
+
+// Admin update product
+app.post('/admin/products/edit/:id', upload.single("imageFile"), async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    try {
+        const productId = parseInt(req.params.id, 10);
+        if (!Number.isInteger(productId)) return res.redirect('/admin/inventory');
+
+        let imageFilename = req.body.currentImage || "default.png";
+        if (req.file) imageFilename = req.file.filename;
+
+        const productName = (req.body.productName || "").trim();
+        const description = (req.body.description || "").trim();
+        const category = (req.body.category || "").trim();
+        const price = parseFloat(req.body.price);
+        const isBestSeller = req.body.isBestSeller === "1";
+        const discountPercent = normalizeDiscountPercent(req.body.discountPercent);
+        const dietaryTags = parseTagList(req.body.dietaryTags, req.body.dietaryTagsCustom);
+        const allergenTags = parseTagList(req.body.allergenTags, req.body.allergenTagsCustom);
+
+        if (!productName) return res.redirect(`/admin/products/edit/${productId}`);
+        if (!category) return res.redirect(`/admin/products/edit/${productId}`);
+        if (Number.isNaN(price) || price < 0) return res.redirect(`/admin/products/edit/${productId}`);
+
+        const product = {
+            productName,
+            description,
+            category,
+            price,
+            image: imageFilename,
+            isBestSeller,
+            discountPercent,
+            dietaryTags,
+            allergenTags
+        };
+
+        await ProductModel.update(productId, product);
+        req.flash('success', 'Product updated successfully.');
+        return res.redirect('/admin/inventory');
+    } catch (err) {
+        console.error("Admin update product error:", err);
+        return res.status(500).send("Server error");
+    }
+});
+
+// Admin delete product
+app.post('/admin/products/delete/:id', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    const productId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(productId)) return res.redirect('/admin/inventory');
+
+    try {
+        await ProductModel.delete(productId);
+        req.flash('success', 'Product removed.');
+        return res.redirect('/admin/inventory');
+    } catch (err) {
+        console.error("Admin delete product error:", err);
+        return res.status(500).send("Server error");
+    }
 });
 
 

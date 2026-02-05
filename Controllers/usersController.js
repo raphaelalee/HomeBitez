@@ -3,12 +3,11 @@ I declare that this code was written by me.
 I will not copy or allow others to copy my code.
 I understand that copying code is considered as plagiarism.
 
-Student Name: Marla
-Student ID: 24014514
+Student Name: Jeffery
+Student ID: 24016580 
 Class: E63C c004
-Date created: December 9, 2025
+Date created: February 3, 2026
 */
-
 const User = require('../models/UsersModel');
 const CartModel = require('../Models/cartModels');
 const crypto = require('crypto');
@@ -302,6 +301,5 @@ module.exports = {
     }
   }
 };
-
 
 
