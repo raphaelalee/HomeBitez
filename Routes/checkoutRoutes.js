@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 
-const checkoutController = require("../controllers/checkoutController");
+const checkoutController = require("../Controllers/checkoutController");
 
 // Checkout page
 router.get("/checkout", checkoutController.renderCheckout);

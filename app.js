@@ -28,7 +28,7 @@ const paypalClient = new paypal.core.PayPalHttpClient(environment);
 
 // Controllers
 const UsersController = require('./Controllers/usersController');
-const ReportModel = require('./models/ReportModel');
+const ReportModel = require('./Models/ReportModel');
 const ProductModel = require('./Models/ProductModel');
 const OrdersModel = require('./Models/OrdersModel');
 const UsersModel = require('./Models/UsersModel');

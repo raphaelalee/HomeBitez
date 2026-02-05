@@ -11,7 +11,7 @@ Date created: December 10, 2025
 
 const express = require('express');
 const router = express.Router();
-const cartController = require('../controllers/cartController');
+const cartController = require('../Controllers/cartController');
 
 router.get('/', cartController.viewCart);
 router.post('/add', cartController.addToCart);

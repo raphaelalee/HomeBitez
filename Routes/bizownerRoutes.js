@@ -10,7 +10,7 @@ Date created: February 3, 2026
 */
 const express = require("express");
 const router = express.Router();
-const ownerController = require("../controllers/bizownerController");
+const ownerController = require("../Controllers/bizownerController");
 const db = require("../db");
 const OrdersModel = require("../Models/OrdersModel");
 
