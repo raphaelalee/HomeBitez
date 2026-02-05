@@ -1,14 +1,3 @@
-/*
-I declare that this code was written by me.
-I will not copy or allow others to copy my code.
-I understand that copying code is considered as plagiarism.
-
-Student Name: Marla
-Student ID: 24014514
-Class: E63C c004
-Date created: December 3, 2025
-*/
-
 const express = require('express');
 const session = require('express-session');
 const flash = require('connect-flash');
