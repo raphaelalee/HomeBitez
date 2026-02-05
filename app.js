@@ -477,8 +477,10 @@ async function issueTwoFactor(req) {
         });
         const emailTo = req.session.user?.email || '';
         const accepted = Array.isArray(info?.accepted) ? info.accepted.map(String) : [];
+        console.log("[2FA EMAIL DEBUG] emailTo:", JSON.stringify(emailTo));
+        console.log("[2FA EMAIL DEBUG] accepted:", JSON.stringify(accepted));
         if (emailTo && accepted.includes(emailTo)) {
-            console.log(`[2FA EMAIL] Sent code ${code} to ${emailTo}`);
+            console.log(`[2FA EMAIL] Accepted by SMTP (delivery not guaranteed). Code ${code} to ${emailTo}`);
         } else {
             console.error(`[2FA EMAIL] Not accepted by server for ${emailTo || 'unknown email'}`);
         }
@@ -2827,8 +2829,10 @@ app.post('/wallet/2fa/send', async (req, res) => {
     });
     const emailTo = req.session.user?.email || '';
     const accepted = Array.isArray(info?.accepted) ? info.accepted.map(String) : [];
+    console.log("[WALLET 2FA DEBUG] emailTo:", JSON.stringify(emailTo));
+    console.log("[WALLET 2FA DEBUG] accepted:", JSON.stringify(accepted));
     if (emailTo && accepted.includes(emailTo)) {
-      console.log(`[WALLET 2FA EMAIL] Sent code ${code} to ${emailTo}`);
+      console.log(`[WALLET 2FA EMAIL] Accepted by SMTP (delivery not guaranteed). Code ${code} to ${emailTo}`);
     } else {
       console.error(`[WALLET 2FA EMAIL] Not accepted by server for ${emailTo || 'unknown email'}`);
     }
