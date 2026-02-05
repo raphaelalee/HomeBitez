@@ -1,10 +1,34 @@
 const db = require('../db');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 module.exports = {
     // Ensure points column exists on users table
     async ensurePointsColumn() {
         try {
             await db.execute("ALTER TABLE users ADD COLUMN points INT NOT NULL DEFAULT 0");
+        } catch (err) {
+            // ignore if exists
+        }
+    },
+
+    async ensureAvatarColumn() {
+        try {
+            await db.execute("ALTER TABLE users ADD COLUMN avatar VARCHAR(255) NULL");
+        } catch (err) {
+            // ignore if exists
+        }
+    },
+
+    async ensureOAuthColumns() {
+        await this.ensureAvatarColumn();
+        try {
+            await db.execute("ALTER TABLE users ADD COLUMN oauth_provider VARCHAR(50) NULL");
+        } catch (err) {
+            // ignore if exists
+        }
+        try {
+            await db.execute("ALTER TABLE users ADD COLUMN oauth_id VARCHAR(191) NULL");
         } catch (err) {
             // ignore if exists
         }
@@ -94,6 +118,17 @@ module.exports = {
         return rows[0];
     },
 
+    async findByOAuth(provider, oauthId) {
+        await this.ensureOAuthColumns();
+        const query = `
+            SELECT * FROM users
+            WHERE oauth_provider = ? AND oauth_id = ?
+            LIMIT 1
+        `;
+        const [rows] = await db.execute(query, [provider, oauthId]);
+        return rows[0];
+    },
+
     // Find user by ID (for change password)
     async findById(id) {
         const query = `
@@ -112,6 +147,32 @@ module.exports = {
             VALUES (?, ?, ?, ?, ?, ?)
         `;
         await db.execute(query, [username, email, password, contact, address, role]);
+        return true;
+    },
+
+    async createOAuthUser({ username, email, contact = '', address = '', role = 'user', oauth_provider, oauth_id, avatar = null }) {
+        await this.ensureOAuthColumns();
+        const randomPassword = crypto.randomBytes(16).toString('hex');
+        const hashedPassword = await bcrypt.hash(randomPassword, 10);
+        const query = `
+            INSERT INTO users (username, email, password, contact, address, role, oauth_provider, oauth_id, avatar)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        await db.execute(query, [username, email, hashedPassword, contact, address, role, oauth_provider, oauth_id, avatar]);
+        return true;
+    },
+
+    async linkOAuthToUser(id, { provider, oauthId, avatar = null, email = null, username = null }) {
+        await this.ensureOAuthColumns();
+        const query = `
+            UPDATE users
+            SET oauth_provider = ?, oauth_id = ?,
+                avatar = COALESCE(?, avatar),
+                email = COALESCE(?, email),
+                username = COALESCE(?, username)
+            WHERE id = ?
+        `;
+        await db.execute(query, [provider, oauthId, avatar, email, username, id]);
         return true;
     },
 

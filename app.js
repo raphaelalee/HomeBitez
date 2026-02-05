@@ -5,6 +5,9 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 require("dotenv").config();
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const FacebookStrategy = require('passport-facebook').Strategy;
 const stripeService = require('./services/stripe');
 const nets = require("./services/nets");
 const paypal = require('@paypal/checkout-server-sdk');
@@ -23,6 +26,7 @@ const ReportModel = require('./models/ReportModel');
 const ProductModel = require('./Models/ProductModel');
 const OrdersModel = require('./Models/OrdersModel');
 const UsersModel = require('./Models/UsersModel');
+const CartModel = require('./Models/cartModels');
 
 // DB
 const db = require('./db');
@@ -171,6 +175,9 @@ app.use(session({
     saveUninitialized: true   // important for cart + fetch
 }));
 
+// Passport (OAuth)
+app.use(passport.initialize());
+
 // Make user available in views
 app.use((req, res, next) => {
     res.locals.user = req.session.user || null;
@@ -217,6 +224,128 @@ function issueTwoFactor(req) {
     req.flash('success', `Demo code: ${code}`);
     console.log('2FA email code for', req.session.user?.email || req.session.user?.username, ':', code);
     return code;
+}
+
+async function startSessionForUser(req, user) {
+    await UsersModel.ensurePointsColumn();
+    const userPoints = Number(user.points || 0);
+    req.session.user = {
+        id: user.id || user.user_id,
+        email: user.email,
+        username: user.username,
+        role: user.role || 'user',
+        avatar: user.avatar || '/images/default-avatar.png',
+        address: user.address || '',
+        contact: user.contact || '',
+        points: userPoints,
+        twoFactorVerified: false
+    };
+
+    if (req.session.user.role === 'biz_owner') req.session.post2faRedirect = '/bizowner';
+    else if (req.session.user.role === 'admin') req.session.post2faRedirect = '/admin';
+    else req.session.post2faRedirect = '/menu';
+
+    issueTwoFactor(req);
+
+    try {
+        const cartRows = await CartModel.getByUserId(req.session.user.id);
+        req.session.cart = cartRows.map(r => ({
+            name: r.name,
+            price: Number(r.price || 0),
+            quantity: Number(r.quantity || 0),
+            image: r.image || ""
+        }));
+    } catch (err) {
+        console.error("Failed to load cart from DB:", err);
+    }
+}
+
+function extractEmail(profile) {
+    const email = profile?.emails?.[0]?.value;
+    return email ? String(email).toLowerCase() : null;
+}
+
+async function upsertOAuthUser(provider, profile) {
+    await UsersModel.ensureOAuthColumns();
+
+    const oauthId = profile?.id ? String(profile.id) : null;
+    const email = extractEmail(profile);
+    const displayName = profile?.displayName || (email ? email.split('@')[0] : null);
+    const avatar = profile?.photos?.[0]?.value || null;
+
+    if (!oauthId) {
+        return { error: "OAuth provider did not return a user id." };
+    }
+    if (!email) {
+        return { error: "Your OAuth provider did not return an email address." };
+    }
+
+    let user = await UsersModel.findByOAuth(provider, oauthId);
+    if (user) {
+        if (!user.email || user.email.toLowerCase() !== email) {
+            await UsersModel.linkOAuthToUser(user.id, { provider, oauthId, avatar, email, username: displayName });
+            user = await UsersModel.findByOAuth(provider, oauthId);
+        }
+        return user;
+    }
+
+    const existing = await UsersModel.findByEmail(email);
+    if (existing) {
+        if (existing.oauth_provider && existing.oauth_provider !== provider) {
+            return { error: "This email is already linked to a different login provider." };
+        }
+        if (existing.oauth_id && existing.oauth_id !== oauthId) {
+            return { error: "This email is already linked to another account." };
+        }
+        await UsersModel.linkOAuthToUser(existing.id, { provider, oauthId, avatar, email, username: existing.username || displayName });
+        return await UsersModel.findByEmail(email);
+    }
+
+    await UsersModel.createOAuthUser({
+        username: displayName || `user_${provider}`,
+        email,
+        oauth_provider: provider,
+        oauth_id: oauthId,
+        avatar
+    });
+    return await UsersModel.findByEmail(email);
+}
+
+const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+const hasGoogleOAuth = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+const hasFacebookOAuth = !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET);
+
+if (hasGoogleOAuth) {
+    passport.use(new GoogleStrategy({
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: `${appBaseUrl}/auth/google/callback`
+    }, async (_accessToken, _refreshToken, profile, done) => {
+        try {
+            const user = await upsertOAuthUser('google', profile);
+            if (user?.error) return done(null, false, { message: user.error });
+            return done(null, user);
+        } catch (err) {
+            return done(err);
+        }
+    }));
+}
+
+if (hasFacebookOAuth) {
+    passport.use(new FacebookStrategy({
+        clientID: process.env.FACEBOOK_APP_ID,
+        clientSecret: process.env.FACEBOOK_APP_SECRET,
+        callbackURL: `${appBaseUrl}/auth/facebook/callback`,
+        profileFields: ['id', 'displayName', 'photos', 'email']
+    }, async (_accessToken, _refreshToken, profile, done) => {
+        try {
+            const user = await upsertOAuthUser('facebook', profile);
+            if (user?.error) return done(null, false, { message: user.error });
+            return done(null, user);
+        } catch (err) {
+            return done(err);
+        }
+    }));
 }
 
 const DAILY_TOPUP_LIMIT = 1000;
@@ -369,6 +498,10 @@ const publicPaths = [
     '/login',
     '/register',
     '/signup',
+    '/auth/google',
+    '/auth/google/callback',
+    '/auth/facebook',
+    '/auth/facebook/callback',
     '/logout',
     '/forgot-password',
     '/reset-password',
@@ -426,6 +559,77 @@ const upload = multer({ storage });
 module.exports.upload = upload;
 
 /* -------------------- ROUTES -------------------- */
+
+// OAuth routes
+app.get('/auth/google', (req, res, next) => {
+    if (!hasGoogleOAuth) {
+        req.flash('error', 'Google login is not configured yet.');
+        return res.redirect('/login');
+    }
+    return passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+});
+
+app.get('/auth/google/callback', (req, res, next) => {
+    if (!hasGoogleOAuth) {
+        req.flash('error', 'Google login is not configured yet.');
+        return res.redirect('/login');
+    }
+    passport.authenticate('google', { session: false }, async (err, user, info) => {
+        if (err) {
+            console.error('Google OAuth error:', err);
+            req.flash('error', err.message || 'Google login failed.');
+            return res.redirect('/login');
+        }
+        if (!user) {
+            const message = info?.message || 'Google login failed.';
+            req.flash('error', message);
+            return res.redirect('/login');
+        }
+        try {
+            await startSessionForUser(req, user);
+            return res.redirect('/2fa/email');
+        } catch (sessionErr) {
+            console.error('Google session error:', sessionErr);
+            req.flash('error', 'Google login failed.');
+            return res.redirect('/login');
+        }
+    })(req, res, next);
+});
+
+app.get('/auth/facebook', (req, res, next) => {
+    if (!hasFacebookOAuth) {
+        req.flash('error', 'Facebook login is not configured yet.');
+        return res.redirect('/login');
+    }
+    return passport.authenticate('facebook', { scope: ['email'] })(req, res, next);
+});
+
+app.get('/auth/facebook/callback', (req, res, next) => {
+    if (!hasFacebookOAuth) {
+        req.flash('error', 'Facebook login is not configured yet.');
+        return res.redirect('/login');
+    }
+    passport.authenticate('facebook', { session: false }, async (err, user, info) => {
+        if (err) {
+            console.error('Facebook OAuth error:', err);
+            req.flash('error', err.message || 'Facebook login failed.');
+            return res.redirect('/login');
+        }
+        if (!user) {
+            const message = info?.message || 'Facebook login failed.';
+            req.flash('error', message);
+            return res.redirect('/login');
+        }
+        try {
+            await startSessionForUser(req, user);
+            return res.redirect('/2fa/email');
+        } catch (sessionErr) {
+            console.error('Facebook session error:', sessionErr);
+            req.flash('error', 'Facebook login failed.');
+            return res.redirect('/login');
+        }
+    })(req, res, next);
+});
 
 // Home
 app.get('/', (req, res) => {
