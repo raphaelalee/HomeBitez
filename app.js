@@ -92,6 +92,36 @@ async function ensureReportReplyColumns() {
     reportColumnsEnsured = true;
 }
 
+let refundTableEnsured = false;
+async function ensureRefundTable() {
+    if (refundTableEnsured) return;
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS refund_requests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                order_id INT NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(150) NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                reason VARCHAR(100) NOT NULL,
+                refund_method ENUM('original','wallet') DEFAULT 'original',
+                details TEXT NOT NULL,
+                status ENUM('pending','approved','rejected') DEFAULT 'pending',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_refund_user (user_id),
+                INDEX idx_refund_order (order_id)
+            )
+        `);
+    } catch (err) {
+        console.error("ensureRefundTable failed:", err);
+    }
+    try {
+        await db.query("ALTER TABLE refund_requests ADD COLUMN refund_method ENUM('original','wallet') DEFAULT 'original'");
+    } catch (err) {}
+    refundTableEnsured = true;
+}
+
 let messagesTableEnsured = false;
 async function ensureMessagesTable() {
     if (messagesTableEnsured) return;
@@ -710,6 +740,96 @@ app.get('/report', async (req, res) => {
             orderOptions: [],
             issues: []
         });
+    }
+});
+
+app.get('/refund', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please log in to request a refund.');
+        return res.redirect('/login');
+    }
+
+    const userId = req.session.user.id;
+    const userEmail = req.session.user.email || '';
+    const userName = req.session.user.username || req.session.user.name || '';
+
+    try {
+        await ensureRefundTable();
+        const [rows] = await db.query(
+            "SELECT id, order_id, amount, reason, refund_method, details, status, created_at FROM refund_requests WHERE user_id = ? ORDER BY created_at DESC",
+            [userId]
+        );
+        const userOrders = await OrdersModel.listByUser(userId, 200);
+        const orderOptions = (userOrders || []).map(o => {
+            const labelBase = `ORD-${o.id}`;
+            const paypalRef = o.paypal_order_id ? ` - PayPal ${o.paypal_order_id}` : '';
+            return { value: String(o.id), label: `${labelBase}${paypalRef}` };
+        });
+
+        res.render('refund', {
+            success: req.flash('success'),
+            error: req.flash('error'),
+            userEmail,
+            userName,
+            orderOptions,
+            refunds: rows || []
+        });
+    } catch (err) {
+        console.error("Refund list error:", err);
+        res.render('refund', {
+            success: req.flash('success'),
+            error: req.flash('error'),
+            userEmail,
+            userName,
+            orderOptions: [],
+            refunds: []
+        });
+    }
+});
+
+app.post('/refund', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please log in to request a refund.');
+        return res.redirect('/login');
+    }
+
+    const { name, orderId, reason, details, refundMethod } = req.body;
+    const email = req.session.user.email || '';
+    const cleanName = (name || '').trim();
+    const cleanReason = (reason || '').trim();
+    const cleanDetails = (details || '').trim();
+    const cleanRefundMethod = (refundMethod || '').trim();
+    const orderIdNum = Number(orderId);
+    const amountNum = 0;
+
+    if (!cleanName || !email || !Number.isFinite(orderIdNum) || !cleanReason || !cleanDetails) {
+        req.flash('error', 'Please fill out all fields.');
+        return res.redirect('/refund');
+    }
+    if (!['original', 'wallet'].includes(cleanRefundMethod)) {
+        req.flash('error', 'Please choose a refund method.');
+        return res.redirect('/refund');
+    }
+
+    try {
+        await ensureRefundTable();
+        const userOrders = await OrdersModel.listByUser(req.session.user.id, 200);
+        const allowedIds = new Set((userOrders || []).map(o => String(o.id)));
+        if (!allowedIds.has(String(orderIdNum))) {
+            req.flash('error', 'Order ID must be one of your own orders.');
+            return res.redirect('/refund');
+        }
+
+        await db.query(
+            "INSERT INTO refund_requests (user_id, order_id, name, email, amount, reason, refund_method, details) VALUES (?,?,?,?,?,?,?,?)",
+            [req.session.user.id, orderIdNum, cleanName, email, amountNum, cleanReason, cleanRefundMethod, cleanDetails]
+        );
+        req.flash('success', 'Refund request submitted.');
+        return res.redirect('/refund');
+    } catch (err) {
+        console.error("Refund submit error:", err);
+        req.flash('error', 'Failed to submit refund request.');
+        return res.redirect('/refund');
     }
 });
 

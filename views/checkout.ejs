@@ -746,21 +746,30 @@
       }
 
       // Enforce pickup date between today and +2 months
-      if (pickupDate) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const maxDate = new Date(today);
-        maxDate.setMonth(maxDate.getMonth() + 2);
+        if (pickupDate) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const maxDate = new Date(today);
+          maxDate.setMonth(maxDate.getMonth() + 2);
 
-        const minDateStr = today.toISOString().split("T")[0];
-        const maxDateStr = maxDate.toISOString().split("T")[0];
-        pickupDate.setAttribute("min", minDateStr);
-        pickupDate.setAttribute("max", maxDateStr);
+          const toLocalDateStr = (d) => {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            return `${yyyy}-${mm}-${dd}`;
+          };
+          const minDateStr = toLocalDateStr(today);
+          const maxDateStr = toLocalDateStr(maxDate);
+          pickupDate.setAttribute("min", minDateStr);
+          pickupDate.setAttribute("max", maxDateStr);
+          if (pickupDate.value && pickupDate.value < minDateStr) {
+            pickupDate.value = "";
+          }
 
-        pickupDate.addEventListener("change", () => {
-          if (!pickupDate.value) return;
-          if (pickupDate.value < minDateStr || pickupDate.value > maxDateStr) {
-            alert(`Please choose a date between ${minDateStr} and ${maxDateStr}.`);
+          pickupDate.addEventListener("change", () => {
+            if (!pickupDate.value) return;
+            if (pickupDate.value < minDateStr || pickupDate.value > maxDateStr) {
+              alert(`Please choose a date between ${minDateStr} and ${maxDateStr}.`);
             pickupDate.value = "";
           }
         });
