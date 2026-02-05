@@ -371,6 +371,11 @@
                         fixed to these windows.</div>
                     </div>
                     <div class="col-12">
+                      <label class="muted-label">Contact</label>
+                      <input class="form-control hb-input" id="pickupContact" placeholder="Contact"
+                        value="<%= prefs?.contact || (user && user.contact) || '' %>">
+                    </div>
+                    <div class="col-12">
                       <label class="muted-label">Pickup notes (optional)</label>
                       <input class="form-control hb-input" id="pickupNotes"
                         placeholder="e.g. Call when ready, extra napkins" value="<%= prefs?.pickupNotes || '' %>">
@@ -414,7 +419,7 @@
                     <div class="col-md-6">
                       <label class="muted-label">Contact</label>
                       <input class="form-control hb-input" id="deliveryContact" placeholder="Contact"
-                        value="<%= prefs?.contact || '' %>">
+                        value="<%= prefs?.contact || (user && user.contact) || '' %>">
                     </div>
                     <div class="col-12">
                       <label class="muted-label">Address</label>
@@ -715,6 +720,7 @@
       const deliveryFields = document.getElementById("deliveryFields");
       const pickupDate = document.getElementById("pickupDate");
       const pickupTime = document.getElementById("pickupTime");
+      const pickupContact = document.getElementById("pickupContact");
       const deliveryName = document.getElementById("deliveryName");
       const deliveryContact = document.getElementById("deliveryContact");
       const deliveryAddress = document.getElementById("deliveryAddress");
@@ -861,6 +867,7 @@
         if (modePickup && modePickup.checked) {
           if (!pickupDate || !pickupDate.value) errs.push("Select a pickup date.");
           if (!pickupTime || !pickupTime.value) errs.push("Choose a pickup slot.");
+          if (!pickupContact || !pickupContact.value.trim()) errs.push("Enter a contact number for pickup.");
         } else if (modeDelivery && modeDelivery.checked) {
           if (!deliveryName || !deliveryName.value.trim()) errs.push("Enter the delivery name.");
           if (!deliveryContact || !deliveryContact.value.trim()) errs.push("Enter a delivery contact number.");
@@ -898,7 +905,9 @@
           pickupTime: pickupTime ? pickupTime.value : "",
           name: deliveryName ? deliveryName.value : "",
           address: deliveryAddress ? deliveryAddress.value : "",
-          contact: deliveryContact ? deliveryContact.value : "",
+          contact: modeDelivery.checked
+            ? (deliveryContact ? deliveryContact.value : "")
+            : (pickupContact ? pickupContact.value : ""),
           notes: deliveryNotes ? deliveryNotes.value : ""
         };
 
@@ -917,6 +926,7 @@
           [deliveryName, deliveryContact, deliveryAddress].forEach(el => { if (el) el.required = true; });
           if (pickupDate) pickupDate.required = false;
           if (pickupTime) pickupTime.required = false;
+          if (pickupContact) pickupContact.required = false;
         } else {
           pickupFields.style.display = "block";
           deliveryFields.style.display = "none";
@@ -924,6 +934,7 @@
           [deliveryName, deliveryContact, deliveryAddress].forEach(el => { if (el) el.required = false; });
           if (pickupDate) pickupDate.required = true;
           if (pickupTime) pickupTime.required = true;
+          if (pickupContact) pickupContact.required = true;
         }
         syncSummary();
         savePrefs();
@@ -934,6 +945,7 @@
 
       if (pickupDate) pickupDate.addEventListener("change", () => { syncSummary(); savePrefs(); });
       if (pickupTime) pickupTime.addEventListener("change", () => { syncSummary(); savePrefs(); });
+      if (pickupContact) pickupContact.addEventListener("change", savePrefs);
       if (deliveryTypeNormal) deliveryTypeNormal.addEventListener("change", () => {
         if (modeDelivery && modeDelivery.checked) {
           currentDeliveryFeeNum = normalDeliveryFeeNum;

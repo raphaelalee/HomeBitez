@@ -176,6 +176,16 @@ module.exports = {
         return true;
     },
 
+    async updateContact(id, contact) {
+        const query = `
+            UPDATE users
+            SET contact = ?
+            WHERE id = ?
+        `;
+        await db.execute(query, [contact || "", id]);
+        return true;
+    },
+
     // Update user password
     async updatePassword(id, hashedPassword) {
         const query = `

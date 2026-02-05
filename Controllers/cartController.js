@@ -193,7 +193,7 @@ module.exports = {
     },
 
     // POST /cart/preferences
-    savePreferences(req, res) {
+    async savePreferences(req, res) {
         const { cutlery, pickupDate, pickupTime, mode, deliveryType, name, address, contact, notes } = req.body;
 
         if (!req.session.cartPrefs) {
@@ -209,6 +209,19 @@ module.exports = {
         if (typeof address !== "undefined") req.session.cartPrefs.address = address || "";
         if (typeof contact !== "undefined") req.session.cartPrefs.contact = contact || "";
         if (typeof notes !== "undefined") req.session.cartPrefs.notes = notes || "";
+
+        if (req.session.user && typeof contact !== "undefined") {
+            const trimmed = String(contact || "").trim();
+            const current = String(req.session.user.contact || "").trim();
+            if (trimmed && trimmed !== current) {
+                try {
+                    await UsersModel.updateContact(req.session.user.id, trimmed);
+                    req.session.user.contact = trimmed;
+                } catch (err) {
+                    console.error("Failed to update user contact from checkout:", err);
+                }
+            }
+        }
 
         return res.json({ ok: true });
     },
