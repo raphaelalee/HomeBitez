@@ -8,7 +8,7 @@ Student ID: 24016580
 Class: E63C c004
 Date created: February 3, 2026
 */
-const User = require('../models/UsersModel');
+const User = require('../Models/UsersModel');
 const CartModel = require('../Models/cartModels');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs'); // make sure bcryptjs is installed
