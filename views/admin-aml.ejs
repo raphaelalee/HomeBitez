@@ -1,0 +1,77 @@
+<%- include('partials/head', { title: 'Admin AML - HomeBitez' }) %>
+<%- include('partials/navbar-admin') %>
+
+<style>
+  body { font-family: 'Sora', 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+  .page-wrap { padding: 28px; }
+  .page-title { font-size: 24px; font-weight: 700; margin: 0 0 16px; }
+  .card { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 16px; }
+  .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .table th, .table td { border-bottom: 1px solid #eee; padding: 10px 8px; text-align: left; vertical-align: top; }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .badge.open { background: #fff3cd; color: #856404; }
+  .badge.reviewed { background: #d4edda; color: #155724; }
+  .btn { border: none; border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .btn-review { background: #2d8cff; color: #fff; }
+  .muted { color: #6c757d; font-size: 12px; }
+  @media (max-width: 900px) {
+    .table { font-size: 12px; }
+  }
+</style>
+
+<div class="page-wrap">
+  <div class="page-title">AML Flags</div>
+  <div class="card">
+    <% if (!flags || flags.length === 0) { %>
+      <div class="muted">No AML flags recorded.</div>
+    <% } else { %>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>User</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% flags.forEach(f => { %>
+            <tr>
+              <td>#<%= f.id %></td>
+              <td>
+                <strong><%= f.username || 'Unknown' %></strong>
+                <div class="muted">User ID: <%= f.user_id %></div>
+              </td>
+              <td><%= f.flag_type %></td>
+              <td><%= (f.amount != null ? `$${Number(f.amount).toFixed(2)}` : '-') %></td>
+              <td><%= f.reason %></td>
+              <td>
+                <% if (f.status === 'reviewed') { %>
+                  <span class="badge reviewed">Reviewed</span>
+                <% } else { %>
+                  <span class="badge open">Open</span>
+                <% } %>
+              </td>
+              <td><%= f.created_at ? new Date(f.created_at).toLocaleString() : '-' %></td>
+              <td>
+                <% if (f.status !== 'reviewed') { %>
+                  <form method="POST" action="/admin/aml/<%= f.id %>/mark-reviewed">
+                    <button class="btn btn-review" type="submit">Mark Reviewed</button>
+                  </form>
+                <% } else { %>
+                  <span class="muted">—</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

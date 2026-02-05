@@ -276,6 +276,73 @@ async function recordWalletTxn(userId, type, method, amount, balanceAfter) {
     }
 }
 
+let amlFlagsEnsured = false;
+async function ensureAmlFlagsTable() {
+    if (amlFlagsEnsured) return;
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS aml_flags (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                flag_type VARCHAR(50) NOT NULL,
+                amount DECIMAL(10,2) NULL,
+                reason VARCHAR(255) NOT NULL,
+                meta JSON NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                status ENUM('open','reviewed') DEFAULT 'open',
+                INDEX idx_aml_user (user_id),
+                INDEX idx_aml_status (status)
+            )
+        `);
+    } catch (err) {
+        console.error("ensureAmlFlagsTable failed:", err);
+    }
+    amlFlagsEnsured = true;
+}
+
+async function recordAmlFlag(userId, flagType, amount, reason, meta = null) {
+    try {
+        await ensureAmlFlagsTable();
+        const safeAmount = Number.isFinite(Number(amount)) ? Number(amount) : null;
+        const metaJson = meta ? JSON.stringify(meta) : null;
+        await db.query(
+            "INSERT INTO aml_flags (user_id, flag_type, amount, reason, meta) VALUES (?,?,?,?,?)",
+            [userId, flagType, safeAmount, reason, metaJson]
+        );
+    } catch (err) {
+        console.error("recordAmlFlag failed:", err);
+    }
+}
+
+function amlCheckWallet({ userId, type, amount, dailyTotal, limit }) {
+    const amt = Number(amount || 0);
+    const total = Number(dailyTotal || 0);
+    const lim = Number(limit || 0);
+    if (!userId || !Number.isFinite(amt)) return;
+
+    // Flag large single movement
+    if (amt >= 500) {
+        recordAmlFlag(
+            userId,
+            type === 'topup' ? 'wallet_topup_large' : 'wallet_spend_large',
+            amt,
+            `Single ${type} >= $500`,
+            { amount: amt }
+        );
+    }
+
+    // Flag if user is near daily limit (>= 90%)
+    if (lim > 0 && (total + amt) >= (0.9 * lim)) {
+        recordAmlFlag(
+            userId,
+            type === 'topup' ? 'wallet_topup_near_limit' : 'wallet_spend_near_limit',
+            amt,
+            `Daily ${type} near limit`,
+            { amount: amt, dailyTotal: total, limit: lim }
+        );
+    }
+}
+
 // Initialize app
 const app = express();
 
@@ -741,6 +808,16 @@ function getRedeemForSubtotalFromSession(session, subtotal) {
         redeemAmount: Number(redeemAmount.toFixed(2)),
         redeemPoints: Number(redeemPoints || 0)
     };
+}
+
+const NORMAL_DELIVERY_FEE = 2.5;
+const URGENT_DELIVERY_FEE = 6;
+
+function getDeliveryFeeFromPrefs(prefs) {
+    const mode = String(prefs?.mode || "pickup").toLowerCase();
+    if (mode !== "delivery") return 0;
+    const deliveryType = String(prefs?.deliveryType || prefs?.delivery_type || "normal").toLowerCase();
+    return deliveryType === "urgent" ? URGENT_DELIVERY_FEE : NORMAL_DELIVERY_FEE;
 }
 
 
@@ -1555,6 +1632,57 @@ app.post('/admin/notifications/mark-read', async (req, res) => {
     await setNotificationRead('admin', req.session.user.id, 'payments', now);
     await setNotificationRead('admin', req.session.user.id, 'refunds', now);
     return res.redirect('/admin/notifications');
+});
+
+// Admin AML flags
+app.get('/admin/aml', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+    try {
+        await ensureAmlFlagsTable();
+        const [rows] = await db.query(
+            `SELECT af.id, af.user_id, u.username, u.email, af.flag_type, af.amount,
+                    af.reason, af.meta, af.status, af.created_at
+             FROM aml_flags af
+             LEFT JOIN users u ON u.id = af.user_id
+             ORDER BY af.created_at DESC
+             LIMIT 200`
+        );
+        return res.render('admin-aml', {
+            flags: rows || [],
+            adminName: req.session.user?.username || 'Admin'
+        });
+    } catch (err) {
+        console.error("Admin AML error:", err);
+        return res.status(500).send("Server error");
+    }
+});
+
+app.post('/admin/aml/:id/mark-reviewed', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+    try {
+        await ensureAmlFlagsTable();
+        const id = Number(req.params.id);
+        if (!Number.isFinite(id)) return res.redirect('/admin/aml');
+        await db.query("UPDATE aml_flags SET status='reviewed' WHERE id=?", [id]);
+        return res.redirect('/admin/aml');
+    } catch (err) {
+        console.error("Admin AML update error:", err);
+        return res.redirect('/admin/aml');
+    }
 });
 
 // Admin manage customers
@@ -2851,6 +2979,35 @@ app.post('/digitalwallet/use', async (req, res) => {
   const total = parseFloat(req.body.total);
   if (isNaN(total) || total <= 0) return res.json({ success: false, error: 'Invalid total' });
 
+  const cart = getSelectedCartItemsFromSession(req.session);
+  if (!cart.length) return res.json({ success: false, error: 'Cart is empty' });
+
+  const prefs = req.session.cartPrefs || {
+    cutlery: false,
+    pickupDate: "",
+    pickupTime: "",
+    mode: "pickup",
+    deliveryType: "normal",
+    name: "",
+    address: "",
+    contact: "",
+    notes: ""
+  };
+
+  const items = cart.map((i) => ({
+    name: i.name,
+    price: Number(i.price || 0),
+    qty: Number(i.quantity || i.qty || 0),
+  }));
+
+  const subtotal = items.reduce((s, it) => s + (it.price * it.qty), 0);
+  const deliveryFee = getDeliveryFeeFromPrefs(prefs);
+  const { redeemAmount: redeem, redeemPoints } = getRedeemForSubtotalFromSession(req.session, subtotal);
+  const computedTotal = Number((subtotal + deliveryFee - redeem).toFixed(2));
+  if (Math.abs(computedTotal - total) > 0.01) {
+    return res.json({ success: false, error: 'Cart total changed. Please refresh and try again.' });
+  }
+
   await ensureWalletColumn();
   await ensureWalletTransactionsTable();
 
@@ -2866,7 +3023,14 @@ app.post('/digitalwallet/use', async (req, res) => {
     console.error("wallet daily spent error:", err);
   }
 
-  if (dailySpent + total > dailyLimit) {
+  if (dailySpent + computedTotal > dailyLimit) {
+    amlCheckWallet({
+      userId: req.session.user.id,
+      type: 'payment',
+      amount: Number(computedTotal),
+      dailyTotal: dailySpent,
+      limit: dailyLimit
+    });
     return res.json({
       success: false,
       error: 'Daily wallet spend limit reached',
@@ -2882,17 +3046,107 @@ app.post('/digitalwallet/use', async (req, res) => {
 
   const balance = rows?.[0]?.wallet_balance ?? 0;
 
-  if (balance >= total) {
-    await db.query(
-      "UPDATE users SET wallet_balance = wallet_balance - ? WHERE id=?",
-      [total, req.session.user.id]
-    );
-    const newBalance = Number(balance) - Number(total);
-    await recordWalletTxn(req.session.user.id, 'payment', 'wallet', Number(total), newBalance);
-    return res.json({ success: true, newBalance });
+  if (balance >= computedTotal) {
+    try {
+      await db.query(
+        "UPDATE users SET wallet_balance = wallet_balance - ? WHERE id=?",
+        [computedTotal, req.session.user.id]
+      );
+      const newBalance = Number(balance) - Number(computedTotal);
+
+      const orderDbId = await OrdersModel.create({
+        userId: req.session.user ? req.session.user.id : null,
+        payerEmail: req.session.user?.email || null,
+        shippingName: prefs?.name || req.session.user?.username || null,
+        items,
+        subtotal,
+        deliveryFee,
+        total: computedTotal,
+        status: "paid"
+      });
+
+      await recordWalletTxn(req.session.user.id, 'payment', 'wallet', Number(computedTotal), newBalance);
+      amlCheckWallet({
+        userId: req.session.user.id,
+        type: 'payment',
+        amount: Number(computedTotal),
+        dailyTotal: dailySpent,
+        limit: dailyLimit
+      });
+
+      if (req.session.user && redeemPoints) {
+        try {
+          const { balance: ptsBalance, entry } = await UsersModel.addPoints(
+            req.session.user.id,
+            -Number(redeemPoints),
+            `Redeem order ${orderDbId} (Wallet)`
+          );
+          req.session.user.points = ptsBalance;
+          req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0, 20);
+        } catch (err) {
+          console.error("Points redeem deduct failed (Wallet):", err);
+        }
+      }
+
+      if (req.session.user && computedTotal > 0) {
+        try {
+          const earned = Math.floor(computedTotal / 0.01);
+          const { balance: ptsBalance, entry } = await UsersModel.addPoints(
+            req.session.user.id,
+            earned,
+            `Order ${orderDbId} (Wallet)`
+          );
+          req.session.user.points = ptsBalance;
+          req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0, 20);
+        } catch (err) {
+          console.error("Points award failed (Wallet):", err);
+        }
+      }
+
+      // Clear redeemed points after use
+      req.session.cartRedeem = null;
+
+      // Remove purchased items from session + DB cart
+      const purchasedNames = [...new Set(items.map(i => i.name).filter(Boolean))];
+      req.session.cart = (req.session.cart || []).filter(i => !purchasedNames.includes(i.name));
+      req.session.checkoutSelection = null;
+      if (req.session?.user?.id) {
+        for (const name of purchasedNames) {
+          try { await CartModel.removeItem(req.session.user.id, name); } catch (err) {}
+        }
+      }
+
+      // Decrement inventory (quantity if column exists)
+      for (const it of items) {
+        const qty = Number(it.qty || 0);
+        if (!it.name || qty <= 0) continue;
+        try {
+          await db.query(
+            "UPDATE product SET quantity = GREATEST(quantity - ?, 0) WHERE LOWER(TRIM(product_name)) = LOWER(TRIM(?))",
+            [qty, it.name]
+          );
+        } catch (err) {}
+      }
+
+      req.session.latestOrderDbId = orderDbId;
+      return res.json({ success: true, newBalance });
+    } catch (err) {
+      console.error("wallet checkout failed:", err);
+      if (Number.isFinite(computedTotal)) {
+        try {
+          await db.query(
+            "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
+            [computedTotal, req.session.user.id]
+          );
+        } catch (refundErr) {
+          console.error("wallet refund failed after checkout error:", refundErr);
+        }
+      }
+      return res.status(500).json({ success: false, error: "Wallet payment failed. Please try again." });
+    }
   }
 
-  const needed = (total - balance).toFixed(2);
+  const needed = (computedTotal - balance).toFixed(2);
   return res.json({ success: false, error: 'Insufficient balance', needed });
 });
 
@@ -2909,6 +3163,13 @@ app.post('/digitalwallet/topup', async (req, res) => {
 
   const limitCheck = await checkDailyTopupLimit(req.session.user.id, amount);
   if (!limitCheck.ok) {
+    amlCheckWallet({
+      userId: req.session.user.id,
+      type: 'topup',
+      amount: Number(amount),
+      dailyTotal: Number(limitCheck.dailyTopup || 0),
+      limit: Number(limitCheck.limit || 0)
+    });
     return res.status(400).json({
       success: false,
       error: 'Daily top up limit reached',
@@ -2928,6 +3189,13 @@ app.post('/digitalwallet/topup', async (req, res) => {
   );
   const balanceAfter = rows?.[0]?.wallet_balance ?? Number(amount);
   await recordWalletTxn(req.session.user.id, 'topup', 'manual', Number(amount), balanceAfter);
+  amlCheckWallet({
+    userId: req.session.user.id,
+    type: 'topup',
+    amount: Number(amount),
+    dailyTotal: Number(limitCheck.dailyTopup || 0),
+    limit: Number(limitCheck.limit || 0)
+  });
   clearWallet2fa(req);
 
   // After top-up, redirect back to the original page
@@ -3044,6 +3312,13 @@ app.get('/wallet/stripe/success', async (req, res) => {
     );
     const balanceAfter = rows?.[0]?.wallet_balance ?? Number(amount);
     await recordWalletTxn(req.session.user.id, 'topup', 'stripe', Number(amount), balanceAfter);
+    amlCheckWallet({
+      userId: req.session.user.id,
+      type: 'topup',
+      amount: Number(amount),
+      dailyTotal: Number(limitCheck.dailyTopup || 0),
+      limit: Number(limitCheck.limit || 0)
+    });
     clearWallet2fa(req);
 
     return res.redirect('/digitalwallet');
@@ -3130,6 +3405,13 @@ app.get('/wallet/paypal/success', async (req, res) => {
   );
   const balanceAfter = rows?.[0]?.wallet_balance ?? Number(parsedAmount);
   await recordWalletTxn(req.session.user.id, 'topup', 'paypal', Number(parsedAmount), balanceAfter);
+  amlCheckWallet({
+    userId: req.session.user.id,
+    type: 'topup',
+    amount: Number(parsedAmount),
+    dailyTotal: Number(limitCheck.dailyTopup || 0),
+    limit: Number(limitCheck.limit || 0)
+  });
   clearWallet2fa(req);
 
   // Redirect back to wallet
@@ -3223,6 +3505,13 @@ app.post('/wallet/nets/complete', async (req, res) => {
     );
     const balanceAfter = rows?.[0]?.wallet_balance ?? Number(amount);
     await recordWalletTxn(req.session.user.id, 'topup', 'nets', Number(amount), balanceAfter);
+    amlCheckWallet({
+      userId: req.session.user.id,
+      type: 'topup',
+      amount: Number(amount),
+      dailyTotal: Number(limitCheck.dailyTopup || 0),
+      limit: Number(limitCheck.limit || 0)
+    });
     clearWallet2fa(req);
     req.session.walletNetsPending = null;
 
