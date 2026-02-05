@@ -1114,13 +1114,8 @@ exports.renderReceipt = async (req, res) => {
     paypalCapture,       // <-- ALWAYS DEFINED (null or object)
     stripeCapture,
     paylaterPlan: req.session?.paylaterPlan || null,
-<<<<<<< HEAD
     latestOrderDbId: receiptOrderDbId,
     receiptOrderRef,
-=======
-    latestOrderDbId,
-    lastReceiptOrderId: req.session?.lastReceiptOrderId || null,
->>>>>>> e4e9825fb181af68a566a17939d61a3835903d45
     user: req.session.user || null,
     prefs,
     paymentMethod,
