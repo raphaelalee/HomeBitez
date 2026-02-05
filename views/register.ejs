@@ -123,14 +123,35 @@
             align-items: center;
             gap: 10px;
             width: 100%;
-            height: 45px;
+            height: 48px;
             background: white;
-            border-radius: 25px;
+            border-radius: 8px;
             border: 1px solid #ddd;
             padding: 5px 15px;
         }
 
-        .social-btn img { height: 20px; }
+        .social-btn img { height: 18px; }
+        .singpass-btn {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #e53935;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            text-transform: none;
+        }
+        .singpass-btn:hover {
+            background: #d32f2f;
+            color: #fff;
+        }
+        .google-btn {
+            background: #fff;
+            color: #111;
+            border: 1px solid #ddd;
+            justify-content: center;
+        }
 
         a { text-decoration: none; color: #666; }
     </style>
@@ -177,8 +198,11 @@
 
         <div class="text-center my-3">or continue with</div>
 
-        <a class="social-btn mb-2" href="/auth/google">
+        <a class="social-btn mb-2 google-btn" href="/auth/google">
             <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png"> Continue with Google
+        </a>
+        <a class="social-btn mb-2 singpass-btn" href="/singpass/start?mode=signup">
+            Sign with singpass
         </a>
         <div class="text-center">
             Already have an account? <a href="/login">Login</a>

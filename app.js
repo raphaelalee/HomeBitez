@@ -644,6 +644,85 @@ async function upsertOAuthUser(provider, profile) {
     return await UsersModel.findByEmail(email);
 }
 
+async function upsertSingpassUser({ nric, email, name, contact }) {
+    await UsersModel.ensureOAuthColumns();
+    const oauthId = String(nric || "").trim().toUpperCase();
+    const cleanEmail = String(email || "").trim().toLowerCase();
+    const displayName = String(name || "").trim() || (cleanEmail ? cleanEmail.split("@")[0] : "singpass_user");
+
+    if (!oauthId) return { error: "Missing NRIC/FIN." };
+    if (!cleanEmail) return { error: "Missing email." };
+
+    let user = await UsersModel.findByOAuth("singpass", oauthId);
+    if (user) return user;
+
+    const existing = await UsersModel.findByEmail(cleanEmail);
+    if (existing) {
+        if (existing.oauth_provider && existing.oauth_provider !== "singpass") {
+            return { error: "This email is already linked to a different login provider." };
+        }
+        if (existing.oauth_id && existing.oauth_id !== oauthId) {
+            return { error: "This email is already linked to another account." };
+        }
+        await UsersModel.linkOAuthToUser(existing.id, {
+            provider: "singpass",
+            oauthId,
+            email: cleanEmail,
+            username: existing.username || displayName
+        });
+        return await UsersModel.findByEmail(cleanEmail);
+    }
+
+    await UsersModel.createOAuthUser({
+        username: displayName,
+        email: cleanEmail,
+        contact: String(contact || "").trim(),
+        oauth_provider: "singpass",
+        oauth_id: oauthId
+    });
+    return await UsersModel.findByEmail(cleanEmail);
+}
+
+async function startSingpassSession(req, user) {
+    await UsersModel.ensurePointsColumn();
+    const userPoints = Number(user.points || 0);
+    req.session.user = {
+        id: user.id || user.user_id,
+        email: user.email,
+        username: user.username,
+        role: user.role || 'user',
+        avatar: user.avatar || '/images/default-avatar.png',
+        address: user.address || '',
+        contact: user.contact || '',
+        points: userPoints,
+        twoFactorVerified: false
+    };
+
+    if (req.session.user.role === 'biz_owner') req.session.post2faRedirect = '/bizowner';
+    else if (req.session.user.role === 'admin') req.session.post2faRedirect = '/admin';
+    else req.session.post2faRedirect = '/menu';
+
+    const code = generateTwoFactorCode();
+    req.session.twoFactor = {
+        stage: 'singpass',
+        singpass: { code, expiresAt: Date.now() + 5 * 60 * 1000 },
+        emailVerified: false
+    };
+    console.log(`[SINGPASS 2FA] Code ${code} for ${req.session.user.email || 'unknown email'}`);
+
+    try {
+        const cartRows = await CartModel.getByUserId(req.session.user.id);
+        req.session.cart = cartRows.map(r => ({
+            name: r.name,
+            price: Number(r.price || 0),
+            quantity: Number(r.quantity || 0),
+            image: r.image || ""
+        }));
+    } catch (err) {
+        console.error("Failed to load cart from DB:", err);
+    }
+}
+
 const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
 const hasGoogleOAuth = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 const hasFacebookOAuth = !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET);
@@ -841,6 +920,7 @@ const publicPaths = [
     '/login',
     '/register',
     '/signup',
+    '/singpass',
     '/auth/google',
     '/auth/google/callback',
     '/auth/facebook',
@@ -874,11 +954,14 @@ app.use((req, res, next) => {
     const path = req.path;
 
     if (!user || user.twoFactorVerified) return next();
-    if (path.startsWith('/2fa') || path.startsWith('/logout')) return next();
+    if (path.startsWith('/2fa') || path.startsWith('/singpass/2fa') || path.startsWith('/logout')) return next();
     if (path.startsWith('/public') || path.startsWith('/images') || path === '/favicon.ico') return next();
 
     const tf = req.session.twoFactor || {};
-    if (!tf.emailVerified) return res.redirect('/2fa/email');
+    if (!tf.emailVerified) {
+        if (tf.stage === 'singpass') return res.redirect('/singpass/2fa');
+        return res.redirect('/2fa/email');
+    }
     return next();
 });
 
@@ -972,6 +1055,108 @@ app.get('/auth/facebook/callback', (req, res, next) => {
             return res.redirect('/login');
         }
     })(req, res, next);
+});
+
+// Singpass (mock) routes
+app.get('/singpass/start', (req, res) => {
+    const mode = String(req.query.mode || 'login').toLowerCase();
+    return res.redirect(`/singpass/mock?mode=${encodeURIComponent(mode)}`);
+});
+
+app.get('/singpass/mock', (req, res) => {
+    const mode = String(req.query.mode || 'login').toLowerCase();
+    res.render('singpass-mock', {
+        mode,
+        error: req.flash('error'),
+        success: req.flash('success')
+    });
+});
+
+app.post('/singpass/mock', async (req, res) => {
+    try {
+        const mode = String(req.body.mode || 'login').toLowerCase();
+        const nric = String(req.body.nric || '').trim();
+        const name = String(req.body.name || '').trim();
+        const email = String(req.body.email || '').trim();
+        const contact = String(req.body.contact || '').trim();
+
+        if (!nric || !email || !name) {
+            req.flash('error', 'Please fill in NRIC/FIN, full name, and email.');
+            return res.redirect(`/singpass/mock?mode=${encodeURIComponent(mode)}`);
+        }
+
+        const user = await upsertSingpassUser({ nric, email, name, contact });
+        if (user?.error) {
+            req.flash('error', user.error);
+            return res.redirect(`/singpass/mock?mode=${encodeURIComponent(mode)}`);
+        }
+
+        await startSingpassSession(req, user);
+        return res.redirect('/singpass/2fa');
+    } catch (err) {
+        console.error("Singpass mock error:", err);
+        req.flash('error', 'Singpass mock failed. Please try again.');
+        return res.redirect('/login');
+    }
+});
+
+app.get('/singpass/2fa', (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    const tf = req.session.twoFactor || {};
+    const sp = tf.singpass || {};
+    if (!sp.code || (sp.expiresAt && Date.now() > sp.expiresAt)) {
+        const code = generateTwoFactorCode();
+        req.session.twoFactor = {
+            stage: 'singpass',
+            singpass: { code, expiresAt: Date.now() + 5 * 60 * 1000 },
+            emailVerified: false
+        };
+        console.log(`[SINGPASS 2FA] Code ${code} for ${req.session.user.email || 'unknown email'}`);
+    }
+
+    res.render('singpass-2fa', {
+        error: req.flash('error'),
+        success: req.flash('success')
+    });
+});
+
+app.post('/singpass/2fa/verify', (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    const submitted = String(req.body.code || '').replace(/\s/g, '');
+    const tf = req.session.twoFactor || {};
+    const sp = tf.singpass || {};
+
+    if (!sp.code) {
+        req.flash('error', 'Verification code not found. Please resend.');
+        return res.redirect('/singpass/2fa');
+    }
+    if (sp.expiresAt && Date.now() > sp.expiresAt) {
+        req.flash('error', 'Code expired. Please resend.');
+        return res.redirect('/singpass/2fa');
+    }
+    if (submitted != String(sp.code)) {
+        req.flash('error', 'Invalid code. Please try again.');
+        return res.redirect('/singpass/2fa');
+    }
+
+    req.session.twoFactor.emailVerified = true;
+    req.session.user.twoFactorVerified = true;
+    req.session.twoFactor = null;
+    const redirectTo = req.session.post2faRedirect || '/menu';
+    req.session.post2faRedirect = null;
+    return res.redirect(redirectTo);
+});
+
+app.post('/singpass/2fa/resend', (req, res) => {
+    if (!req.session.user) return res.redirect('/login');
+    const code = generateTwoFactorCode();
+    req.session.twoFactor = {
+        stage: 'singpass',
+        singpass: { code, expiresAt: Date.now() + 5 * 60 * 1000 },
+        emailVerified: false
+    };
+    console.log(`[SINGPASS 2FA] Code ${code} for ${req.session.user.email || 'unknown email'}`);
+    return res.redirect('/singpass/2fa');
 });
 
 // Home

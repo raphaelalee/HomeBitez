@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singpass - HomeBitez</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #f3f3f3;
+            font-family: 'Source Sans 3', Arial, sans-serif;
+        }
+        .gov-bar {
+            background: #eeeeee;
+            color: #333;
+            font-size: 12px;
+            padding: 6px 0;
+        }
+        .brand-bar {
+            background: #ffffff;
+            border-bottom: 1px solid #e6e6e6;
+            padding: 12px 0;
+        }
+        .sp-logo {
+            font-weight: 800;
+            font-size: 26px;
+            color: #d71920;
+            letter-spacing: 0.4px;
+        }
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .search-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #ddd;
+            background: #fff;
+            color: #333;
+            border-radius: 16px;
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        .search-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+        .advisory {
+            background: #f7f7f7;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 18px;
+            color: #333;
+        }
+        .advisory-title {
+            font-weight: 700;
+        }
+        .advisory-text {
+            font-weight: 600;
+        }
+        .hero {
+            display: flex;
+            gap: 24px;
+            align-items: stretch;
+        }
+        .hero .login-panel {
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .welcome {
+            flex: 1;
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 280px;
+            position: relative;
+            overflow: hidden;
+        }
+        .welcome::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image:
+                radial-gradient(circle at 16px 16px, rgba(0,0,0,0.04) 2px, transparent 2px),
+                radial-gradient(circle at 80px 56px, rgba(0,0,0,0.03) 3px, transparent 3px),
+                linear-gradient(45deg, rgba(0,0,0,0.02) 25%, transparent 25%, transparent 50%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.02) 75%, transparent 75%, transparent);
+            background-size: 140px 140px, 140px 140px, 60px 60px;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .welcome-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+        .welcome-title {
+            font-weight: 700;
+        }
+        .welcome-subtitle {
+            font-weight: 700;
+        }
+        .welcome-icon {
+            width: 46px;
+            height: 46px;
+        }
+        .login-panel {
+            width: 360px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #eee;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 10px;
+            text-align: center;
+            font-weight: 600;
+            border: none;
+            background: #ffffff;
+            border-bottom: 3px solid transparent;
+            color: #999;
+        }
+        .tab-btn.active {
+            border-bottom: 3px solid #d71920;
+            color: #d71920;
+        }
+        .panel-body {
+            padding: 16px;
+        }
+        .qr-box {
+            border: 2px solid #d71920;
+            border-radius: 10px;
+            padding: 12px;
+            display: inline-block;
+            background: #fff;
+            position: relative;
+        }
+        .qr-box img {
+            width: 180px;
+            height: 180px;
+            display: block;
+        }
+        .qr-badge {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: #d71920;
+            color: #fff;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .qr-label {
+            font-size: 15px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .qr-label strong {
+            font-weight: 700;
+            color: #d71920;
+        }
+        .form-control {
+            background: #f4f4f4;
+            border-radius: 6px;
+            height: 42px;
+            border: 1px solid #e1e1e1;
+        }
+        .primary-btn {
+            width: 100%;
+            height: 42px;
+            background-color: #d71920;
+            color: white;
+            border-radius: 6px;
+            border: none;
+            font-size: 15px;
+        }
+        .hint {
+            font-size: 12px;
+            color: #666;
+        }
+        .hidden {
+            display: none;
+        }
+        .mock-details {
+            margin-top: 12px;
+            border-top: 1px dashed #eee;
+            padding-top: 10px;
+            font-size: 12px;
+        }
+        .mock-details summary {
+            cursor: pointer;
+            color: #666;
+            font-weight: 600;
+        }
+        .footer-note {
+            margin-top: 18px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+        }
+        .singpass-wordmark {
+            text-align: center;
+            font-weight: 800;
+            color: #d71920;
+            margin-top: 8px;
+            font-size: 15px;
+        }
+        @media (max-width: 992px) {
+            .hero {
+                flex-direction: column;
+            }
+            .login-panel {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="gov-bar">
+    <div class="container">A Singapore Government Agency Website</div>
+</div>
+<div class="brand-bar">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sp-logo">singpass</div>
+        <div class="top-actions">
+            <button class="search-btn" type="button" aria-label="Search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+                </svg>
+                Search
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="container py-4">
+    <div class="advisory">
+        <span class="advisory-title">Advisory Note</span><br>
+        <span class="advisory-text">Your Singpass account contains personal data. Do not share your username, password and 2FA details with anyone.</span>
+    </div>
+
+    <% if (error && error.length > 0) { %>
+        <div class="alert alert-danger"><%= error %></div>
+    <% } %>
+    <% if (success && success.length > 0) { %>
+        <div class="alert alert-success"><%= success %></div>
+    <% } %>
+
+    <div class="hero">
+        <div class="welcome">
+            <div class="welcome-content">
+                <svg class="welcome-icon" viewBox="0 0 64 64" aria-hidden="true">
+                    <circle cx="32" cy="22" r="10" fill="#f7c6c6"></circle>
+                    <path d="M14 56c3-12 13-20 18-20s15 8 18 20" fill="#f7c6c6"></path>
+                    <circle cx="32" cy="16" r="6" fill="#d71920"></circle>
+                    <path d="M22 34h20l-10 8z" fill="#d71920"></path>
+                </svg>
+                <div>
+                    <h4 class="mb-1 welcome-title">Welcome to Singpass</h4>
+                    <div class="text-muted welcome-subtitle">Your trusted digital identity</div>
+                </div>
+            </div>
+            <div class="hint mt-3">Mock layout for HomeBitez.</div>
+        </div>
+
+        <div class="login-panel">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="qr">Singpass app</button>
+                <button class="tab-btn" data-tab="password">Password login</button>
+            </div>
+
+            <div class="panel-body" id="tab-qr">
+                <div class="qr-label text-center"><strong>Scan with Singpass app</strong><br>to log in</div>
+                <div class="d-flex justify-content-center mb-3">
+                    <div class="qr-box">
+                        <a href="https://www.singpass.gov.sg/" target="_blank" rel="noopener">
+                            <img alt="Singpass QR" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fwww.singpass.gov.sg%2F">
+                        </a>
+                        <div class="qr-badge">i</div>
+                    </div>
+                </div>
+                <div class="singpass-wordmark">singpass</div>
+                <div class="text-center mb-2 hint">Don't have Singpass app? <a href="https://www.singpass.gov.sg/" target="_blank" rel="noopener">Download now</a></div>
+
+                <details class="mock-details">
+                    <summary>Mock details for HomeBitez only</summary>
+                    <form action="/singpass/mock" method="POST" class="mt-2">
+                        <input type="hidden" name="mode" value="<%= mode %>">
+                        <input type="text" name="nric" placeholder="NRIC / FIN (e.g., S1234567D)" class="form-control mb-2" required>
+                        <input type="text" name="name" placeholder="Full Name" class="form-control mb-2" required>
+                        <input type="email" name="email" placeholder="Email" class="form-control mb-2" required>
+                        <input type="text" name="contact" placeholder="Contact (optional)" class="form-control mb-2">
+                        <div class="hint mb-2">We use NRIC/FIN as the mock identifier. 2FA code is printed in terminal.</div>
+                        <button class="primary-btn" type="submit">
+                            Continue (<%= mode === 'signup' ? 'Sign Up' : 'Login' %>)
+                        </button>
+                    </form>
+                </details>
+            </div>
+
+            <div class="panel-body hidden" id="tab-password">
+                <form action="/login" method="POST">
+                    <input type="email" name="email" placeholder="Email" class="form-control mb-2" required>
+                    <input type="password" name="password" placeholder="Password" class="form-control mb-2" required>
+                    <button class="primary-btn" type="submit">Login</button>
+                </form>
+                <div class="hint mt-2">Uses the same HomeBitez password login flow.</div>
+                <div class="mt-3">
+                    <a href="/login">Go to HomeBitez login page</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-note">Mock Singpass page for HomeBitez only.</div>
+</div>
+
+<script>
+    const tabs = document.querySelectorAll('.tab-btn');
+    const tabQr = document.getElementById('tab-qr');
+    const tabPassword = document.getElementById('tab-password');
+
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.getAttribute('data-tab');
+            if (tab === 'qr') {
+                tabQr.classList.remove('hidden');
+                tabPassword.classList.add('hidden');
+            } else {
+                tabPassword.classList.remove('hidden');
+                tabQr.classList.add('hidden');
+            }
+        });
+    });
+</script>
+</body>
+</html>
