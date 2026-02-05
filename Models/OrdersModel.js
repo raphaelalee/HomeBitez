@@ -9,6 +9,7 @@ async function ensureTable() {
       user_id INT NULL,
       paypal_order_id VARCHAR(100) NULL,
       paypal_capture_id VARCHAR(100) NULL,
+      stripe_payment_intent VARCHAR(120) NULL,
       payer_email VARCHAR(200) NULL,
       shipping_name VARCHAR(200) NULL,
       items LONGTEXT NULL,
@@ -85,6 +86,15 @@ async function ensureTable() {
   } catch (err) {
     console.error("ensureTable: add paylater_remaining column failed:", err);
   }
+  try {
+    const stripeIntentExists = await columnExists("stripe_payment_intent");
+    if (!stripeIntentExists) {
+      await db.execute("ALTER TABLE orders ADD COLUMN stripe_payment_intent VARCHAR(120) NULL");
+      columnCache.stripe_payment_intent = true;
+    }
+  } catch (err) {
+    console.error("ensureTable: add stripe_payment_intent column failed:", err);
+  }
   tableEnsured = true;
 }
 
@@ -124,6 +134,7 @@ module.exports = {
       { logical: 'user_id', candidates: ['user_id', 'userId', 'user'] , value: order.userId || null},
       { logical: 'paypal_order_id', candidates: ['paypal_order_id', 'paypalOrderId'], value: order.paypalOrderId || null},
       { logical: 'paypal_capture_id', candidates: ['paypal_capture_id', 'paypalCaptureId'], value: order.paypalCaptureId || null},
+      { logical: 'stripe_payment_intent', candidates: ['stripe_payment_intent', 'stripePaymentIntent', 'payment_intent'], value: order.stripePaymentIntent || null},
       { logical: 'payer_email', candidates: ['payer_email', 'payerEmail', 'email'], value: order.payerEmail || null},
       { logical: 'shipping_name', candidates: ['shipping_name', 'shippingName'], value: order.shippingName || null},
       { logical: 'items', candidates: ['items', 'order_items', 'orderItems'], value: order.items ? JSON.stringify(order.items) : null},
@@ -182,6 +193,7 @@ module.exports = {
       { alias: 'user_id', candidates: ['user_id', 'userId', 'user'] },
       { alias: 'paypal_order_id', candidates: ['paypal_order_id', 'paypalOrderId'] },
       { alias: 'paypal_capture_id', candidates: ['paypal_capture_id', 'paypalCaptureId'] },
+      { alias: 'stripe_payment_intent', candidates: ['stripe_payment_intent', 'stripePaymentIntent', 'payment_intent'] },
       { alias: 'payer_email', candidates: ['payer_email', 'payerEmail', 'email'] },
       { alias: 'shipping_name', candidates: ['shipping_name', 'shippingName'] },
       { alias: 'items', candidates: ['items', 'order_items', 'orderItems'] },
@@ -217,6 +229,7 @@ module.exports = {
       { alias: 'user_id', candidates: ['user_id', 'userId', 'user'] },
       { alias: 'paypal_order_id', candidates: ['paypal_order_id', 'paypalOrderId'] },
       { alias: 'paypal_capture_id', candidates: ['paypal_capture_id', 'paypalCaptureId'] },
+      { alias: 'stripe_payment_intent', candidates: ['stripe_payment_intent', 'stripePaymentIntent', 'payment_intent'] },
       { alias: 'payer_email', candidates: ['payer_email', 'payerEmail', 'email'] },
       { alias: 'shipping_name', candidates: ['shipping_name', 'shippingName'] },
       { alias: 'items', candidates: ['items', 'order_items', 'orderItems'] },
@@ -258,6 +271,7 @@ module.exports = {
       { alias: 'user_id', candidates: ['user_id', 'userId', 'user'] },
       { alias: 'paypal_order_id', candidates: ['paypal_order_id', 'paypalOrderId'] },
       { alias: 'paypal_capture_id', candidates: ['paypal_capture_id', 'paypalCaptureId'] },
+      { alias: 'stripe_payment_intent', candidates: ['stripe_payment_intent', 'stripePaymentIntent', 'payment_intent'] },
       { alias: 'payer_email', candidates: ['payer_email', 'payerEmail', 'email'] },
       { alias: 'shipping_name', candidates: ['shipping_name', 'shippingName'] },
       { alias: 'items', candidates: ['items', 'order_items', 'orderItems'] },

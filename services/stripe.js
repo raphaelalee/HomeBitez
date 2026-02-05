@@ -74,5 +74,17 @@ module.exports = {
     return stripe.checkout.sessions.retrieve(sessionId, {
       expand: ["payment_intent", "customer_details"]
     });
+  },
+
+  refundPaymentIntent: async ({ paymentIntentId, amount }) => {
+    if (!paymentIntentId) throw new Error("Missing Stripe payment_intent");
+    const cents = Math.round(Number(amount || 0) * 100);
+    if (!Number.isFinite(cents) || cents <= 0) {
+      throw new Error("Invalid refund amount");
+    }
+    return stripe.refunds.create({
+      payment_intent: paymentIntentId,
+      amount: cents
+    });
   }
 };
