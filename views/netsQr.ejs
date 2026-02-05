@@ -95,6 +95,15 @@
   <%- include('partials/navbar-user') %>
 
   <div class="wrap">
+    <% const _completeUrl = typeof completeUrl !== 'undefined' ? completeUrl : "/nets/complete"; %>
+    <% const _failCompleteUrl = typeof failCompleteUrl !== 'undefined' ? failCompleteUrl : "/nets/complete-fail"; %>
+    <% const _successRedirect = typeof successRedirect !== 'undefined' ? successRedirect : "/receipt"; %>
+    <% const _failRedirect = typeof failRedirect !== 'undefined' ? failRedirect : "/nets-qr/fail"; %>
+    <% const _backPrimaryUrl = typeof backPrimaryUrl !== 'undefined' ? backPrimaryUrl : "/checkout"; %>
+    <% const _backPrimaryLabel = typeof backPrimaryLabel !== 'undefined' ? backPrimaryLabel : "Back to checkout"; %>
+    <% const _backSecondaryUrl = typeof backSecondaryUrl !== 'undefined' ? backSecondaryUrl : "/cart"; %>
+    <% const _backSecondaryLabel = typeof backSecondaryLabel !== 'undefined' ? backSecondaryLabel : "Back to cart"; %>
+
     <div class="title">Pay with NETS QR</div>
     <div class="sub">Scan and pay. We’ll auto-detect payment status.</div>
 
@@ -108,8 +117,8 @@
           <img src="<%= qrCodeUrl %>" alt="NETS QR Code">
         </div>
         <div class="mt-3 d-flex gap-2 flex-wrap">
-          <a class="btn-hb btn-outline" href="/checkout">Back to checkout</a>
-          <a class="btn-hb btn-outline" href="/cart">Back to cart</a>
+          <a class="btn-hb btn-outline" href="<%= _backPrimaryUrl %>"><%= _backPrimaryLabel %></a>
+          <a class="btn-hb btn-outline" href="<%= _backSecondaryUrl %>"><%= _backSecondaryLabel %></a>
         </div>
       </div>
 
@@ -150,15 +159,15 @@
           const data = JSON.parse(ev.data || "{}");
           if (data.success) {
             if (statusEl) statusEl.textContent = "Payment successful. Redirecting...";
-            await fetch("/nets/complete", { method: "POST", credentials: "include" });
-            window.location.href = "/receipt";
+            await fetch("<%= _completeUrl %>", { method: "POST", credentials: "include" });
+            window.location.href = "<%= _successRedirect %>";
             es.close();
             return;
           }
           if (data.fail) {
             if (statusEl) statusEl.textContent = "Payment failed. Please try again.";
-            await fetch("/nets/complete-fail", { method: "POST", credentials: "include" });
-            window.location.href = "/nets-qr/fail";
+            await fetch("<%= _failCompleteUrl %>", { method: "POST", credentials: "include" });
+            window.location.href = "<%= _failRedirect %>";
             es.close();
             return;
           }

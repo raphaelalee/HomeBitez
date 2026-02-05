@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Refund Request - HomeBitez</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #2a2118;
+      --muted: #6f5c4c;
+      --cream: #fbf2e7;
+      --amber: #d98b00;
+      --terracotta: #d86f3a;
+      --card: #ffffff;
+      --line: #ead9c7;
+    }
+
+    body {
+      background:
+        radial-gradient(1200px 500px at 10% -10%, #fff4df 0%, rgba(255, 244, 223, 0) 60%),
+        radial-gradient(900px 400px at 90% 0%, #ffe4c4 0%, rgba(255, 228, 196, 0) 55%),
+        var(--cream);
+      font-family: "Manrope", "Segoe UI", sans-serif;
+      color: var(--ink);
+    }
+
+    .refund-page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 36px 20px 70px;
+    }
+
+    .refund-hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 10px 0 30px;
+    }
+
+    .hero-title {
+      font-family: "Fraunces", "Times New Roman", serif;
+      font-size: clamp(2rem, 3vw, 3rem);
+      font-weight: 800;
+      margin: 8px 0;
+    }
+
+    .hero-subtitle {
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    .hero-badge {
+      background: linear-gradient(135deg, #ffe0ad, #ffd7a1);
+      border: 1px solid #f1c483;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-weight: 700;
+      color: #7a4c17;
+      box-shadow: 0 8px 18px rgba(122, 76, 23, 0.15);
+    }
+
+    .refund-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .card-shell {
+      background: var(--card);
+      padding: 28px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 30px rgba(44, 29, 12, 0.1);
+    }
+
+    .card-title {
+      font-family: "Fraunces", "Times New Roman", serif;
+      font-weight: 700;
+      font-size: 1.4rem;
+      margin-bottom: 6px;
+    }
+
+    .form-control,
+    .form-select {
+      border-radius: 12px;
+      border: 1px solid #ead9c7;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+      border-color: #e1a84d;
+      box-shadow: 0 0 0 0.2rem rgba(225, 168, 77, 0.2);
+    }
+
+    .btn-submit {
+      background: linear-gradient(135deg, var(--amber), var(--terracotta));
+      color: white;
+      border: none;
+    }
+
+    .btn-submit:hover {
+      filter: brightness(0.95);
+    }
+
+    .refund-list {
+      margin-top: 32px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .refund-item {
+      background: white;
+      border-radius: 16px;
+      padding: 22px;
+      border: 1px solid #f0e0bf;
+      box-shadow: 0 10px 20px rgba(44, 29, 12, 0.08);
+    }
+
+    .refund-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .refund-subject {
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: #7a6e63;
+      margin-top: 6px;
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+
+    .status-pending {
+      background: #fff2d6;
+      color: #7a5a00;
+      border: 1px solid #f1c483;
+    }
+
+    .status-approved {
+      background: #e6f7ed;
+      color: #2f7a4e;
+      border: 1px solid #bde5c9;
+    }
+
+    .status-rejected {
+      background: #fde8e8;
+      color: #b91c1c;
+      border: 1px solid #f3b7b7;
+    }
+
+    .empty-state {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px dashed #e4b477;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar-user') %>
+
+  <div class="refund-page">
+    <header class="refund-hero">
+      <div>
+        <h1 class="hero-title">Request a Refund</h1>
+        <p class="hero-subtitle">Submit a refund request for a completed order. We’ll review it within 1-3 business days.</p>
+      </div>
+      <div class="hero-badge">
+        Secure review process
+      </div>
+    </header>
+
+    <section class="refund-grid">
+      <div class="card-shell">
+        <div class="card-title">Refund form</div>
+        <p class="text-muted">Fill in your order and reason. We’ll contact you by email.</p>
+
+        <% if (error && error.length) { %>
+          <div class="alert alert-danger"><%= error %></div>
+        <% } %>
+        <% if (success && success.length) { %>
+          <div class="alert alert-success"><%= success %></div>
+        <% } %>
+
+        <form action="/refund" method="POST" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Name</label>
+            <input type="text" name="name" class="form-control" value="<%= userName || '' %>" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" value="<%= userEmail || '' %>" readonly>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Order ID</label>
+            <% if (orderOptions && orderOptions.length) { %>
+              <select name="orderId" class="form-select" required>
+                <option value="" disabled selected>Select your order</option>
+                <% orderOptions.forEach(opt => { %>
+                  <option value="<%= opt.value %>"><%= opt.label %></option>
+                <% }) %>
+              </select>
+            <% } else { %>
+              <select name="orderId" class="form-select" disabled>
+                <option value="">No orders found</option>
+              </select>
+              <div class="form-text text-danger">You need a completed order to request a refund.</div>
+            <% } %>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Reason</label>
+            <select name="reason" class="form-select" required>
+              <option value="" disabled selected>Select a reason</option>
+              <option>Missing items</option>
+              <option>Wrong items</option>
+              <option>Late delivery</option>
+              <option>Food quality issue</option>
+              <option>Charged incorrectly</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Refund method</label>
+            <select name="refundMethod" class="form-select" required>
+              <option value="" disabled selected>Choose refund method</option>
+              <option value="original">Refund to original payment method</option>
+              <option value="wallet">Credit to HomeBitez Wallet</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Details</label>
+            <textarea name="details" rows="4" class="form-control" placeholder="Explain what happened..." required></textarea>
+          </div>
+          <div class="col-12 text-end">
+            <button type="submit" class="btn btn-submit px-4" <%= !orderOptions || !orderOptions.length ? "disabled" : "" %>>Submit Request</button>
+          </div>
+        </form>
+      </div>
+
+      <aside class="card-shell">
+        <div class="card-title">Tips</div>
+        <p class="text-muted">Provide a clear reason and the exact amount to speed up review.</p>
+        <ul class="text-muted" style="padding-left:18px;">
+          <li>Use the Order ID from your receipt.</li>
+          <li>Specify missing or incorrect items.</li>
+          <li>We may reach out for more info.</li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="refund-list">
+      <div class="card-title mt-3">Your refund requests</div>
+
+      <% if (refunds && refunds.length) { %>
+        <% refunds.forEach(ref => { %>
+          <% const status = (ref.status || 'pending').toLowerCase(); %>
+          <div class="refund-item">
+            <div class="refund-header">
+              <div class="refund-subject">Refund for Order #<%= ref.order_id %></div>
+              <span class="status-badge status-<%= status %>"><%= status %></span>
+            </div>
+            <div class="meta">
+              <span><%= ref.created_at ? new Date(ref.created_at).toLocaleDateString("en-GB") : "" %></span>
+              <span class="ms-2">Request #<%= ref.id %></span>
+            </div>
+            <div class="mt-1"><strong>Refund method:</strong> <%= (ref.refund_method || 'original') === 'wallet' ? 'Wallet credit' : 'Original payment method' %></div>
+            <div class="mt-2"><strong>Reason:</strong> <%= ref.reason %></div>
+            <div class="mt-1"><%= ref.details %></div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="empty-state">
+          You have not submitted any refund requests yet.
+        </div>
+      <% } %>
+    </section>
+  </div>
+</body>
+</html>

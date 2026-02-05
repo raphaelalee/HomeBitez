@@ -280,7 +280,21 @@ body {
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Order ID (from receipt)</label>
-                    <input type="text" name="orderId" class="form-control" value="<%= orderId || '' %>" placeholder="e.g. 1024" required>
+                    <% if (orderOptions && orderOptions.length) { %>
+                        <select name="orderId" class="form-control" required>
+                            <option value="" disabled <%= !orderId ? "selected" : "" %>>Select your order</option>
+                            <% orderOptions.forEach(opt => { %>
+                                <option value="<%= opt.value %>" <%= String(orderId) === String(opt.value) ? "selected" : "" %>>
+                                    <%= opt.label %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    <% } else { %>
+                        <select name="orderId" class="form-control" disabled>
+                            <option value="">No orders found</option>
+                        </select>
+                        <div class="form-text text-danger">You need a completed order to report an issue.</div>
+                    <% } %>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Address</label>
@@ -300,7 +314,7 @@ body {
                     <div class="form-text">JPG or PNG up to a few MB works best.</div>
                 </div>
                 <div class="col-12 text-end">
-                    <button type="submit" class="btn btn-submit px-4">Submit Report</button>
+                    <button type="submit" class="btn btn-submit px-4" <%= !orderOptions || !orderOptions.length ? "disabled" : "" %>>Submit Report</button>
                 </div>
             </form>
         </div>
