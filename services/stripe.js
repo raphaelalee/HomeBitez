@@ -1,3 +1,14 @@
+/*
+I declare that this code was written by me.
+I will not copy or allow others to copy my code.
+I understand that copying code is considered as plagiarism.
+
+Student Name: Marla
+Student ID: 24014514
+Class: E63C c004
+Date created: February 3, 2026
+*/
+
 // services/stripe.js
 const Stripe = require('stripe');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -88,3 +99,4 @@ module.exports = {
     });
   }
 };
+

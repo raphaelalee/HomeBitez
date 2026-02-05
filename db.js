@@ -1,3 +1,14 @@
+/*
+I declare that this code was written by me.
+I will not copy or allow others to copy my code.
+I understand that copying code is considered as plagiarism.
+
+Student Name: Marla
+Student ID: 24014514
+Class: E63C c004
+Date created: December 3, 2025
+*/
+
 // db.js
 const mysql = require('mysql2/promise');
 const path = require('path');
@@ -35,3 +46,4 @@ const pool = mysql.createPool({
 })();
 
 module.exports = pool;
+

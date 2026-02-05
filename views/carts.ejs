@@ -1,4 +1,15 @@
-﻿<!DOCTYPE html>
+<!--
+I declare that this code was written by me.
+I will not copy or allow others to copy my code.
+I understand that copying code is considered as plagiarism.
+
+Student Name: Marcus
+Student ID: 24002725
+Class: E63C c004
+Date created: December 10, 2025
+-->
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -91,7 +102,7 @@
       gap: 12px;
   }
 
-  /* ✅ Added per-item subtotal column */
+  /* ? Added per-item subtotal column */
   .cart-row{
       display: grid;
       grid-template-columns: 36px 78px 1fr 110px 110px 170px;
@@ -369,7 +380,7 @@
       justify-content:flex-end;
   }
 
-  /* ✅ Toast */
+  /* ? Toast */
   .toastx{
       position:fixed;
       bottom:18px;
@@ -507,7 +518,7 @@
                 </p>
 
                 <% if (item.notes) { %>
-                  <p class="item-sub">• <%= item.notes %></p>
+                  <p class="item-sub">� <%= item.notes %></p>
                 <% } %>
               </div>
 
@@ -804,7 +815,7 @@
     return data;
   }
 
-  // ✅ Update qty (no reload)
+  // ? Update qty (no reload)
   async function updateQty(id, qty){
     const row = document.querySelector('.cart-row[data-id="' + CSS.escape(String(id)) + '"]');
     const name = row ? row.getAttribute("data-name") : "";
@@ -814,7 +825,7 @@
     return data;
   }
 
-  // ✅ Remove (no reload)
+  // ? Remove (no reload)
   async function removeItem(id){
     const row = document.querySelector('.cart-row[data-id="' + CSS.escape(String(id)) + '"]');
     const name = row ? row.getAttribute("data-name") : "";
@@ -1043,3 +1054,4 @@ if (checkoutSelectedBtn) {
 
 </body>
 </html>
+
