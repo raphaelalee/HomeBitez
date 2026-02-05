@@ -156,13 +156,23 @@ module.exports = {
     else req.session.post2faRedirect = '/menu';
 
     try {
-      await sendEmail({
+      const info = await sendEmail({
         to: user.email,
         subject: "Your HomeBitez 2FA code",
         text: `Your HomeBitez verification code is ${emailCode}. It expires in 5 minutes.`
       });
+      const emailTo = user.email || '';
+      const accepted = Array.isArray(info?.accepted) ? info.accepted.map(String) : [];
+      console.log("[2FA EMAIL DEBUG] emailTo:", JSON.stringify(emailTo));
+      console.log("[2FA EMAIL DEBUG] accepted:", JSON.stringify(accepted));
+      if (emailTo && accepted.includes(emailTo)) {
+        console.log(`[2FA EMAIL] Accepted by SMTP (delivery not guaranteed). Code ${emailCode} to ${emailTo}`);
+      } else {
+        console.error(`[2FA EMAIL] Not accepted by server for ${emailTo || 'unknown email'}`);
+      }
     } catch (err) {
-      console.error("2FA email send failed:", err);
+      const errMsg = err?.response || err?.message || String(err);
+      console.error("2FA email send failed:", errMsg);
       req.flash('error', 'Failed to send 2FA email. Please try again.');
       return res.redirect('/login');
     }
