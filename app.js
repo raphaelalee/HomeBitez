@@ -1631,14 +1631,81 @@ app.post("/nets/complete", async (req, res) => {
             return res.status(400).json({ error: "No pending NETS payment" });
         }
 
+        const items = Array.isArray(pending.items) && pending.items.length
+            ? pending.items
+            : getSelectedCartItemsFromSession(req.session).map((i) => ({
+                name: i.name,
+                price: Number(i.price || 0),
+                qty: Number(i.quantity || i.qty || 0),
+            }));
+
+        const subtotal = Number.isFinite(Number(pending.subtotal))
+            ? Number(pending.subtotal)
+            : items.reduce((s, it) => s + Number(it.price || 0) * Number(it.qty || 0), 0);
+
+        const deliveryFee = Number.isFinite(Number(pending.deliveryFee))
+            ? Number(pending.deliveryFee)
+            : 0;
+
+        const redeemAmount = Number.isFinite(Number(pending.redeemAmount))
+            ? Number(pending.redeemAmount)
+            : 0;
+
+        const total = Number.isFinite(Number(pending.total))
+            ? Number(pending.total)
+            : Number((subtotal + deliveryFee - redeemAmount).toFixed(2));
+
+        const orderDbId = await OrdersModel.create({
+            userId: req.session.user ? req.session.user.id : null,
+            payerEmail: req.session.user?.email || null,
+            shippingName: pending.prefs?.name || req.session.user?.username || null,
+            items,
+            subtotal,
+            deliveryFee,
+            total,
+            status: "paid"
+        });
+
+        // Deduct redeemed points first
+        if (req.session.user && pending.redeemPoints) {
+            try {
+                const { balance, entry } = await UsersModel.addPoints(
+                    req.session.user.id,
+                    -Number(pending.redeemPoints),
+                    `Redeem order ${orderDbId} (NETS)`
+                );
+                req.session.user.points = balance;
+                req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0, 20);
+            } catch (err) {
+                console.error("Points redeem deduct failed (NETS):", err);
+            }
+        }
+
+        // Award loyalty points
+        if (req.session.user && total > 0) {
+            try {
+                const earned = Math.floor(total);
+                const { balance, entry } = await UsersModel.addPoints(
+                    req.session.user.id,
+                    earned,
+                    `Order ${orderDbId} (NETS)`
+                );
+                req.session.user.points = balance;
+                req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0, 20);
+            } catch (err) {
+                console.error("Points award failed (NETS):", err);
+            }
+        }
+
         if (req.session) {
             req.session.netsCapture = {
-                total: Number(pending.amount) || 0,
+                total: Number(total) || 0,
                 txnRetrievalRef: pending.txnRetrievalRef || null,
                 txnId: pending.txnRef || null,
                 status: "COMPLETED",
                 capturedAt: Date.now(),
             };
+            req.session.latestOrderDbId = orderDbId;
             req.session.cartRedeem = null;
             req.session.netsPending = null;
         }

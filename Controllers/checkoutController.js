@@ -849,7 +849,13 @@ exports.capturePaypalOrder = async (req, res) => {
         (s, i) => s + Number(i.price || 0) * Number(i.quantity || i.qty || 0),
         0
       );
-      const { redeemPoints } = getRedeemForSubtotal(req.session, subtotal);
+      const prefs = req.session.cartPrefs || { mode: "pickup", deliveryType: "normal" };
+      const { redeemAmount, redeemPoints } = getRedeemForSubtotal(req.session, subtotal);
+      const items = cart.map((i) => ({
+        name: i.name,
+        price: Number(i.price || 0),
+        qty: Number(i.quantity || i.qty || 0),
+      }));
 
       console.log("NETS QR request:", {
         cartTotal,
@@ -882,9 +888,21 @@ exports.capturePaypalOrder = async (req, res) => {
       });
 
       if (nets.isQrSuccess(qrData)) {
+        const computedDeliveryFee = Number((cartTotal - subtotal + redeemAmount).toFixed(2));
+        const fallbackDeliveryFee = getDeliveryFeeFromPrefs(prefs);
+        const deliveryFee = Number.isFinite(computedDeliveryFee) && computedDeliveryFee >= 0
+          ? computedDeliveryFee
+          : fallbackDeliveryFee;
+
         req.session.netsPending = {
           amount: cartTotal,
+          items,
+          subtotal,
+          deliveryFee,
+          total: Number(cartTotal),
+          redeemAmount,
           redeemPoints,
+          prefs,
           txnRetrievalRef,
           createdAt: Date.now(),
         };
