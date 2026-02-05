@@ -467,24 +467,23 @@
           </div>
 
           <% cart.forEach((item, i) => {
-              const id = item.id;
+              const id = item.name;
               const price = Number(item.price) || 0;
               const qty = Number(item.quantity) || 1;
               const lineTotal = price * qty;
           %>
-            <div class="cart-row"
-                 data-id="<%= id %>"
-                 data-price="<%= price.toFixed(2) %>"
-                 data-name="<%= item.name %>">
-              <button class="quick-remove" data-id="<%= id %>" title="Remove item">Remove</button>
+              <div class="cart-row"
+                  data-id="<%= item.name %>"
+                  data-price="<%= price.toFixed(2) %>"
+                  data-name="<%= item.name %>">
 
               <div class="row-select">
                 <input
                   class="item-select"
                   type="checkbox"
-                  data-id="<%= id %>"
+                  data-name="<%= item.name %>"
                   <%= (Array.isArray(checkoutSelection) && checkoutSelection.length)
-                        ? (checkoutSelection.includes(id) ? 'checked' : '')
+                        ? (checkoutSelection.includes(String(item.name)) ? 'checked' : '')
                         : 'checked' %>>
               </div>
 
@@ -708,22 +707,27 @@
     }
   }
 
-  function getSelectedIds(){
+  function getSelectedNames(){
     return Array.from(document.querySelectorAll(".item-select"))
       .filter(cb => cb.checked)
-      .map(cb => cb.getAttribute("data-id"))
+      .map(cb => cb.getAttribute("data-name"))
       .filter(Boolean)
-      .map(v => Number(v));
+      .map(String);
   }
 
-  function recomputeCartSubtotal(){
+
+  function recomputeSelectedSubtotal(){
+    const selected = new Set(getSelectedNames().map(String));
     let subtotal = 0;
+
     document.querySelectorAll(".cart-row").forEach(row => {
-      const id = row.getAttribute("data-id");
+      const name = row.getAttribute("data-name");
       const price = Number(row.getAttribute("data-price") || 0);
-      const qty = getQty(id);
-      subtotal += (price * qty);
+      const qty = getQty(row.getAttribute("data-id")); // row data-id is item.name in your EJS
+
+      if (selected.has(String(name))) subtotal += (price * qty);
     });
+
     return subtotal;
   }
 
@@ -742,7 +746,7 @@
   function syncSelectionUI(){
     const selectAll = document.getElementById("selectAllCartItems");
     const checkboxes = Array.from(document.querySelectorAll(".item-select"));
-    const selectedIds = getSelectedIds();
+    const selectedIds = getSelectedNames
     const total = checkboxes.length;
     const selectedCount = selectedIds.length;
 
@@ -994,34 +998,29 @@
     });
   }
 
-  // Checkout Selected -> store selection -> redirect
-  const checkoutSelectedBtn = document.getElementById("checkoutSelectedBtn");
-  if (checkoutSelectedBtn) {
-    checkoutSelectedBtn.addEventListener("click", async () => {
-      const ids = getSelectedIds();
-      if (!ids.length) {
-        showToast("Please select at least one item to checkout.");
-        return;
-      }
+// Checkout Selected -> store selection -> redirect
+const checkoutSelectedBtn = document.getElementById("checkoutSelectedBtn");
 
-      // Send ids (primary). Also send names as fallback for older backend.
-      const rows = Array.from(document.querySelectorAll(".cart-row"));
-      const idSet = new Set(ids.map(String));
-      const names = rows
-        .filter(r => idSet.has(String(r.getAttribute("data-id"))))
-        .map(r => r.getAttribute("data-name"))
-        .filter(Boolean);
+if (checkoutSelectedBtn) {
+  checkoutSelectedBtn.addEventListener("click", async () => {
+    const names = getSelectedNames();
 
-      const data = await postJSON("/cart/selection", { ids: ids, names: names });
+    if (!names.length) {
+      showToast("Please select at least one item to checkout.");
+      return;
+    }
 
-      if (!data.ok) {
-        showToast(data.error || "Failed to save selection");
-        return;
-      }
+    const data = await postJSON("/cart/selection", { names: names });
 
-      window.location.href = "/checkout";
-    });
-  }
+    if (!data.ok) {
+      showToast(data.error || "Failed to save selection");
+      return;
+    }
+
+    window.location.href = "/checkout";
+  });
+}
+
 
   // Initial sync
   syncTotalsUI();
