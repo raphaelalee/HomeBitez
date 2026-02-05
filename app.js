@@ -470,13 +470,21 @@ async function issueTwoFactor(req) {
     req.session.twoFactor.email = { code, expiresAt };
     req.session.twoFactor.stage = 'email';
     try {
-        await sendEmail({
+        const info = await sendEmail({
             to: req.session.user?.email,
             subject: "Your HomeBitez 2FA code",
             text: `Your HomeBitez verification code is ${code}. It expires in 5 minutes.`
         });
+        const emailTo = req.session.user?.email || '';
+        const accepted = Array.isArray(info?.accepted) ? info.accepted.map(String) : [];
+        if (emailTo && accepted.includes(emailTo)) {
+            console.log(`[2FA EMAIL] Sent code ${code} to ${emailTo}`);
+        } else {
+            console.error(`[2FA EMAIL] Not accepted by server for ${emailTo || 'unknown email'}`);
+        }
     } catch (err) {
-        console.error("2FA email send failed:", err);
+        const errMsg = err?.response || err?.message || String(err);
+        console.error("2FA email send failed:", errMsg);
         req.flash('error', 'Failed to send 2FA email. Please try again.');
     }
     return code;
@@ -2812,13 +2820,21 @@ app.post('/wallet/2fa/send', async (req, res) => {
   };
 
   try {
-    await sendEmail({
+    const info = await sendEmail({
       to: req.session.user?.email,
       subject: "Your HomeBitez Wallet 2FA code",
       text: `Your HomeBitez wallet verification code is ${code}. It expires in 5 minutes.`
     });
+    const emailTo = req.session.user?.email || '';
+    const accepted = Array.isArray(info?.accepted) ? info.accepted.map(String) : [];
+    if (emailTo && accepted.includes(emailTo)) {
+      console.log(`[WALLET 2FA EMAIL] Sent code ${code} to ${emailTo}`);
+    } else {
+      console.error(`[WALLET 2FA EMAIL] Not accepted by server for ${emailTo || 'unknown email'}`);
+    }
   } catch (err) {
-    console.error("Wallet 2FA email send failed:", err);
+    const errMsg = err?.response || err?.message || String(err);
+    console.error("Wallet 2FA email send failed:", errMsg);
     return res.status(500).json({ ok: false, error: 'Failed to send 2FA email. Please try again.' });
   }
 

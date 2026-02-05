@@ -23,12 +23,13 @@ function getTransporter() {
 async function sendEmail({ to, subject, text }) {
   if (!to) throw new Error('Missing recipient email');
   const tx = getTransporter();
-  await tx.sendMail({
+  const info = await tx.sendMail({
     from: `HomeBitez <${gmailUser}>`,
     to,
     subject,
     text
   });
+  return info;
 }
 
 module.exports = { sendEmail };
