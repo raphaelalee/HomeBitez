@@ -106,6 +106,18 @@
             margin-top: 10px;
         }
 
+        .field-hint {
+            font-size: 12px;
+            margin-top: 6px;
+            color: #666;
+        }
+        .field-hint.error {
+            color: #b3261e;
+        }
+        .field-hint.ok {
+            color: #2e7d32;
+        }
+
         .social-btn {
             display: flex;
             align-items: center;
@@ -139,23 +151,26 @@
         <% if (error && error.length > 0) { %>
             <div class="alert alert-danger"><%= error %></div>
         <% } %>
+        <div id="clientError" class="alert alert-danger d-none"></div>
 
-        <form action="/signup" method="POST">
+        <form id="signupForm" action="/signup" method="POST" novalidate>
             <input type="text" name="username" placeholder="Username" class="form-control mb-3" required>
             <input type="email" name="email" placeholder="Email" class="form-control mb-3" required>
             <input type="text" name="contact" placeholder="Contact" class="form-control mb-3" required>
             <div class="password-wrap mb-3">
-                <input type="password" name="password" placeholder="Password" class="form-control" required>
+                <input id="password" type="password" name="password" placeholder="Password" class="form-control" required>
                 <button type="button" class="toggle-pass" aria-label="Show password">
-                    <i class="bi bi-eye"></i>
+                    <i class="bi bi-eye-slash"></i>
                 </button>
             </div>
+            <div id="passwordStrength" class="field-hint">Must be 8+ chars with uppercase, lowercase, number, and special character.</div>
             <div class="password-wrap mb-3">
-                <input type="password" name="confirmPassword" placeholder="Confirm Password" class="form-control" required>
+                <input id="confirmPassword" type="password" name="confirmPassword" placeholder="Confirm Password" class="form-control" required>
                 <button type="button" class="toggle-pass" aria-label="Show password">
-                    <i class="bi bi-eye"></i>
+                    <i class="bi bi-eye-slash"></i>
                 </button>
             </div>
+            <div id="passwordMatch" class="field-hint">Passwords must match.</div>
             
             <button class="register-btn" type="submit">Register</button>
         </form>
@@ -188,11 +203,71 @@
             const input = btn.parentElement.querySelector('input');
             const icon = btn.querySelector('i');
             if (!input || !icon) return;
-            const isHidden = input.type === 'password';
-            input.type = isHidden ? 'text' : 'password';
-            icon.className = isHidden ? 'bi bi-eye-slash' : 'bi bi-eye';
-            btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+            const willShow = input.type === 'password';
+            input.type = willShow ? 'text' : 'password';
+            const isHiddenNow = input.type === 'password';
+            icon.className = isHiddenNow ? 'bi bi-eye-slash' : 'bi bi-eye';
+            btn.setAttribute('aria-label', isHiddenNow ? 'Show password' : 'Hide password');
         });
+    });
+
+    const form = document.getElementById('signupForm');
+    const passwordInput = document.getElementById('password');
+    const confirmInput = document.getElementById('confirmPassword');
+    const strengthEl = document.getElementById('passwordStrength');
+    const matchEl = document.getElementById('passwordMatch');
+    const clientErrorEl = document.getElementById('clientError');
+
+    const getStrength = (value) => {
+        const hasUpper = /[A-Z]/.test(value);
+        const hasLower = /[a-z]/.test(value);
+        const hasNumber = /[0-9]/.test(value);
+        const hasSpecial = /[^A-Za-z0-9]/.test(value);
+        const longEnough = value.length >= 8;
+        const score = [hasUpper, hasLower, hasNumber, hasSpecial, longEnough].filter(Boolean).length;
+        const meetsAll = hasUpper && hasLower && hasNumber && hasSpecial && longEnough;
+
+        if (meetsAll) return { label: "Strong", ok: true };
+        if (score >= 3 && longEnough) return { label: "Medium (not enough)", ok: false };
+        return { label: "Not enough", ok: false };
+    };
+
+    const updateStrength = () => {
+        const { label, ok } = getStrength(passwordInput.value);
+        strengthEl.textContent = `Password strength: ${label}. Must be 8+ chars with uppercase, lowercase, number, and special character.`;
+        strengthEl.classList.toggle('ok', ok);
+        strengthEl.classList.toggle('error', !ok);
+    };
+
+    const updateMatch = () => {
+        const matches = passwordInput.value === confirmInput.value && confirmInput.value.length > 0;
+        matchEl.textContent = matches ? "Passwords match." : "Passwords must match.";
+        matchEl.classList.toggle('ok', matches);
+        matchEl.classList.toggle('error', !matches);
+    };
+
+    passwordInput.addEventListener('input', () => {
+        updateStrength();
+        updateMatch();
+    });
+    confirmInput.addEventListener('input', updateMatch);
+
+    form.addEventListener('submit', (e) => {
+        updateStrength();
+        updateMatch();
+        const { ok } = getStrength(passwordInput.value);
+        const matches = passwordInput.value === confirmInput.value;
+
+        if (!ok || !matches) {
+            e.preventDefault();
+            clientErrorEl.classList.remove('d-none');
+            clientErrorEl.textContent = !ok
+                ? "Password must be at least 8 characters and include uppercase, lowercase, number, and special character."
+                : "Passwords do not match.";
+        } else {
+            clientErrorEl.classList.add('d-none');
+            clientErrorEl.textContent = "";
+        }
     });
 </script>
 
