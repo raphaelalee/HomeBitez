@@ -471,6 +471,26 @@ document.querySelectorAll('.add-to-cart').forEach(btn => {
             return;
         }
 
+        const updateCartBadge = (count) => {
+            const cartLink = document.querySelector('.hb-icons a[href="/cart"]');
+            if (!cartLink) return;
+            const existing = cartLink.querySelector('.cart-badge');
+            const safeCount = Number(count || 0);
+            if (safeCount <= 0) {
+                if (existing) existing.remove();
+                return;
+            }
+            const text = safeCount > 99 ? '99+' : String(safeCount);
+            if (existing) {
+                existing.textContent = text;
+            } else {
+                const badge = document.createElement('span');
+                badge.className = 'cart-badge';
+                badge.textContent = text;
+                cartLink.appendChild(badge);
+            }
+        };
+
         fetch("/cart/add", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -483,7 +503,12 @@ document.querySelectorAll('.add-to-cart').forEach(btn => {
         })
         .then(res => res.json())
         .then(data => {
-            if (data.ok) showToast("Added to cart!");
+            if (data.ok) {
+                showToast("Added to cart!");
+                if (typeof data.cartCount !== "undefined") {
+                    updateCartBadge(data.cartCount);
+                }
+            }
             else showToast(data.error || "Failed to add", true);
         })
         .catch(() => showToast("Server error", true));

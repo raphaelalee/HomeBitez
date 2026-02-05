@@ -1,6 +1,7 @@
 <!-- views/partials/navbar-user.ejs -->
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
 
 <style>
   /* RESET */
@@ -32,9 +33,13 @@
 
   /* LOGO */
   .navbar-logo {
-    font-size: 26px;            /* same as homepage */
-    font-weight: 700;
-    color: #f4b400;             /* homepage yellow */
+    font-family: "Baloo 2", "Sniglet", "Segoe UI", sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #f0a300 0%, #f6b23a 50%, #e09000 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
     text-decoration: none;
     letter-spacing: 0.3px;
   }
@@ -73,6 +78,20 @@
   }
 
   .notif-badge{
+    position:absolute;
+    top:-6px;
+    right:-8px;
+    background:#e74c3c;
+    color:white;
+    font-size:10px;
+    font-weight:700;
+    padding:2px 6px;
+    border-radius:999px;
+    border:1px solid #fff2e1;
+    line-height:1;
+  }
+
+  .cart-badge{
     position:absolute;
     top:-6px;
     right:-8px;
@@ -267,8 +286,12 @@
 
   <!-- Icons -->
   <div class="hb-icons">
+    <% const cartBadgeCount = Number((typeof cartCount !== 'undefined') ? cartCount : 0); %>
     <a href="<%= user ? '/cart' : '/login' %>" title="<%= user ? 'Cart' : 'Login to view cart' %>">
       <i class="bi bi-cart3"></i>
+      <% if (cartBadgeCount > 0) { %>
+        <span class="cart-badge"><%= cartBadgeCount > 99 ? '99+' : cartBadgeCount %></span>
+      <% } %>
     </a>
     <% if (user) { %>
       <% const notifCount = Number((typeof userNotifCount !== 'undefined') ? userNotifCount : 0); %>

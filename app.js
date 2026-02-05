@@ -373,6 +373,12 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use((req, res, next) => {
+    const cart = Array.isArray(req.session?.cart) ? req.session.cart : [];
+    res.locals.cartCount = cart.length;
+    next();
+});
+
 app.use(flash());
 
 app.use(async (req, res, next) => {
@@ -3100,10 +3106,10 @@ app.post("/nets/complete", async (req, res) => {
             }
         }
 
-        // Award loyalty points: 1 point = $0.01 of value (100 points per $1)
+        // Award loyalty points: 1 point per $1 spent (value $0.01 per point)
         if (req.session.user && total > 0) {
             try {
-                const earned = Math.floor(total / 0.01);
+                const earned = Math.floor(total);
                 const { balance, entry } = await UsersModel.addPoints(
                     req.session.user.id,
                     earned,
@@ -3246,10 +3252,10 @@ app.get('/stripe/success', async (req, res) => {
       }
     }
 
-    // Award loyalty points: 1 point = $0.01 of value (100 points per $1)
+    // Award loyalty points: 1 point per $1 spent (value $0.01 per point)
     if (req.session.user && total > 0) {
       try {
-        const earned = Math.floor(total / 0.01);
+        const earned = Math.floor(total);
         const { balance, entry } = await UsersModel.addPoints(
           req.session.user.id,
           earned,

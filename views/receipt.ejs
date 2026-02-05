@@ -235,7 +235,7 @@
             <div class="section-title"><i class="bi bi-person-circle"></i> Bill to</div>
             <div style="font-weight:800;"><%= (user && (user.username || user.name)) || 'Guest' %></div>
             <div class="text-muted" style="font-size:13px;">
-              <%= paymentMeta && paymentMeta.payerEmail ? paymentMeta.payerEmail : (user?.email || 'Email not provided') %>
+              <%= user?.email || (paymentMeta && paymentMeta.payerEmail ? paymentMeta.payerEmail : 'Email not provided') %>
             </div>
             <div class="pill">Payment: <%= paymentMethod %></div>
             <% if (paymentMethod === 'PayLater' && paylaterPlan) { %>
