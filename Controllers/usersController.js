@@ -2,6 +2,7 @@ const User = require('../models/UsersModel');
 const CartModel = require('../Models/cartModels');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs'); // make sure bcryptjs is installed
+const { sendEmail } = require('../services/email');
 
 function generateTwoFactorCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -154,8 +155,17 @@ module.exports = {
     else if (user.role === 'admin') req.session.post2faRedirect = '/admin';
     else req.session.post2faRedirect = '/menu';
 
-    req.flash('success', `Demo code: ${emailCode}`);
-    console.log('2FA email code for', user.email || user.username, ':', emailCode);
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: "Your HomeBitez 2FA code",
+        text: `Your HomeBitez verification code is ${emailCode}. It expires in 5 minutes.`
+      });
+    } catch (err) {
+      console.error("2FA email send failed:", err);
+      req.flash('error', 'Failed to send 2FA email. Please try again.');
+      return res.redirect('/login');
+    }
 
     try {
       const cartRows = await CartModel.getByUserId(req.session.user.id);

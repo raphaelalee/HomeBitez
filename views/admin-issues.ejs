@@ -217,6 +217,9 @@
                 <% if (issue.order_id) { %>
                   <span>Order #<%= issue.order_id %></span>
                 <% } %>
+                <% if (issue.status) { %>
+                  <span>Status: <%= issue.status.replace("_", " ") %></span>
+                <% } %>
               </div>
             </div>
             <div class="issue-date">
@@ -258,7 +261,11 @@
 
           <div class="issue-actions">
             <button class="btn btn-outline reply-toggle" type="button">Reply</button>
-            <button class="btn btn-solid" type="button">Mark as Resolved</button>
+            <form method="POST" action="/admin/issues/<%= issue.id %>/resolve">
+              <button class="btn btn-solid" type="submit" <%= issue.status === "resolved" ? "disabled" : "" %>>
+                <%= issue.status === "resolved" ? "Resolved" : "Mark as Resolved" %>
+              </button>
+            </form>
           </div>
 
           <form class="reply-form" method="POST" action="/admin/issues/<%= issue.id %>/reply">

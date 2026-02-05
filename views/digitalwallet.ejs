@@ -403,13 +403,14 @@
         </div>
       </div>
 
-      <div id="payBlock" style="display:none;">
-        <div class="inline-actions">
-          <button class="btn" id="paypalBtn">PayPal</button>
-          <button class="btn" id="stripeBtn">Stripe</button>
+        <div id="payBlock" style="display:none;">
+          <div class="inline-actions">
+            <button class="btn" id="paypalBtn">PayPal</button>
+            <button class="btn" id="stripeBtn">Stripe</button>
+            <button class="btn" id="netsBtn">NETS QR</button>
+          </div>
+          <div class="notice">Stripe checkout supports card, GrabPay, Alipay, PayNow, WeChat Pay. NETS opens a QR page.</div>
         </div>
-        <div class="notice">Stripe checkout supports card, GrabPay, Alipay, PayNow, WeChat Pay.</div>
-      </div>
 
       <button class="btn secondary" id="closeModalBtn">Close</button>
     </div>
@@ -421,10 +422,11 @@
     const topupBtn = document.getElementById('topupBtn');
     const modal = document.getElementById('topupModal');
     const closeModalBtn = document.getElementById('closeModalBtn');
-    const sendCodeBtn = document.getElementById('sendCodeBtn');
-    const verifyCodeBtn = document.getElementById('verifyCodeBtn');
-    const paypalBtn = document.getElementById('paypalBtn');
-    const stripeBtn = document.getElementById('stripeBtn');
+      const sendCodeBtn = document.getElementById('sendCodeBtn');
+      const verifyCodeBtn = document.getElementById('verifyCodeBtn');
+      const paypalBtn = document.getElementById('paypalBtn');
+      const stripeBtn = document.getElementById('stripeBtn');
+      const netsBtn = document.getElementById('netsBtn');
     const topupAmount = document.getElementById('topupAmount');
     const twofaCode = document.getElementById('twofaCode');
     const sendInfo = document.getElementById('sendInfo');
@@ -515,7 +517,7 @@
       const data = await res.json();
       if (data.ok) {
         wallet2faVerified = true;
-    verifyInfo.textContent = 'Verified. Choose PayPal or Stripe.';
+        verifyInfo.textContent = 'Verified. Choose PayPal, Stripe, or NETS.';
         payBlock.style.display = 'block';
         showToast("2FA verified.");
       } else {
@@ -543,12 +545,17 @@
       }
     }
 
-    paypalBtn.addEventListener('click', () => {
-      const amount = validateAmount();
-      if (!amount) return;
-      window.location.href = `/wallet/paypal?amount=${amount.toFixed(2)}`;
-    });
-    stripeBtn.addEventListener('click', () => startCheckout('/wallet/topup/stripe-session'));
+      paypalBtn.addEventListener('click', () => {
+        const amount = validateAmount();
+        if (!amount) return;
+        window.location.href = `/wallet/paypal?amount=${amount.toFixed(2)}`;
+      });
+      stripeBtn.addEventListener('click', () => startCheckout('/wallet/topup/stripe-session'));
+      netsBtn.addEventListener('click', () => {
+        const amount = validateAmount();
+        if (!amount) return;
+        window.location.href = `/wallet/nets/qr?amount=${amount.toFixed(2)}`;
+      });
 
     function autoClear(el) {
       setTimeout(() => { if (el) el.textContent = ""; }, 2500);

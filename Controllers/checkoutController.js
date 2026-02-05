@@ -1057,6 +1057,7 @@ exports.renderReceipt = async (req, res) => {
     stripeCapture,
     paylaterPlan: req.session?.paylaterPlan || null,
     latestOrderDbId,
+    lastReceiptOrderId: req.session?.lastReceiptOrderId || null,
     user: req.session.user || null,
     prefs,
     paymentMethod,

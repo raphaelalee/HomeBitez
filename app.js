@@ -11,6 +11,11 @@ const FacebookStrategy = require('passport-facebook').Strategy;
 const stripeService = require('./services/stripe');
 const nets = require("./services/nets");
 const paypal = require('@paypal/checkout-server-sdk');
+const { sendEmail } = require("./services/email");
+
+const NETS_TXN_ID =
+    process.env.NETS_TXN_ID ||
+    "sandbox_nets|m|8ff8e5b6-d43e-4786-8ac5-7accf8c5bd9b";
 
 const environment = new paypal.core.SandboxEnvironment(
   process.env.PAYPAL_CLIENT_ID,
@@ -80,6 +85,9 @@ async function ensureReportReplyColumns() {
     } catch (err) {}
     try {
         await db.query("ALTER TABLE report_messages ADD COLUMN image_url VARCHAR(255) NULL");
+    } catch (err) {}
+    try {
+        await db.query("ALTER TABLE report_messages ADD COLUMN status ENUM('new','in_progress','resolved') DEFAULT 'new'");
     } catch (err) {}
     reportColumnsEnsured = true;
 }
@@ -208,7 +216,7 @@ function maskPhone(phone) {
     return "***" + tail;
 }
 
-function issueTwoFactor(req) {
+async function issueTwoFactor(req) {
     const code = generateTwoFactorCode();
     if (!req.session.twoFactor) {
         req.session.twoFactor = {
@@ -220,9 +228,16 @@ function issueTwoFactor(req) {
     const expiresAt = Date.now() + 5 * 60 * 1000;
     req.session.twoFactor.email = { code, expiresAt };
     req.session.twoFactor.stage = 'email';
-
-    req.flash('success', `Demo code: ${code}`);
-    console.log('2FA email code for', req.session.user?.email || req.session.user?.username, ':', code);
+    try {
+        await sendEmail({
+            to: req.session.user?.email,
+            subject: "Your HomeBitez 2FA code",
+            text: `Your HomeBitez verification code is ${code}. It expires in 5 minutes.`
+        });
+    } catch (err) {
+        console.error("2FA email send failed:", err);
+        req.flash('error', 'Failed to send 2FA email. Please try again.');
+    }
     return code;
 }
 
@@ -653,7 +668,7 @@ app.get('/logout', (req, res) => {
 
 
 // Report Issue page
-app.get('/report', (req, res) => {
+app.get('/report', async (req, res) => {
     if (!req.session.user) {
         req.flash('error', 'Please log in to submit a report.');
         return res.redirect('/login');
@@ -662,31 +677,40 @@ app.get('/report', (req, res) => {
     const userId = req.session.user.id;
     const userEmail = req.session.user.email || '';
 
-    ensureReportReplyColumns().then(() => {
-        return db.query(
+    try {
+        await ensureReportReplyColumns();
+        const [rows] = await db.query(
             "SELECT id, subject, description, status, created_at, admin_reply, replied_at, user_reply, user_reply_at, order_id, address, image_url FROM report_messages WHERE user_id = ? ORDER BY created_at DESC",
             [userId]
         );
-    }).then(([rows]) => {
+        const userOrders = await OrdersModel.listByUser(userId, 200);
+        const orderOptions = (userOrders || []).map(o => {
+            const labelBase = `ORD-${o.id}`;
+            const paypalRef = o.paypal_order_id ? ` - PayPal ${o.paypal_order_id}` : '';
+            return { value: String(o.id), label: `${labelBase}${paypalRef}` };
+        });
+
         res.render('report', {
             success: req.flash('success'),
             error: req.flash('error'),
             userEmail,
             userAddress: req.session.user?.address || req.session.cartPrefs?.address || '',
-            orderId: req.session.lastReceiptOrderId || '',
+            orderId: req.session.lastReceiptOrderId ? String(req.session.lastReceiptOrderId) : '',
+            orderOptions,
             issues: rows || []
         });
-    }).catch(err => {
+    } catch (err) {
         console.error("Report list error:", err);
         res.render('report', {
             success: req.flash('success'),
             error: req.flash('error'),
             userEmail,
             userAddress: req.session.user?.address || req.session.cartPrefs?.address || '',
-            orderId: req.session.lastReceiptOrderId || '',
+            orderId: req.session.lastReceiptOrderId ? String(req.session.lastReceiptOrderId) : '',
+            orderOptions: [],
             issues: []
         });
-    });
+    }
 });
 
 app.post('/report', upload.single('issueImage'), async (req, res) => {
@@ -706,6 +730,18 @@ app.post('/report', upload.single('issueImage'), async (req, res) => {
     }
 
     try {
+        const orderIdNum = Number(cleanOrderId);
+        if (!Number.isFinite(orderIdNum)) {
+            req.flash('error', 'Please select a valid order ID.');
+            return res.redirect('/report');
+        }
+        const userOrders = await OrdersModel.listByUser(req.session.user.id, 200);
+        const allowedIds = new Set((userOrders || []).map(o => String(o.id)));
+        if (!allowedIds.has(String(orderIdNum))) {
+            req.flash('error', 'Order ID must be one of your own orders.');
+            return res.redirect('/report');
+        }
+
         const imageUrl = req.file ? `/images/${req.file.filename}` : null;
         await ReportModel.create({
             userId: req.session.user.id || null,
@@ -713,7 +749,7 @@ app.post('/report', upload.single('issueImage'), async (req, res) => {
             email,
             subject,
             description,
-            orderId: cleanOrderId,
+            orderId: String(orderIdNum),
             address: cleanAddress,
             imageUrl
         });
@@ -868,13 +904,13 @@ app.post('/reset-password', async (req, res) => {
 });
 
 
-app.get('/2fa/email', (req, res) => {
+app.get('/2fa/email', async (req, res) => {
     if (!req.session.user) return res.redirect('/login');
 
     const tf = req.session.twoFactor || {};
     const email = tf.email || {};
     if (!email.code || (email.expiresAt && Date.now() > email.expiresAt)) {
-        issueTwoFactor(req);
+        await issueTwoFactor(req);
     }
 
     res.render('2fa-email', {
@@ -914,9 +950,9 @@ app.post('/2fa/email/verify', (req, res) => {
     return res.redirect(redirectTo);
 });
 
-app.post('/2fa/email/resend', (req, res) => {
+app.post('/2fa/email/resend', async (req, res) => {
     if (!req.session.user) return res.redirect('/login');
-    issueTwoFactor(req);
+    await issueTwoFactor(req);
     return res.redirect('/2fa/email');
 });
 
@@ -1442,7 +1478,9 @@ app.get('/admin/issues', async (req, res) => {
 
     res.render('admin-issues', {
         issues,
-        adminName: req.session.user?.username || 'Admin'
+        adminName: req.session.user?.username || 'Admin',
+        success: req.flash('success'),
+        error: req.flash('error')
     });
 });
 
@@ -1473,6 +1511,37 @@ app.post('/admin/issues/:id/reply', async (req, res) => {
     } catch (err) {
         console.error("Admin reply error:", err);
         req.flash('error', 'Failed to send reply.');
+    }
+
+    return res.redirect('/admin/issues');
+});
+
+app.post('/admin/issues/:id/resolve', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    const issueId = Number(req.params.id);
+    if (!Number.isFinite(issueId)) {
+        req.flash('error', 'Invalid issue ID.');
+        return res.redirect('/admin/issues');
+    }
+
+    try {
+        await ensureReportReplyColumns();
+        await db.query(
+            "UPDATE report_messages SET status = 'resolved' WHERE id = ?",
+            [issueId]
+        );
+        req.flash('success', 'Issue marked as resolved.');
+    } catch (err) {
+        console.error("Admin resolve error:", err);
+        req.flash('error', 'Failed to update issue status.');
     }
 
     return res.redirect('/admin/issues');
@@ -2141,7 +2210,7 @@ app.get('/digitalwallet', async (req, res) => {
 });
 
 // POST /wallet/2fa/send
-app.post('/wallet/2fa/send', (req, res) => {
+app.post('/wallet/2fa/send', async (req, res) => {
   if (!req.session.user) return res.status(401).json({ ok: false, error: 'Not logged in' });
 
   const code = generateTwoFactorCode();
@@ -2152,13 +2221,21 @@ app.post('/wallet/2fa/send', (req, res) => {
     verifiedAt: null
   };
 
-  console.log('Wallet 2FA code for', req.session.user?.email || req.session.user?.username, ':', code);
+  try {
+    await sendEmail({
+      to: req.session.user?.email,
+      subject: "Your HomeBitez Wallet 2FA code",
+      text: `Your HomeBitez wallet verification code is ${code}. It expires in 5 minutes.`
+    });
+  } catch (err) {
+    console.error("Wallet 2FA email send failed:", err);
+    return res.status(500).json({ ok: false, error: 'Failed to send 2FA email. Please try again.' });
+  }
 
   return res.json({
     ok: true,
     maskedPhone: maskPhone(req.session.user.contact),
-    maskedEmail: maskEmail(req.session.user.email),
-    demoCode: code
+    maskedEmail: maskEmail(req.session.user.email)
   });
 });
 
@@ -2467,6 +2544,116 @@ app.get('/wallet/paypal/success', async (req, res) => {
 
   // Redirect back to wallet
   res.redirect('/digitalwallet');
+});
+
+// GET /wallet/nets/qr
+app.get('/wallet/nets/qr', async (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
+  if (!wallet2faIsValid(req)) {
+    req.session.walletTopupError = '2FA required for top up.';
+    return res.redirect('/digitalwallet');
+  }
+
+  const parsedAmount = Number(req.query.amount);
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    req.session.walletTopupError = 'Invalid top up amount.';
+    return res.redirect('/digitalwallet');
+  }
+
+  const limitCheck = await checkDailyTopupLimit(req.session.user.id, parsedAmount);
+  if (!limitCheck.ok) {
+    req.session.walletTopupError = 'Daily top up limit reached. Try again tomorrow.';
+    return res.redirect('/digitalwallet');
+  }
+
+  try {
+    const qrData = await nets.requestNetsQr(parsedAmount, NETS_TXN_ID);
+    if (!nets.isQrSuccess(qrData)) {
+      req.session.walletTopupError = qrData?.error_message || 'NETS QR failed.';
+      return res.redirect('/digitalwallet');
+    }
+
+    const txnRetrievalRef =
+      qrData?.txn_retrieval_ref || qrData?.txnRetrievalRef || qrData?.txn_ref || null;
+    req.session.walletNetsPending = {
+      amount: parsedAmount,
+      txnRetrievalRef,
+      txnRef: qrData?.txn_ref || null,
+      createdAt: Date.now()
+    };
+
+    return res.render("netsQr", {
+      qrCodeUrl: `data:image/png;base64,${qrData.qr_code}`,
+      txnRetrievalRef,
+      total: parsedAmount,
+      successRedirect: "/digitalwallet",
+      completeUrl: "/wallet/nets/complete",
+      failCompleteUrl: "/wallet/nets/complete-fail",
+      failRedirect: "/digitalwallet",
+      backPrimaryUrl: "/digitalwallet",
+      backPrimaryLabel: "Back to wallet",
+      backSecondaryUrl: "/menu",
+      backSecondaryLabel: "Back to menu"
+    });
+  } catch (err) {
+    console.error("Wallet NETS QR error:", err);
+    req.session.walletTopupError = 'NETS server error.';
+    return res.redirect('/digitalwallet');
+  }
+});
+
+// POST /wallet/nets/complete
+app.post('/wallet/nets/complete', async (req, res) => {
+  try {
+    if (!req.session.user) return res.status(401).json({ ok: false, error: 'Not logged in' });
+    const pending = req.session.walletNetsPending;
+    if (!pending) return res.status(400).json({ ok: false, error: 'No pending NETS top up' });
+
+    const amount = Number(pending.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ ok: false, error: 'Invalid top up amount' });
+    }
+
+    const limitCheck = await checkDailyTopupLimit(req.session.user.id, amount);
+    if (!limitCheck.ok) {
+      req.session.walletTopupError = 'Daily top up limit reached. Try again tomorrow.';
+      req.session.walletNetsPending = null;
+      return res.status(400).json({ ok: false, error: 'Daily top up limit reached' });
+    }
+
+    await ensureWalletColumn();
+    await db.query(
+      "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id=?",
+      [amount, req.session.user.id]
+    );
+
+    const [rows] = await db.query(
+      "SELECT wallet_balance FROM users WHERE id=?",
+      [req.session.user.id]
+    );
+    const balanceAfter = rows?.[0]?.wallet_balance ?? Number(amount);
+    await recordWalletTxn(req.session.user.id, 'topup', 'nets', Number(amount), balanceAfter);
+    clearWallet2fa(req);
+    req.session.walletNetsPending = null;
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("wallet/nets/complete error:", err);
+    return res.status(500).json({ ok: false, error: 'Failed to finalize NETS top up' });
+  }
+});
+
+// POST /wallet/nets/complete-fail
+app.post('/wallet/nets/complete-fail', (req, res) => {
+  try {
+    if (req.session) {
+      req.session.walletNetsPending = null;
+    }
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("wallet/nets/complete-fail error:", err);
+    return res.status(500).json({ ok: false, error: 'Failed to finalize NETS fail' });
+  }
 });
 
 
