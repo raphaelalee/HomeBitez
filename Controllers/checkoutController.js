@@ -143,7 +143,7 @@ function getRedeemForSubtotal(session, subtotal) {
   const redeemAmount = Math.min(Number(subtotal || 0), Number(session?.cartRedeem?.amount || 0));
   const redeemPoints = Math.min(
     Number(session?.cartRedeem?.points || 0),
-    Math.floor(redeemAmount / 0.1)
+    Math.floor(redeemAmount / 0.01)
   );
   return {
     redeemAmount: Number(redeemAmount.toFixed(2)),
@@ -805,10 +805,10 @@ exports.capturePaypalOrder = async (req, res) => {
       }
     }
 
-    // Award loyalty points: 1 point per $1 total (floor)
+    // Award loyalty points: 1 point = $0.01 of value (100 points per $1)
     if (req.session.user && total > 0) {
       try {
-        const earned = Math.floor(total); // 1 pt = $1
+        const earned = Math.floor(total / 0.01);
         const { balance, entry } = await UsersModel.addPoints(req.session.user.id, earned, `Order ${orderDbId} (PayPal)`);
         req.session.user.points = balance;
         req.session.user.pointsHistory = [entry, ...(req.session.user.pointsHistory || [])].slice(0,20);
@@ -931,13 +931,41 @@ exports.capturePaypalOrder = async (req, res) => {
      GET /receipt
   ========================= */
 exports.renderReceipt = async (req, res) => {
-    const paypalCapture = req.session?.paypalCapture || null;
-    const stripeCapture = req.session?.stripeCapture || null;
-    const netsCapture = req.session?.netsCapture || null;
-  const latestOrderDbId = req.session?.latestOrderDbId || null;
+  const paypalCapture = req.session?.paypalCapture || null;
+  const stripeCapture = req.session?.stripeCapture || null;
+  const netsCapture = req.session?.netsCapture || null;
   const paylaterPurchase = req.session?.paylaterPurchase || null;
-  if (latestOrderDbId) {
-    req.session.lastReceiptOrderId = latestOrderDbId;
+  const queryOrderIdRaw = req.query?.orderId;
+  let queryOrderId = null;
+  if (queryOrderIdRaw !== undefined && queryOrderIdRaw !== null && String(queryOrderIdRaw).trim() !== "") {
+    const match = String(queryOrderIdRaw).match(/(\d+)/);
+    if (match) {
+      const parsed = Number(match[1]);
+      if (Number.isInteger(parsed) && parsed > 0) queryOrderId = parsed;
+    }
+  }
+
+  const sessionOrderDbId = req.session?.latestOrderDbId || null;
+  const receiptOrderDbId = queryOrderId || sessionOrderDbId || null;
+  if (receiptOrderDbId && !queryOrderId) {
+    req.session.lastReceiptOrderId = receiptOrderDbId;
+  }
+
+  let orderFromDb = null;
+  if (receiptOrderDbId) {
+    try {
+      orderFromDb = await OrdersModel.getById(receiptOrderDbId);
+      if (
+        orderFromDb &&
+        orderFromDb.user_id &&
+        req.session?.user &&
+        String(orderFromDb.user_id) !== String(req.session.user.id)
+      ) {
+        return res.status(403).send("Forbidden");
+      }
+    } catch (err) {
+      console.error("renderReceipt order lookup error:", err);
+    }
   }
 
   let cart = getSelectedCartItems(req.session);
@@ -954,9 +982,9 @@ exports.renderReceipt = async (req, res) => {
   };
 
   // If cart empty but we have an order id, hydrate from DB
-  if ((!cart || cart.length === 0) && latestOrderDbId) {
+  if ((!cart || cart.length === 0) && orderFromDb) {
     try {
-      const order = await OrdersModel.getById(latestOrderDbId);
+      const order = orderFromDb;
       if (order) {
         const parsedItems = order.items
           ? (Array.isArray(order.items) ? order.items : (() => { try { return JSON.parse(order.items); } catch (e) { return []; } })())
@@ -995,25 +1023,43 @@ exports.renderReceipt = async (req, res) => {
   }));
 
   const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
-    const total =
-      paylaterPurchase?.total ||
-      paypalCapture?.total ||
-      stripeCapture?.total ||
-      netsCapture?.total ||
-      (subtotal - redeem);
-  const deliveryFee = Number((total - subtotal).toFixed(2));
-    const paymentMethod = paylaterPurchase
-      ? "PayLater"
-      : (paypalCapture
-        ? "PayPal"
-        : (stripeCapture
-          ? "Stripe"
-          : (netsCapture ? "NETS" : "Other")));
+  const total =
+    paylaterPurchase?.total ||
+    paypalCapture?.total ||
+    stripeCapture?.total ||
+    netsCapture?.total ||
+    (orderFromDb ? Number(orderFromDb.total || 0) : 0) ||
+    (subtotal - redeem);
+  const deliveryFeeRaw =
+    orderFromDb?.delivery_fee ??
+    orderFromDb?.deliveryFee ??
+    (total - subtotal);
+  const deliveryFeeNum = Number(deliveryFeeRaw);
+  const deliveryFee = Number.isFinite(deliveryFeeNum)
+    ? Number(deliveryFeeNum.toFixed(2))
+    : 0;
+  const paymentMethod = paylaterPurchase
+    ? "PayLater"
+    : (paypalCapture
+      ? "PayPal"
+      : (stripeCapture
+        ? "Stripe"
+        : (netsCapture
+          ? "NETS"
+          : (orderFromDb
+            ? (String(orderFromDb.status || "").toLowerCase() === "paylater"
+              ? "PayLater"
+              : (orderFromDb.paypal_order_id ? "PayPal" : "Other"))
+            : "Other"))));
   const fulfillment = prefs.mode === "delivery"
     ? (getDeliveryTypeFromPrefs(prefs) === "urgent" ? "Urgent Delivery" : "Normal Delivery")
     : "Pickup";
-    const isPaid = !!(paypalCapture || stripeCapture || netsCapture || paylaterPurchase);
-    const paymentMeta = paypalCapture
+  const statusRaw = String(orderFromDb?.status || "").toLowerCase();
+  const orderPaid =
+    ["paid", "fulfilled", "completed"].includes(statusRaw) ||
+    Boolean(orderFromDb?.paypal_capture_id);
+  const isPaid = !!(paypalCapture || stripeCapture || netsCapture || paylaterPurchase || orderPaid);
+  const paymentMeta = paypalCapture
       ? {
           refId: paypalCapture.orderId || null,
           txnId: paypalCapture.captureId || null,
@@ -1031,13 +1077,21 @@ exports.renderReceipt = async (req, res) => {
               txnId: netsCapture.txnId || null,
               payerEmail: null
             }
-          : {
-              refId: null,
-              txnId: null,
-              payerEmail: null
-            }));
+          : (orderFromDb
+            ? {
+                refId: orderFromDb.paypal_order_id || `ORD-${orderFromDb.id}`,
+                txnId: orderFromDb.paypal_capture_id || null,
+                payerEmail: orderFromDb.payer_email || orderFromDb.payerEmail || null
+              }
+            : {
+                refId: null,
+                txnId: null,
+                payerEmail: null
+              })));
 
-    if (isPaid) {
+  const shouldFinalize =
+    !!(paypalCapture || stripeCapture || netsCapture || paylaterPurchase);
+  if (shouldFinalize) {
       // Finalize purchase: decrement product inventory and clear purchased cart items.
       await decrementPurchasedProductInventory(items);
       await removePurchasedItemsFromCart(req, items);
@@ -1046,6 +1100,10 @@ exports.renderReceipt = async (req, res) => {
       req.session.netsCapture = null;
       req.session.cartRedeem = null;
     }
+
+  const receiptOrderRef = orderFromDb
+    ? `ORD-${orderFromDb.id}`
+    : (receiptOrderDbId ? `ORD-${receiptOrderDbId}` : null);
 
   res.render("receipt", {
     brand: "HomeBitez",
@@ -1056,7 +1114,8 @@ exports.renderReceipt = async (req, res) => {
     paypalCapture,       // <-- ALWAYS DEFINED (null or object)
     stripeCapture,
     paylaterPlan: req.session?.paylaterPlan || null,
-    latestOrderDbId,
+    latestOrderDbId: receiptOrderDbId,
+    receiptOrderRef,
     user: req.session.user || null,
     prefs,
     paymentMethod,

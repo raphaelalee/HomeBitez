@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notifications - HomeBitez</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      background:#f6efe6;
+      color:#2a241e;
+      font-family: "Manrope", "Segoe UI", Arial, sans-serif;
+    }
+    .page-wrap {
+      max-width: 980px;
+      margin: 34px auto 60px;
+      padding: 0 22px;
+    }
+    .page-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:18px;
+    }
+    .page-title {
+      font-family: "Fraunces", "Times New Roman", serif;
+      font-size:26px;
+      font-weight:800;
+      margin:0;
+      color:#2a241e;
+    }
+    .btn {
+      border:none;
+      border-radius:999px;
+      padding:10px 16px;
+      font-weight:700;
+      cursor:pointer;
+      font-size:13px;
+      background:#d59b2d;
+      color:#fff;
+      box-shadow:0 10px 24px rgba(213,155,45,0.22);
+    }
+    .card {
+      background:#fffaf3;
+      border:1px solid #eadac6;
+      border-radius:22px;
+      box-shadow:0 14px 34px rgba(42,36,30,0.10);
+      padding:20px;
+      margin-bottom:18px;
+    }
+    .section-title {
+      font-weight:800;
+      margin:0 0 10px;
+      font-size:16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .list { display:grid; gap:10px; }
+    .row {
+      border:1px solid #eadac6;
+      border-radius:12px;
+      padding:12px 14px;
+      background:#fff;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .meta { font-size:12px; color:#6f6256; margin-top:4px; }
+    .empty { color:#6f6256; font-size:13px; }
+    .link {
+      border:1px solid #dd9b00;
+      color:#dd9b00;
+      border-radius:10px;
+      padding:6px 12px;
+      font-weight:700;
+      text-decoration:none;
+      font-size:12px;
+      background:#fff;
+    }
+    .link:hover { background:#fff3df; }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar-user') %>
+
+  <div class="page-wrap">
+    <div class="page-head">
+      <h1 class="page-title">Your Notifications</h1>
+      <form action="/user/notifications/mark-read" method="POST" style="margin:0;">
+        <button class="btn" type="submit">Mark all as read</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="section-title">
+        <span>Order Status Updates</span>
+        <a class="link" href="/user/profile">Order History</a>
+      </div>
+      <% if (!orderUpdates || orderUpdates.length === 0) { %>
+        <div class="empty">No new order updates.</div>
+      <% } else { %>
+        <div class="list">
+          <% orderUpdates.forEach(o => { %>
+            <div class="row">
+              <div>
+                <div><strong><%= o.orderRef %></strong> · $<%= Number(o.total || 0).toFixed(2) %></div>
+                <div class="meta"><%= o.status %> · <%= o.created_at ? new Date(o.created_at).toLocaleString() : '-' %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="section-title">
+        <span>Support Replies</span>
+        <a class="link" href="/report">Report Issue</a>
+      </div>
+      <% if (!supportReplies || supportReplies.length === 0) { %>
+        <div class="empty">No support replies yet.</div>
+      <% } else { %>
+        <div class="list">
+          <% supportReplies.forEach(r => { %>
+            <div class="row">
+              <div>
+                <div><strong><%= r.subject || 'Support reply' %></strong></div>
+                <div class="meta"><%= r.replied_at ? new Date(r.replied_at).toLocaleString() : (r.created_at ? new Date(r.created_at).toLocaleString() : '-') %></div>
+                <div style="margin-top:6px;"><%= r.admin_reply %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="section-title">
+        <span>Messages</span>
+        <a class="link" href="/user/profile">View Profile</a>
+      </div>
+      <% if (!inboxMessages || inboxMessages.length === 0) { %>
+        <div class="empty">No messages yet.</div>
+      <% } else { %>
+        <div class="list">
+          <% inboxMessages.forEach(m => { %>
+            <div class="row">
+              <div>
+                <div><strong><%= m.senderName || 'Business Owner' %></strong></div>
+                <div class="meta"><%= m.created_at ? new Date(m.created_at).toLocaleString() : '-' %></div>
+                <div style="margin-top:6px;"><%= m.message %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="section-title">
+        <span>Refund Status</span>
+        <a class="link" href="/report">Report Issue</a>
+      </div>
+      <% if (!refundUpdates || refundUpdates.length === 0) { %>
+        <div class="empty">No refund updates.</div>
+      <% } else { %>
+        <div class="list">
+          <% refundUpdates.forEach(r => { %>
+            <div class="row">
+              <div>
+                <div><strong><%= r.subject || 'Refund update' %></strong></div>
+                <div class="meta"><%= r.status || 'pending' %> · <%= r.replied_at ? new Date(r.replied_at).toLocaleString() : (r.created_at ? new Date(r.created_at).toLocaleString() : '-') %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Promo Announcements</div>
+      <% if (!promoAnnouncements || promoAnnouncements.length === 0) { %>
+        <div class="empty">No promo announcements right now.</div>
+      <% } else { %>
+        <div class="list">
+          <% promoAnnouncements.forEach(p => { %>
+            <div class="row">
+              <div>
+                <div><strong><%= p.title %></strong></div>
+                <div class="meta"><%= p.date ? new Date(p.date).toLocaleString() : '-' %></div>
+                <div style="margin-top:6px;"><%= p.message %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Delivery ETA Updates</div>
+      <% if (!etaUpdates || etaUpdates.length === 0) { %>
+        <div class="empty">No ETA updates yet. ETA updates will appear after checkout.</div>
+      <% } else { %>
+        <div class="list">
+          <% etaUpdates.forEach(e => { %>
+            <div class="row">
+              <div>
+                <div><strong><%= e.orderRef %></strong></div>
+                <div class="meta"><%= e.message %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</body>
+</html>

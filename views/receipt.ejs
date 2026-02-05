@@ -218,7 +218,7 @@
 
         <div class="meta">
           <div><strong>Receipt</strong></div>
-          <div>Order #: <strong><%= latestOrderDbId || 'N/A' %></strong></div>
+          <div>Order #: <strong><%= receiptOrderRef || 'N/A' %></strong></div>
           <div>Payment: <strong><%= paymentMethod %></strong></div>
           <div>Payment Ref: <strong><%= paymentMeta?.refId || '-' %></strong></div>
           <div>Txn ID: <strong><%= paymentMeta?.txnId || '-' %></strong></div>

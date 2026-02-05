@@ -51,7 +51,7 @@
             </tr>
           <% } else { %>
             <% orders.forEach(o => { 
-              const orderNum = o.paypal_order_id || `ORD-${o.id}`;
+              const orderNum = o.orderRef || `ORD-${o.id}`;
               const statusKey = (o.fulfillmentStatus || '').toLowerCase();
               const statusLabel = statusKey === 'completed' ? 'Completed' : (statusKey === 'paid' ? 'Paid' : 'Pending');
               const statusClass = statusKey === 'completed' ? 'completed' : (statusKey === 'paid' ? 'paid' : 'pending');

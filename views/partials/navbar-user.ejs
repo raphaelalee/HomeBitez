@@ -72,6 +72,20 @@
     color: #f4b400;
   }
 
+  .notif-badge{
+    position:absolute;
+    top:-6px;
+    right:-8px;
+    background:#e74c3c;
+    color:white;
+    font-size:10px;
+    font-weight:700;
+    padding:2px 6px;
+    border-radius:999px;
+    border:1px solid #fff2e1;
+    line-height:1;
+  }
+
   /* PROFILE AVATAR */
   .profile-avatar-navbar {
     width: 34px;
@@ -256,6 +270,13 @@
       <i class="bi bi-cart3"></i>
     </a>
     <% if (user) { %>
+      <% const notifCount = Number((typeof userNotifCount !== 'undefined') ? userNotifCount : 0); %>
+      <a href="/user/notifications" title="Notifications">
+        <i class="bi bi-bell"></i>
+        <% if (notifCount > 0) { %>
+          <span class="notif-badge"><%= notifCount > 99 ? '99+' : notifCount %></span>
+        <% } %>
+      </a>
       <a href="/user/profile" title="Profile" class="profile-avatar-navbar">
         <img
           id="navbar-avatar"

@@ -6,6 +6,41 @@ const UsersModel = require("../Models/UsersModel");
 // -----------------------------
 // Helpers
 // -----------------------------
+let messagesOwnerColCache = undefined;
+async function getMessagesOwnerCol() {
+  if (messagesOwnerColCache !== undefined) return messagesOwnerColCache;
+  try {
+    const [colRows] = await db.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'messages' 
+       AND COLUMN_NAME IN ('ownerId','owner_id') LIMIT 1`
+    );
+    messagesOwnerColCache = colRows && colRows[0] ? colRows[0].COLUMN_NAME : null;
+  } catch (err) {
+    messagesOwnerColCache = null;
+  }
+  return messagesOwnerColCache;
+}
+
+async function markMessagesReadForOwner(ownerId) {
+  try {
+    const ownerCol = await getMessagesOwnerCol();
+    let sql = "UPDATE messages SET isRead = 1";
+    const params = [];
+    if (ownerCol) {
+      sql += ` WHERE ( ${ownerCol} = ? OR ${ownerCol} IS NULL ) AND isRead = 0`;
+      params.push(ownerId);
+    } else {
+      sql += " WHERE isRead = 0";
+    }
+    await db.query(sql, params);
+    return true;
+  } catch (err) {
+    console.error("markMessagesReadForOwner error:", err);
+    return false;
+  }
+}
+
 function getSessionUser(req) {
   return req.session && req.session.user ? req.session.user : null;
 }
@@ -38,7 +73,8 @@ function addOrderMeta(order) {
   const subtotal = Number(order.subtotal || order.subTotal || (order.total ? Number(order.total) - deliveryFee : 0));
   const total = Number(order.total || order.totalAmount || order.total_amount || 0);
   const fulfillmentMode = deliveryFee > 0 ? "Delivery" : "Pickup";
-  return { ...order, ...payment, fulfillmentStatus, completedAt, deliveryFee, subtotal, total, fulfillmentMode };
+  const orderRef = `ORD-${order.id}`;
+  return { ...order, ...payment, fulfillmentStatus, completedAt, deliveryFee, subtotal, total, fulfillmentMode, orderRef };
 }
 
 function normalizeDiscountPercent(value) {
@@ -346,12 +382,7 @@ exports.messagesPage = async (req, res) => {
     // detect owner column on messages table (ownerId or owner_id). If none, show all messages.
     let ownerCol = null;
     try {
-      const [colRows] = await db.query(
-        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'messages' 
-         AND COLUMN_NAME IN ('ownerId','owner_id') LIMIT 1`
-      );
-      ownerCol = colRows && colRows[0] ? colRows[0].COLUMN_NAME : null;
+      ownerCol = await getMessagesOwnerCol();
     } catch (err) {
       console.error("messagesPage column detect error:", err);
     }
@@ -386,6 +417,90 @@ exports.messagesPage = async (req, res) => {
     console.error("Messages page error:", err);
     return res.status(500).send("Server error");
   }
+};
+
+// ------------------------------------
+// NOTIFICATIONS
+// ------------------------------------
+exports.notificationsPage = async (req, res) => {
+  const guard = requireBizOwner(req, res);
+  if (!guard.ok) return;
+
+  try {
+    const ownerId = guard.user.id;
+
+    // Unread messages
+    let unreadMessages = [];
+    try {
+      const ownerCol = await getMessagesOwnerCol();
+      let sql = `SELECT m.id, m.senderId, m.ownerId, m.message, m.isRead, m.created_at,
+                        u.username AS senderName, u.email AS senderEmail
+                 FROM messages m
+                 LEFT JOIN users u ON u.id = m.senderId `;
+      const params = [];
+      if (ownerCol) {
+        sql += `WHERE (m.${ownerCol} = ? OR m.${ownerCol} IS NULL) AND m.isRead = 0 `;
+        params.push(ownerId);
+      } else {
+        sql += `WHERE m.isRead = 0 `;
+      }
+      sql += `ORDER BY m.created_at DESC LIMIT 20`;
+      const [rows] = await db.query(sql, params);
+      unreadMessages = rows || [];
+    } catch (err) {
+      console.error("notifications unread messages error:", err);
+    }
+
+    // Pending orders
+    let pendingOrders = [];
+    try {
+      const orders = await OrdersModel.list(100);
+      pendingOrders = (orders || [])
+        .filter(o => {
+          const status = String(o.status || o.order_status || o.state || "").toLowerCase();
+          return status !== "completed" && status !== "fulfilled";
+        })
+        .slice(0, 20)
+        .map(o => ({
+          id: o.id,
+          orderRef: `ORD-${o.id}`,
+          created_at: o.created_at,
+          total: Number(o.total || 0),
+          status: String(o.status || o.order_status || o.state || "pending")
+        }));
+    } catch (err) {
+      console.error("notifications pending orders error:", err);
+    }
+
+    // Auto-clear unread messages after viewing
+    if (unreadMessages.length) {
+      await markMessagesReadForOwner(ownerId);
+      res.locals.bizownerUnreadMessages = 0;
+      res.locals.bizownerNotifCount = pendingOrders.length;
+      res.locals.bizownerPendingOrders = pendingOrders.length;
+    }
+
+    return res.render("bizowner/notifications", {
+      unreadMessages,
+      pendingOrders
+    });
+  } catch (err) {
+    console.error("Notifications page error:", err);
+    return res.status(500).send("Server error");
+  }
+};
+
+exports.markAllNotificationsRead = async (req, res) => {
+  const guard = requireBizOwner(req, res);
+  if (!guard.ok) return;
+
+  try {
+    await markMessagesReadForOwner(guard.user.id);
+  } catch (err) {
+    console.error("markAllNotificationsRead error:", err);
+  }
+
+  return res.redirect("/bizowner/notifications");
 };
 
 // Reply to a message (simple echo back to sender via new row)

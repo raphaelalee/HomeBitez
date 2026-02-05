@@ -110,6 +110,88 @@ async function ensureMessagesTable() {
     messagesTableEnsured = true;
 }
 
+let notifReadsEnsured = false;
+async function ensureNotificationReadsTable() {
+    if (notifReadsEnsured) return;
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS notification_reads (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                role VARCHAR(20) NOT NULL,
+                scope VARCHAR(50) NOT NULL,
+                last_read_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_read (user_id, role, scope)
+            )
+        `);
+    } catch (err) {
+        console.error("ensureNotificationReadsTable failed:", err);
+    }
+    notifReadsEnsured = true;
+}
+
+async function getNotificationRead(role, userId, scope) {
+    await ensureNotificationReadsTable();
+    try {
+        const [rows] = await db.query(
+            "SELECT last_read_at FROM notification_reads WHERE user_id = ? AND role = ? AND scope = ? LIMIT 1",
+            [userId, role, scope]
+        );
+        const ts = rows && rows[0] ? rows[0].last_read_at : null;
+        return ts ? new Date(ts) : new Date(0);
+    } catch (err) {
+        return new Date(0);
+    }
+}
+
+async function setNotificationRead(role, userId, scope, when = new Date()) {
+    await ensureNotificationReadsTable();
+    try {
+        await db.query(
+            `INSERT INTO notification_reads (user_id, role, scope, last_read_at)
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE last_read_at = VALUES(last_read_at)`,
+            [userId, role, scope, when]
+        );
+    } catch (err) {
+        console.error("setNotificationRead failed:", err);
+    }
+}
+
+async function columnExists(tableName, columnName) {
+    try {
+        const [rows] = await db.query(
+            `SELECT COUNT(*) AS cnt
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = ?
+               AND COLUMN_NAME = ?`,
+            [tableName, columnName]
+        );
+        return rows && rows[0] && rows[0].cnt > 0;
+    } catch (err) {
+        return false;
+    }
+}
+
+let messagesOwnerColCache = undefined;
+async function getMessagesOwnerCol() {
+    if (messagesOwnerColCache !== undefined) return messagesOwnerColCache;
+    try {
+        const [colRows] = await db.query(
+            `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'messages'
+               AND COLUMN_NAME IN ('ownerId','owner_id')
+             LIMIT 1`
+        );
+        messagesOwnerColCache = colRows && colRows[0] ? colRows[0].COLUMN_NAME : "ownerId";
+    } catch (err) {
+        messagesOwnerColCache = "ownerId";
+    }
+    return messagesOwnerColCache;
+}
+
 let walletColumnEnsured = false;
 async function ensureWalletColumn() {
     if (walletColumnEnsured) return;
@@ -186,6 +268,135 @@ app.use((req, res, next) => {
 });
 
 app.use(flash());
+
+app.use(async (req, res, next) => {
+    try {
+        const user = req.session?.user;
+        if (!user) return next();
+
+        if (user.role === 'admin') {
+            const userId = user.id;
+            const lastIssues = await getNotificationRead('admin', userId, 'issues');
+            const lastUsers = await getNotificationRead('admin', userId, 'users');
+            const lastPayments = await getNotificationRead('admin', userId, 'payments');
+            const lastRefunds = await getNotificationRead('admin', userId, 'refunds');
+
+            let issuesCount = 0;
+            let usersCount = 0;
+            let paymentFailCount = 0;
+            let refundCount = 0;
+
+            try {
+                await ensureReportReplyColumns();
+                const [rows] = await db.query(
+                    "SELECT COUNT(*) AS cnt FROM report_messages WHERE status <> 'resolved' AND created_at > ?",
+                    [lastIssues]
+                );
+                issuesCount = Number(rows?.[0]?.cnt || 0);
+            } catch (err) {}
+
+            try {
+                const hasCreatedAt = await columnExists('users', 'created_at');
+                if (hasCreatedAt) {
+                    const [rows] = await db.query(
+                        "SELECT COUNT(*) AS cnt FROM users WHERE role = 'user' AND created_at > ?",
+                        [lastUsers]
+                    );
+                    usersCount = Number(rows?.[0]?.cnt || 0);
+                }
+            } catch (err) {}
+
+            try {
+                const [rows] = await db.query(
+                    "SELECT COUNT(*) AS cnt FROM orders WHERE LOWER(COALESCE(status,'')) IN ('failed','cancelled','error') AND created_at > ?",
+                    [lastPayments]
+                );
+                paymentFailCount = Number(rows?.[0]?.cnt || 0);
+            } catch (err) {}
+
+            try {
+                await ensureReportReplyColumns();
+                const [rows] = await db.query(
+                    `SELECT COUNT(*) AS cnt
+                     FROM report_messages
+                     WHERE (LOWER(subject) LIKE '%refund%' OR LOWER(description) LIKE '%refund%')
+                       AND created_at > ?`,
+                    [lastRefunds]
+                );
+                refundCount = Number(rows?.[0]?.cnt || 0);
+            } catch (err) {}
+
+            res.locals.adminNotifCount = issuesCount + usersCount + paymentFailCount + refundCount;
+        }
+
+        if (user.role === 'user') {
+            const userId = user.id;
+            const lastOrders = await getNotificationRead('user', userId, 'orders');
+            const lastSupport = await getNotificationRead('user', userId, 'support');
+            const lastRefunds = await getNotificationRead('user', userId, 'refunds');
+            const lastPromos = await getNotificationRead('user', userId, 'promos');
+
+            let orderCount = 0;
+            let supportCount = 0;
+            let refundCount = 0;
+            let promoCount = 0;
+            let messageCount = 0;
+
+            try {
+                const [rows] = await db.query(
+                    "SELECT COUNT(*) AS cnt FROM orders WHERE user_id = ? AND created_at > ?",
+                    [userId, lastOrders]
+                );
+                orderCount = Number(rows?.[0]?.cnt || 0);
+            } catch (err) {}
+
+            try {
+                await ensureReportReplyColumns();
+                const [rows] = await db.query(
+                    `SELECT COUNT(*) AS cnt
+                     FROM report_messages
+                     WHERE user_id = ?
+                       AND admin_reply IS NOT NULL
+                       AND (COALESCE(replied_at, created_at) > ?)`,
+                    [userId, lastSupport]
+                );
+                supportCount = Number(rows?.[0]?.cnt || 0);
+            } catch (err) {}
+
+            try {
+                await ensureReportReplyColumns();
+                const [rows] = await db.query(
+                    `SELECT COUNT(*) AS cnt
+                     FROM report_messages
+                     WHERE user_id = ?
+                       AND (LOWER(subject) LIKE '%refund%' OR LOWER(description) LIKE '%refund%')
+                       AND (COALESCE(replied_at, created_at) > ?)`,
+                    [userId, lastRefunds]
+                );
+                refundCount = Number(rows?.[0]?.cnt || 0);
+            } catch (err) {}
+
+            try {
+                // promo announcements are static (none for now)
+                promoCount = 0;
+                void lastPromos;
+            } catch (err) {}
+
+            try {
+                await ensureMessagesTable();
+                const ownerCol = await getMessagesOwnerCol();
+                const [rows] = await db.query(
+                    `SELECT COUNT(*) AS cnt FROM messages WHERE ${ownerCol} = ? AND isRead = 0`,
+                    [userId]
+                );
+                messageCount = Number(rows?.[0]?.cnt || 0);
+            } catch (err) {}
+
+            res.locals.userNotifCount = orderCount + supportCount + refundCount + promoCount + messageCount;
+        }
+    } catch (err) {}
+    next();
+});
 
 function generateTwoFactorCode() {
     return String(Math.floor(100000 + Math.random() * 900000));
@@ -479,7 +690,7 @@ function getRedeemForSubtotalFromSession(session, subtotal) {
     const redeemAmount = Math.min(Number(subtotal || 0), Number(session?.cartRedeem?.amount || 0));
     const redeemPoints = Math.min(
         Number(session?.cartRedeem?.points || 0),
-        Math.floor(redeemAmount / 0.1)
+        Math.floor(redeemAmount / 0.01)
     );
     return {
         redeemAmount: Number(redeemAmount.toFixed(2)),
@@ -1074,6 +1285,122 @@ app.post('/admin/profile', async (req, res) => {
     }
 });
 
+// Admin notifications inbox
+app.get('/admin/notifications', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+
+    try {
+        await ensureReportReplyColumns();
+
+        let issues = [];
+        try {
+            const [rows] = await db.query(
+                "SELECT id, name, email, subject, status, created_at FROM report_messages WHERE status <> 'resolved' ORDER BY created_at DESC LIMIT 20"
+            );
+            issues = rows || [];
+        } catch (err) {
+            console.error("admin notifications issues load error:", err);
+        }
+
+        let refunds = [];
+        try {
+            const [rows] = await db.query(
+                `SELECT id, name, email, subject, description, status, created_at
+                 FROM report_messages
+                 WHERE (LOWER(subject) LIKE '%refund%' OR LOWER(description) LIKE '%refund%')
+                 ORDER BY created_at DESC LIMIT 20`
+            );
+            refunds = rows || [];
+        } catch (err) {
+            console.error("admin notifications refunds load error:", err);
+        }
+
+        let paymentFailures = [];
+        try {
+            const [rows] = await db.query(
+                "SELECT id, total, status, created_at FROM orders WHERE LOWER(COALESCE(status,'')) IN ('failed','cancelled','error') ORDER BY created_at DESC LIMIT 20"
+            );
+            paymentFailures = rows || [];
+        } catch (err) {
+            console.error("admin notifications payment failures load error:", err);
+        }
+
+        let newUsers = [];
+        try {
+            const hasCreatedAt = await columnExists('users', 'created_at');
+            if (hasCreatedAt) {
+                const [rows] = await db.query(
+                    "SELECT id, username, email, created_at FROM users WHERE role = 'user' ORDER BY created_at DESC LIMIT 20"
+                );
+                newUsers = rows || [];
+            } else {
+                const [rows] = await db.query(
+                    "SELECT id, username, email FROM users WHERE role = 'user' ORDER BY id DESC LIMIT 20"
+                );
+                newUsers = rows || [];
+            }
+        } catch (err) {
+            console.error("admin notifications users load error:", err);
+        }
+
+        let lowStock = [];
+        try {
+            const [rows] = await db.query(
+                "SELECT id, product_name, quantity FROM product WHERE quantity <= 5 ORDER BY quantity ASC LIMIT 20"
+            );
+            lowStock = rows || [];
+        } catch (err) {
+            console.error("admin notifications low stock load error:", err);
+        }
+
+        const systemAlerts = [];
+
+        const now = new Date();
+        await setNotificationRead('admin', req.session.user.id, 'issues', now);
+        await setNotificationRead('admin', req.session.user.id, 'users', now);
+        await setNotificationRead('admin', req.session.user.id, 'payments', now);
+        await setNotificationRead('admin', req.session.user.id, 'refunds', now);
+        res.locals.adminNotifCount = 0;
+
+        return res.render('admin-notifications', {
+            issues,
+            refunds,
+            paymentFailures,
+            newUsers,
+            lowStock,
+            systemAlerts,
+            adminName: req.session.user?.username || 'Admin'
+        });
+    } catch (err) {
+        console.error("Admin notifications error:", err);
+        return res.status(500).send("Server error");
+    }
+});
+
+app.post('/admin/notifications/mark-read', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error', 'Please login first.');
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        req.flash('error', 'Access denied.');
+        return res.redirect('/menu');
+    }
+    const now = new Date();
+    await setNotificationRead('admin', req.session.user.id, 'issues', now);
+    await setNotificationRead('admin', req.session.user.id, 'users', now);
+    await setNotificationRead('admin', req.session.user.id, 'payments', now);
+    await setNotificationRead('admin', req.session.user.id, 'refunds', now);
+    return res.redirect('/admin/notifications');
+});
+
 // Admin manage customers
 app.get('/admin/customers', async (req, res) => {
     if (!req.session.user) {
@@ -1572,7 +1899,8 @@ app.get('/user/profile', async (req, res) => {
       const qty = (o.items || []).reduce((s, i) => s + Number(i.qty || i.quantity || 0), 0);
       const derivedStatus = normalizeStatus(o.status) || (o.paypal_capture_id ? 'Paid' : 'Pending');
       return {
-        orderId: o.paypal_order_id || `ORD-${o.id}`,
+        dbId: o.id,
+        orderId: `ORD-${o.id}`,
         date: formatOrderDate(o.created_at),
         qty,
         total: Number(o.total || 0),
@@ -1625,6 +1953,148 @@ app.get('/user/profile', async (req, res) => {
       success: req.flash('success'),
       error: req.flash('error')
   });
+});
+
+// User notifications inbox
+app.get('/user/notifications', async (req, res) => {
+  if (!req.session.user) {
+    req.flash('error', 'Please login first.');
+    return res.redirect('/login');
+  }
+  if (req.session.user.role !== 'user') {
+    req.flash('error', 'Access denied.');
+    return res.redirect('/menu');
+  }
+
+  const userId = req.session.user.id;
+  let orderUpdates = [];
+  let supportReplies = [];
+  let refundUpdates = [];
+  let inboxMessages = [];
+  const promoAnnouncements = [];
+  const etaUpdates = [];
+
+  try {
+    const lastOrders = await getNotificationRead('user', userId, 'orders');
+    try {
+      const rawOrders = await OrdersModel.listByUser(userId, 20);
+      orderUpdates = (rawOrders || [])
+        .filter(o => o.created_at && new Date(o.created_at) > lastOrders)
+        .map(o => ({
+          orderRef: `ORD-${o.id}`,
+          status: String(o.status || '').toLowerCase() || (o.paypal_capture_id ? 'paid' : 'pending'),
+          total: Number(o.total || 0),
+          created_at: o.created_at
+        }));
+    } catch (err) {
+      console.error("user notifications orders load error:", err);
+    }
+
+    const lastSupport = await getNotificationRead('user', userId, 'support');
+    try {
+      await ensureReportReplyColumns();
+      const [rows] = await db.query(
+        `SELECT id, subject, admin_reply, replied_at, created_at
+         FROM report_messages
+         WHERE user_id = ? AND admin_reply IS NOT NULL
+         ORDER BY COALESCE(replied_at, created_at) DESC
+         LIMIT 20`,
+        [userId]
+      );
+      supportReplies = (rows || []).filter(r => {
+        const t = r.replied_at || r.created_at;
+        return t && new Date(t) > lastSupport;
+      });
+    } catch (err) {
+      console.error("user notifications support load error:", err);
+    }
+
+    const lastRefunds = await getNotificationRead('user', userId, 'refunds');
+    try {
+      await ensureReportReplyColumns();
+      const [rows] = await db.query(
+        `SELECT id, subject, description, status, replied_at, created_at
+         FROM report_messages
+         WHERE user_id = ?
+           AND (LOWER(subject) LIKE '%refund%' OR LOWER(description) LIKE '%refund%')
+         ORDER BY COALESCE(replied_at, created_at) DESC
+         LIMIT 20`,
+        [userId]
+      );
+      refundUpdates = (rows || []).filter(r => {
+        const t = r.replied_at || r.created_at;
+        return t && new Date(t) > lastRefunds;
+      });
+    } catch (err) {
+      console.error("user notifications refunds load error:", err);
+    }
+
+    try {
+      await ensureMessagesTable();
+      const ownerCol = await getMessagesOwnerCol();
+      const [rows] = await db.query(
+        `SELECT m.id, m.message, m.isRead, m.created_at, u.username AS senderName
+         FROM messages m
+         LEFT JOIN users u ON u.id = m.senderId
+         WHERE m.${ownerCol} = ?
+         ORDER BY m.created_at DESC
+         LIMIT 20`,
+        [userId]
+      );
+      inboxMessages = rows || [];
+    } catch (err) {
+      console.error("user notifications messages load error:", err);
+    }
+
+    // Auto-clear notifications after viewing
+    const now = new Date();
+    await setNotificationRead('user', userId, 'orders', now);
+    await setNotificationRead('user', userId, 'support', now);
+    await setNotificationRead('user', userId, 'refunds', now);
+    await setNotificationRead('user', userId, 'promos', now);
+
+    try {
+      await ensureMessagesTable();
+      const ownerCol = await getMessagesOwnerCol();
+      await db.query(`UPDATE messages SET isRead = 1 WHERE ${ownerCol} = ? AND isRead = 0`, [userId]);
+    } catch (err) {}
+
+    res.locals.userNotifCount = 0;
+  } catch (err) {
+    console.error("User notifications error:", err);
+  }
+
+  return res.render('user-notifications', {
+    orderUpdates,
+    supportReplies,
+    refundUpdates,
+    inboxMessages,
+    promoAnnouncements,
+    etaUpdates
+  });
+});
+
+app.post('/user/notifications/mark-read', async (req, res) => {
+  if (!req.session.user) {
+    req.flash('error', 'Please login first.');
+    return res.redirect('/login');
+  }
+  if (req.session.user.role !== 'user') {
+    req.flash('error', 'Access denied.');
+    return res.redirect('/menu');
+  }
+  const userId = req.session.user.id;
+  const now = new Date();
+  await setNotificationRead('user', userId, 'orders', now);
+  await setNotificationRead('user', userId, 'support', now);
+  await setNotificationRead('user', userId, 'refunds', now);
+  await setNotificationRead('user', userId, 'promos', now);
+  try {
+    await ensureMessagesTable();
+    const ownerCol = await getMessagesOwnerCol();
+    await db.query(`UPDATE messages SET isRead = 1 WHERE ${ownerCol} = ? AND isRead = 0`, [userId]);
+  } catch (err) {}
+  return res.redirect('/user/notifications');
 });
 
 
@@ -1885,10 +2355,10 @@ app.post("/nets/complete", async (req, res) => {
             }
         }
 
-        // Award loyalty points
+        // Award loyalty points: 1 point = $0.01 of value (100 points per $1)
         if (req.session.user && total > 0) {
             try {
-                const earned = Math.floor(total);
+                const earned = Math.floor(total / 0.01);
                 const { balance, entry } = await UsersModel.addPoints(
                     req.session.user.id,
                     earned,
@@ -2030,10 +2500,10 @@ app.get('/stripe/success', async (req, res) => {
       }
     }
 
-    // Award loyalty points
+    // Award loyalty points: 1 point = $0.01 of value (100 points per $1)
     if (req.session.user && total > 0) {
       try {
-        const earned = Math.floor(total);
+        const earned = Math.floor(total / 0.01);
         const { balance, entry } = await UsersModel.addPoints(
           req.session.user.id,
           earned,

@@ -589,9 +589,12 @@
         <div class="section-block" style="grid-template-columns:1fr auto; margin:12px 0;">
           <div>
             <p class="label" style="margin:0;">Redeem points</p>
-            <p class="hint" style="margin:0;">1 point = $0.10 off. Max up to total.</p>
+            <p class="hint" style="margin:0;">1 point = $0.01 off. Max up to total.</p>
             <% if (appliedPoints > 0) { %>
-              <p class="hint" style="margin:0;">Applied: <strong><%= appliedPoints %></strong> points ( -$<%= Number(redeem||0).toFixed(2) %> )</p>
+              <p class="hint" style="margin:0;">
+                Applied: <strong><span id="appliedPointsText"><%= appliedPoints %></span></strong> points
+                ( -$<span id="appliedRedeemText"><%= Number(redeem||0).toFixed(2) %></span> )
+              </p>
             <% } %>
           </div>
           <form action="/cart/redeem" method="POST" class="d-flex gap-2 align-items-center">
@@ -716,6 +719,17 @@
   }
 
 
+  function recomputeCartSubtotal(){
+    let subtotal = 0;
+    document.querySelectorAll(".cart-row").forEach(row => {
+      const id = row.getAttribute("data-id");
+      const price = Number(row.getAttribute("data-price") || 0);
+      const qty = getQty(id);
+      subtotal += (price * qty);
+    });
+    return subtotal;
+  }
+
   function recomputeSelectedSubtotal(){
     const selected = new Set(getSelectedNames().map(String));
     let subtotal = 0;
@@ -723,30 +737,17 @@
     document.querySelectorAll(".cart-row").forEach(row => {
       const name = row.getAttribute("data-name");
       const price = Number(row.getAttribute("data-price") || 0);
-      const qty = getQty(row.getAttribute("data-id")); // row data-id is item.name in your EJS
-
+      const qty = getQty(row.getAttribute("data-id"));
       if (selected.has(String(name))) subtotal += (price * qty);
     });
 
     return subtotal;
   }
 
-  function recomputeSelectedSubtotal(){
-    const selected = new Set(getSelectedIds().map(String));
-    let subtotal = 0;
-    document.querySelectorAll(".cart-row").forEach(row => {
-      const id = row.getAttribute("data-id");
-      const price = Number(row.getAttribute("data-price") || 0);
-      const qty = getQty(id);
-      if (selected.has(String(id))) subtotal += (price * qty);
-    });
-    return subtotal;
-  }
-
   function syncSelectionUI(){
     const selectAll = document.getElementById("selectAllCartItems");
     const checkboxes = Array.from(document.querySelectorAll(".item-select"));
-    const selectedIds = getSelectedNames
+    const selectedIds = getSelectedNames();
     const total = checkboxes.length;
     const selectedCount = selectedIds.length;
 
@@ -767,19 +768,30 @@
     if (checkoutBtn){
       checkoutBtn.disabled = selectedCount === 0;
     }
+
+    syncTotalsUI();
   }
 
   function syncTotalsUI(){
     const summarySubtotalEl = document.getElementById("summarySubtotal");
     const summaryTotalEl = document.getElementById("summaryTotal");
     const redeemEl = document.getElementById("redeemAmount");
+    const appliedPointsEl = document.getElementById("appliedPointsText");
+    const appliedRedeemEl = document.getElementById("appliedRedeemText");
+
+    const baseRedeem = window.__baseRedeemAmount ?? 0;
+    const selectedSubtotal = recomputeSelectedSubtotal();
+    const appliedRedeem = Math.min(baseRedeem, selectedSubtotal);
+    const appliedPoints = Math.floor(appliedRedeem / 0.01);
 
     const newSubtotal = recomputeCartSubtotal();
-    const redeem = Number(redeemEl ? redeemEl.textContent : 0) || 0;
-    const newTotal = Math.max(0, newSubtotal - redeem);
+    const newTotal = Math.max(0, selectedSubtotal - appliedRedeem);
 
     if (summarySubtotalEl) summarySubtotalEl.textContent = money(newSubtotal);
     if (summaryTotalEl) summaryTotalEl.textContent = money(newTotal);
+    if (redeemEl) redeemEl.textContent = money(appliedRedeem);
+    if (appliedPointsEl) appliedPointsEl.textContent = String(appliedPoints);
+    if (appliedRedeemEl) appliedRedeemEl.textContent = money(appliedRedeem);
   }
 
   async function postJSON(url, payload){
@@ -1023,6 +1035,8 @@ if (checkoutSelectedBtn) {
 
 
   // Initial sync
+  const redeemEl = document.getElementById("redeemAmount");
+  window.__baseRedeemAmount = Number(redeemEl ? redeemEl.textContent : 0) || 0;
   syncTotalsUI();
   syncSelectionUI();
 </script>

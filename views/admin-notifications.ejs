@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Notifications - HomeBitez</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #fff5ea;
+      --card: #ffffff;
+      --ink: #1d1d1d;
+      --muted: #6c6c6c;
+      --accent: #f0a400;
+      --line: rgba(20, 20, 20, 0.08);
+      --shadow: 0 12px 28px rgba(20, 20, 20, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Sora", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #fff1de 0%, transparent 60%),
+        linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
+      min-height: 100vh;
+    }
+    .page {
+      max-width: 1100px;
+      margin: 30px auto 80px;
+      padding: 0 28px;
+    }
+    .page-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom: 18px;
+    }
+    .page-title {
+      font-size: 26px;
+      font-weight: 700;
+    }
+    .btn {
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--accent);
+      background: #fff;
+      color: #c97b00;
+    }
+    .btn:hover { background: #fff3df; }
+    .section {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 18px 20px;
+      border: 1px solid var(--line);
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-weight: 700;
+      font-size: 15px;
+      margin-bottom: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .list { display:grid; gap:10px; }
+    .row {
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:12px 14px;
+      background:#faf7f2;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .meta { font-size:12px; color:var(--muted); margin-top:4px; }
+    .empty { color:var(--muted); font-size:13px; }
+    .link {
+      border:1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 12px;
+      background: #fff;
+    }
+    .link:hover { background:#fff3df; }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar-admin') %>
+
+  <main class="page">
+    <div class="page-head">
+      <div class="page-title">Admin Notification Inbox</div>
+      <form action="/admin/notifications/mark-read" method="POST" style="margin:0;">
+        <button class="btn" type="submit">Mark all as read</button>
+      </form>
+    </div>
+
+    <section class="section">
+      <div class="section-title">
+        <span>Reported Issues</span>
+        <a class="link" href="/admin/issues">Open Issues</a>
+      </div>
+      <% if (!issues || issues.length === 0) { %>
+        <div class="empty">No new issues.</div>
+      <% } else { %>
+        <div class="list">
+          <% issues.forEach(i => { %>
+            <div class="row">
+              <div>
+                <div><strong><%= i.subject || 'Issue' %></strong></div>
+                <div class="meta"><%= i.email || 'Unknown user' %> · <%= i.created_at ? new Date(i.created_at).toLocaleString() : '-' %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <span>Pending Refunds</span>
+        <a class="link" href="/admin/issues">Review</a>
+      </div>
+      <% if (!refunds || refunds.length === 0) { %>
+        <div class="empty">No refund requests.</div>
+      <% } else { %>
+        <div class="list">
+          <% refunds.forEach(r => { %>
+            <div class="row">
+              <div>
+                <div><strong><%= r.subject || 'Refund request' %></strong></div>
+                <div class="meta"><%= r.email || 'Unknown user' %> · <%= r.created_at ? new Date(r.created_at).toLocaleString() : '-' %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <span>Payment Failures</span>
+        <a class="link" href="/admin/records">View Records</a>
+      </div>
+      <% if (!paymentFailures || paymentFailures.length === 0) { %>
+        <div class="empty">No payment failures.</div>
+      <% } else { %>
+        <div class="list">
+          <% paymentFailures.forEach(p => { %>
+            <div class="row">
+              <div>
+                <div><strong>ORD-<%= p.id %></strong> · $<%= Number(p.total || 0).toFixed(2) %></div>
+                <div class="meta"><%= p.status || 'failed' %> · <%= p.created_at ? new Date(p.created_at).toLocaleString() : '-' %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <span>New User Registrations</span>
+        <a class="link" href="/admin/customers">Customers</a>
+      </div>
+      <% if (!newUsers || newUsers.length === 0) { %>
+        <div class="empty">No new users.</div>
+      <% } else { %>
+        <div class="list">
+          <% newUsers.forEach(u => { %>
+            <div class="row">
+              <div>
+                <div><strong><%= u.username || 'User' %></strong> · <%= u.email || '-' %></div>
+                <div class="meta"><%= u.created_at ? new Date(u.created_at).toLocaleString() : 'Date unavailable' %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <span>Low Stock Alerts</span>
+        <a class="link" href="/admin/inventory">Inventory</a>
+      </div>
+      <% if (!lowStock || lowStock.length === 0) { %>
+        <div class="empty">No low stock items.</div>
+      <% } else { %>
+        <div class="list">
+          <% lowStock.forEach(p => { %>
+            <div class="row">
+              <div>
+                <div><strong><%= p.product_name || 'Product' %></strong></div>
+                <div class="meta">Qty left: <%= Number(p.quantity || 0) %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="section">
+      <div class="section-title">System Alerts</div>
+      <% if (!systemAlerts || systemAlerts.length === 0) { %>
+        <div class="empty">No system alerts.</div>
+      <% } else { %>
+        <div class="list">
+          <% systemAlerts.forEach(a => { %>
+            <div class="row">
+              <div>
+                <div><strong><%= a.title %></strong></div>
+                <div class="meta"><%= a.message %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

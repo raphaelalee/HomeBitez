@@ -1,9 +1,64 @@
 const express = require("express");
 const router = express.Router();
 const ownerController = require("../controllers/bizownerController");
+const db = require("../db");
+const OrdersModel = require("../Models/OrdersModel");
 
 // Correct multer usage
 const { upload } = require("../app");   // ✅ CORRECT
+
+let messagesOwnerColCache = undefined;
+async function getMessagesOwnerCol() {
+  if (messagesOwnerColCache !== undefined) return messagesOwnerColCache;
+  try {
+    const [colRows] = await db.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'messages' 
+       AND COLUMN_NAME IN ('ownerId','owner_id') LIMIT 1`
+    );
+    messagesOwnerColCache = colRows && colRows[0] ? colRows[0].COLUMN_NAME : null;
+  } catch (err) {
+    messagesOwnerColCache = null;
+  }
+  return messagesOwnerColCache;
+}
+
+// Navbar notification counts for biz owner
+router.use(async (req, res, next) => {
+  try {
+    const user = req.session?.user;
+    if (!user || user.role !== "biz_owner") return next();
+
+    let unreadMessages = 0;
+    try {
+      const ownerCol = await getMessagesOwnerCol();
+      let sql = "SELECT COUNT(*) AS unread FROM messages";
+      const params = [];
+      if (ownerCol) {
+        sql += ` WHERE ( ${ownerCol} = ? OR ${ownerCol} IS NULL ) AND isRead = 0`;
+        params.push(user.id);
+      } else {
+        sql += " WHERE isRead = 0";
+      }
+      const [rows] = await db.query(sql, params);
+      unreadMessages = Number(rows?.[0]?.unread || 0);
+    } catch (err) {}
+
+    let pendingOrders = 0;
+    try {
+      const orders = await OrdersModel.list(200);
+      pendingOrders = (orders || []).filter(o => {
+        const status = String(o.status || o.order_status || o.state || "").toLowerCase();
+        return status !== "completed" && status !== "fulfilled";
+      }).length;
+    } catch (err) {}
+
+    res.locals.bizownerUnreadMessages = unreadMessages;
+    res.locals.bizownerPendingOrders = pendingOrders;
+    res.locals.bizownerNotifCount = unreadMessages + pendingOrders;
+  } catch (err) {}
+  next();
+});
 
 
 // Business Owner Dashboard
@@ -37,6 +92,10 @@ router.post("/replenish/:id", ownerController.replenish);
 // Messages
 router.get("/messages", ownerController.messagesPage);
 router.post("/messages/reply", ownerController.replyMessage);
+
+// Notifications
+router.get("/notifications", ownerController.notificationsPage);
+router.post("/notifications/mark-read", ownerController.markAllNotificationsRead);
 
 // Orders list + details
 router.get("/orders", ownerController.ordersPage);

@@ -195,7 +195,11 @@
               <td><%= order.qty %></td>
               <td>$<%= order.total.toFixed(2) %></td>
               <td><%= order.status %></td>
-              <td><a href="/receipt" style="text-decoration:none; color:#d59b2d; font-weight:600;">View receipt</a></td>
+              <td>
+                <a href="/receipt?orderId=<%= order.dbId %>" style="text-decoration:none; color:#d59b2d; font-weight:600;">
+                  View receipt
+                </a>
+              </td>
             </tr>
           <% }) %>
         <% } %>
@@ -214,7 +218,7 @@
         if (pts >= 0) totalEarned += pts;
         else totalRedeemed += Math.abs(pts);
       });
-      const pointsValue = Number(currentPoints * 0.1).toFixed(2);
+      const pointsValue = Number(currentPoints * 0.01).toFixed(2);
       const cycleSize = 50;
       const nextRewardAt = Math.max(cycleSize, Math.ceil((currentPoints + 1) / cycleSize) * cycleSize);
       const pointsInCycle = currentPoints % cycleSize;
@@ -227,7 +231,7 @@
         <h3 style="margin:0 0 6px;">Your Points</h3>
         <p class="points-sub">
           Earn points every time you order on HomeBitez and redeem them for instant discounts on your next checkout.
-          Every 50 points is worth about $5.00 in redemption value.
+          Every 50 points is worth about $0.50 in redemption value.
         </p>
       </div>
     </div>
@@ -251,7 +255,7 @@
       <div class="points-metric">
         <span class="label">Estimated value</span>
         <div class="value">$<%= pointsValue %></div>
-        <div class="hint">Based on 1 point = $0.10</div>
+        <div class="hint">Based on 1 point = $0.01</div>
       </div>
     </div>
 
