@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeBitez - Refund Requests</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sniglet:wght@700;900&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #fff5ea;
+      --cream-deep: #fde8cf;
+      --card: #ffffff;
+      --ink: #1d1d1d;
+      --muted: #6c6c6c;
+      --accent: #f0a400;
+      --accent-deep: #e38f00;
+      --line: rgba(20, 20, 20, 0.08);
+      --shadow: 0 12px 28px rgba(20, 20, 20, 0.08);
+      --ok: #0f766e;
+      --bad: #b91c1c;
+      --pending: #a16207;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Sora", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #fff1de 0%, transparent 60%),
+        linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 40px auto 96px;
+      padding: 0 28px;
+    }
+
+    .page-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 26px;
+    }
+
+    .refunds {
+      display: grid;
+      gap: 18px;
+    }
+
+    .refund-card {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 22px 28px;
+      border: 1px solid var(--line);
+    }
+
+    .refund-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .refund-name {
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .meta span::before {
+      content: "• ";
+      margin-right: 4px;
+    }
+
+    .meta span:first-child::before {
+      content: "";
+      margin-right: 0;
+    }
+
+    .refund-date {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      margin-left: 8px;
+    }
+
+    .status-pending {
+      color: var(--pending);
+      border-color: rgba(161, 98, 7, 0.35);
+      background: rgba(245, 158, 11, 0.12);
+    }
+
+    .status-approved {
+      color: var(--ok);
+      border-color: rgba(15, 118, 110, 0.35);
+      background: rgba(20, 184, 166, 0.12);
+    }
+
+    .status-rejected {
+      color: var(--bad);
+      border-color: rgba(185, 28, 28, 0.35);
+      background: rgba(239, 68, 68, 0.12);
+    }
+
+    .refund-body {
+      background: #f6f6f6;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    .refund-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      border-radius: 8px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+    }
+
+    .btn-outline {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #fff;
+    }
+
+    .btn-solid {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-reject {
+      border-color: rgba(185, 28, 28, 0.35);
+      color: var(--bad);
+      background: #fff;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 28px 0;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    @media (max-width: 780px) {
+      .refund-header {
+        flex-direction: column;
+      }
+      .refund-date {
+        order: 2;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .page {
+        padding: 0 18px;
+      }
+      .refund-card {
+        padding: 20px;
+      }
+      .refund-actions {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <%- include('../partials/navbar-bizowner') %>
+
+  <main class="page">
+    <h1 class="page-title">Refund Requests</h1>
+
+    <section class="refunds">
+      <% if (!refunds.length) { %>
+        <div class="empty">No refund requests yet.</div>
+      <% } %>
+
+      <% refunds.forEach(refund => { %>
+        <article class="refund-card">
+          <div class="refund-header">
+            <div>
+              <div class="refund-name">
+                <%= refund.name || refund.username || "Unknown User" %>
+                <span class="status-pill status-<%= refund.status || 'pending' %>">
+                  <%= (refund.status || 'pending').replace("_", " ") %>
+                </span>
+              </div>
+              <div class="meta">
+                <% if (refund.order_email) { %>
+                  <span><%= refund.order_email %></span>
+                <% } else if (refund.email) { %>
+                  <span><%= refund.email %></span>
+                <% } %>
+                <% if (refund.contact) { %>
+                  <span><%= refund.contact %></span>
+                <% } %>
+                <% if (refund.order_id) { %>
+                  <span>Order #<%= refund.order_id %></span>
+                <% } %>
+                <% if (refund.order_status) { %>
+                  <span>Status: <%= refund.order_status %></span>
+                <% } %>
+                <% if (refund.refund_method) { %>
+                  <span>Method: <%= refund.refund_method %></span>
+                <% } %>
+              </div>
+            </div>
+            <div class="refund-date">
+              <%= refund.order_created_at ? new Date(refund.order_created_at).toLocaleDateString("en-GB") : (refund.created_at ? new Date(refund.created_at).toLocaleDateString("en-GB") : "") %>
+            </div>
+          </div>
+
+          <div class="refund-body">
+            <strong><%= refund.reason || "No reason" %></strong>
+            <% if (refund.details) { %>
+              <div><%= refund.details %></div>
+            <% } %>
+            <% if (refund.order_items) { %>
+              <div class="meta" style="margin-top:8px;">Items: <%= refund.order_items %></div>
+            <% } %>
+            <% const displayAmount = Number(refund.amount || 0) > 0 ? refund.amount : refund.order_total_num; %>
+            <% if (displayAmount !== null && displayAmount !== undefined) { %>
+              <div class="meta" style="margin-top:8px;">Amount: $<%= Number(displayAmount || 0).toFixed(2) %></div>
+            <% } %>
+          </div>
+
+          <div class="refund-actions">
+            <form method="POST" action="/bizowner/refunds/<%= refund.id %>/approve">
+              <button class="btn btn-solid" type="submit" <%= refund.status === "approved" ? "disabled" : "" %>>
+                <%= refund.status === "approved" ? "Approved" : "Approve" %>
+              </button>
+            </form>
+            <form method="POST" action="/bizowner/refunds/<%= refund.id %>/reject">
+              <button class="btn btn-reject" type="submit" <%= refund.status === "rejected" ? "disabled" : "" %>>
+                <%= refund.status === "rejected" ? "Rejected" : "Reject" %>
+              </button>
+            </form>
+          </div>
+        </article>
+      <% }) %>
+    </section>
+  </main>
+</body>
+</html>

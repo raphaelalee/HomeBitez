@@ -102,6 +102,11 @@ router.get("/orders", ownerController.ordersPage);
 router.get("/orders/:id", ownerController.orderDetailsPage);
 router.post("/orders/:id/complete", ownerController.markOrderComplete);
 
+// Refunds
+router.get("/refunds", ownerController.refundsPage);
+router.post("/refunds/:id/approve", ownerController.approveRefund);
+router.post("/refunds/:id/reject", ownerController.rejectRefund);
+
 // If reply is not implemented yet, comment it out or add the function
 // router.post("/messages/reply/:id", ownerController.replyMessage);
 
