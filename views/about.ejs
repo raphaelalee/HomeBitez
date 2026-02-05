@@ -17,6 +17,8 @@
     --accent:#d59b2d;
     --accent-deep:#b97d18;
     --line:#eadac6;
+    --shadow: 0 14px 34px rgba(42,36,30,0.10);
+    --shadow-sm: 0 10px 24px rgba(42,36,30,0.08);
   }
 
   body{
@@ -34,6 +36,7 @@
     padding: 40px 20px 70px;
   }
 
+  /* HERO */
   .hero{
     display:grid;
     grid-template-columns: 1.2fr 1fr;
@@ -43,8 +46,22 @@
     border: 1px solid var(--line);
     border-radius: 22px;
     padding: 28px;
-    box-shadow: 0 14px 34px rgba(42,36,30,0.10);
+    box-shadow: var(--shadow);
   }
+
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+    font-size: 12px;
+    margin-bottom: 10px;
+    text-decoration:none;
+  }
+  .eyebrow:hover{ text-decoration: underline; }
 
   .title{
     font-family: "Fraunces", "Times New Roman", serif;
@@ -52,12 +69,13 @@
     font-size: 38px;
     color: var(--accent);
     margin-bottom: 8px;
+    line-height: 1.1;
   }
 
   .subtitle{
     color: var(--muted);
     font-size: 15px;
-    line-height: 1.6;
+    line-height: 1.7;
     margin-bottom: 18px;
   }
 
@@ -65,6 +83,7 @@
     display:flex;
     gap:12px;
     flex-wrap:wrap;
+    margin-top: 14px;
   }
 
   .btn-menu{
@@ -73,7 +92,7 @@
     color:white;
     border-radius:999px;
     border:none;
-    font-weight:700;
+    font-weight:800;
     text-decoration:none;
     display:inline-flex;
     align-items:center;
@@ -87,10 +106,35 @@
     border:1px solid var(--line);
     color: var(--ink);
     text-decoration:none;
-    font-weight:700;
+    font-weight:800;
     background:#fff;
   }
+  .btn-ghost:hover{ background:#fff8f0; }
 
+  /* TRUST BADGES */
+  .badges{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top: 10px;
+  }
+  .badge-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #fff7ea;
+    border: 1px solid rgba(0,0,0,0.10);
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .dot{
+    width:8px;height:8px;border-radius:999px;background: var(--accent);
+    display:inline-block;
+  }
+
+  /* PHOTOS */
   .photo-stack{
     display:grid;
     grid-template-columns: 1fr 1fr;
@@ -110,45 +154,153 @@
   }
   .photo.tall{ height: 220px; grid-column: span 2; }
 
+  /* SECTIONS */
   .sections{
     display:grid;
     grid-template-columns: repeat(3, minmax(220px, 1fr));
     gap: 18px;
-    margin-top: 26px;
+    margin-top: 22px;
   }
 
-  .card{
+  .cardx{
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: 18px;
     padding: 18px;
-    box-shadow: 0 10px 24px rgba(42,36,30,0.08);
+    box-shadow: var(--shadow-sm);
   }
 
-  .card h5{
+  .cardx h5{
     font-family: "Fraunces", "Times New Roman", serif;
-    font-weight: 700;
+    font-weight: 800;
     margin-bottom: 10px;
   }
 
-  .chip{
-    display:inline-block;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: #fff7ea;
-    border: 1px solid rgba(0,0,0,0.10);
-    font-size: 12px;
-    margin: 6px 8px 0 0;
+  /* HOW IT WORKS STRIP */
+  .how{
+    margin-top: 18px;
+    background: #fffdf8;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow-sm);
   }
-
-  .list{
-    margin:0;
-    padding-left:18px;
+  .how-head{
+    display:flex;
+    align-items:baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .how-title{
+    font-family: "Fraunces", "Times New Roman", serif;
+    font-weight: 800;
+    margin: 0;
+  }
+  .how-sub{
+    margin: 0;
     color: var(--muted);
+    font-size: 13px;
+  }
+  .steps{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .step{
+    background: #fff7ee;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px;
+  }
+  .step-num{
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 900;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-bottom: 8px;
+  }
+  .step h6{
+    margin: 0 0 6px;
+    font-weight: 900;
+  }
+  .step p{
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
   }
 
+  /* OFFER LIST (feature + benefit) */
+  .offer{
+    display:grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .offer li{
+    background: #fffdf8;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 10px 12px;
+  }
+  .offer .k{
+    font-weight: 900;
+    display:block;
+    margin-bottom: 2px;
+  }
+  .offer .d{
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* FAQ */
+  .faq{
+    margin-top: 18px;
+    background: #fffdf8;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+  }
+  .faq h5{
+    font-family: "Fraunces", "Times New Roman", serif;
+    font-weight: 800;
+    margin-bottom: 12px;
+  }
+  .accordion-item{
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    background: #fff;
+  }
+  .accordion-button{
+    font-weight: 900;
+    color: var(--ink);
+    background: #fff7ee;
+  }
+  .accordion-button:focus{
+    box-shadow: none;
+    border-color: var(--accent);
+  }
+  .accordion-body{
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* FOOTER */
   .footer-row{
-    margin-top: 26px;
+    margin-top: 22px;
     display:flex;
     justify-content: space-between;
     align-items: center;
@@ -159,6 +311,7 @@
   @media (max-width: 900px){
     .hero{ grid-template-columns: 1fr; }
     .sections{ grid-template-columns: 1fr; }
+    .steps{ grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -166,47 +319,154 @@
 <body>
 
 <div class="wrap">
-  <div class="hero">
-    <div>
+
+    <div class="hero">
+      <div>
+        <a class="eyebrow" href="/">
+          HomeBitez
+        </a>
+
       <div class="title">About HomeBitez</div>
       <p class="subtitle">
-        HomeBitez is built to make ordering simple, fast, and fuss free so you can get your favorite meals with less waiting and more convenience.
+        HomeBitez is built to make ordering simple, fast, and fuss-free — so you can get your favourite meals with less waiting and more convenience.
       </p>
+
+      <!-- trust badges (edit the text if needed) -->
+      <div class="badges">
+        <div class="badge-pill"><span class="dot"></span> Fast, smooth pickup flow</div>
+        <div class="badge-pill"><span class="dot"></span> Clear pricing & cart controls</div>
+        <div class="badge-pill"><span class="dot"></span> Mobile-friendly design</div>
+      </div>
+
       <div class="cta-row">
         <a href="/login" class="btn-menu">Browse Menu</a>
-        <a href="/" class="btn-ghost">Back to Home</a>
+        <a href="#how-it-works" class="btn-ghost">How it works</a>
+        <a href="/contact" class="btn-ghost">Contact Support</a>
       </div>
     </div>
+
     <div class="photo-stack">
-      <div class="photo" style="--img:url('/images/about-3.jpg');"></div>
-      <div class="photo" style="--img:url('/images/about-2.jpg');"></div>
-      <div class="photo tall" style="--img:url('/images/about-1.jpg');"></div>
+      <div class="photo" style="--img:url('/images/about-3.jpg');" aria-label="Meal photo"></div>
+      <div class="photo" style="--img:url('/images/about-2.jpg');" aria-label="Dessert photo"></div>
+      <div class="photo tall" style="--img:url('/images/about-1.jpg');" aria-label="Chef plating dish"></div>
     </div>
   </div>
 
+  <!-- HOW IT WORKS -->
+  <div class="how" id="how-it-works">
+    <div class="how-head">
+      <h5 class="how-title">How it works</h5>
+      <p class="how-sub">Three simple steps from browsing to pickup.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h6>Browse & choose</h6>
+        <p>Explore meals by category and find something that fits your cravings and budget.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h6>Customize quickly</h6>
+        <p>Add items to cart instantly, adjust quantities easily, and toggle cutlery when needed.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h6>Checkout & pickup</h6>
+        <p>Select a pickup date/time and enjoy a smooth checkout with a clear order summary.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 MAIN CARDS -->
   <div class="sections">
-    <div class="card">
+    <div class="cardx">
       <h5>Our Mission</h5>
-      <p>
-        To provide an easy, friendly food ordering experience with clear menu info, smooth checkout, and reliable pickup.
+      <p class="subtitle" style="margin:0;">
+        To provide an easy, friendly food ordering experience with clear menu info, smooth checkout, and reliable pickup — designed for busy days and hungry nights.
       </p>
     </div>
-    <div class="card">
+
+    <div class="cardx">
       <h5>What We Offer</h5>
-      <div class="chip">Browse menu by categories</div>
-      <div class="chip">Add to cart instantly</div>
-      <div class="chip">Edit cart quantities easily</div>
-      <div class="chip">Cutlery toggle</div>
-      <div class="chip">Pickup date and time selection</div>
-      <div class="chip">Smooth checkout flow</div>
-    </div>
-    <div class="card">
-      <h5>Why HomeBitez?</h5>
-      <ul class="list">
-        <li>Simple interface that is easy to use</li>
-        <li>Clear prices and quick cart management</li>
-        <li>Designed to be clean, modern, and mobile friendly</li>
+      <ul class="offer">
+        <li>
+          <span class="k">Category browsing</span>
+          <span class="d">Find meals faster without scrolling endlessly.</span>
+        </li>
+        <li>
+          <span class="k">Instant add-to-cart</span>
+          <span class="d">Add items in one click for a smoother flow.</span>
+        </li>
+        <li>
+          <span class="k">Easy cart edits</span>
+          <span class="d">Update quantities quickly — no need to re-add items.</span>
+        </li>
+        <li>
+          <span class="k">Cutlery toggle</span>
+          <span class="d">Choose what you need and reduce unnecessary waste.</span>
+        </li>
+        <li>
+          <span class="k">Pickup scheduling</span>
+          <span class="d">Pick a date and time so your meal fits your routine.</span>
+        </li>
       </ul>
+    </div>
+
+    <div class="cardx">
+      <h5>Why HomeBitez?</h5>
+      <ul class="subtitle" style="margin:0; padding-left: 18px;">
+        <li style="margin-bottom:8px;">Built for clarity — straightforward menu and pricing.</li>
+        <li style="margin-bottom:8px;">Less friction — faster cart management and checkout.</li>
+        <li style="margin-bottom:8px;">Modern UI — clean layout that works well on mobile.</li>
+        <li>Support ready — quick help when you need it.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq">
+    <h5>Frequently Asked Questions</h5>
+
+    <div class="accordion" id="faqAccordion">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="q1">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a1" aria-expanded="false" aria-controls="a1">
+            Is HomeBitez delivery or pickup?
+          </button>
+        </h2>
+        <div id="a1" class="accordion-collapse collapse" aria-labelledby="q1" data-bs-parent="#faqAccordion">
+          <div class="accordion-body">
+            HomeBitez focuses on <strong>reliable pickup</strong> to keep the process fast and simple. You can select your pickup date and time during checkout.
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="q2">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a2" aria-expanded="false" aria-controls="a2">
+            Can I change item quantity after adding to cart?
+          </button>
+        </h2>
+        <div id="a2" class="accordion-collapse collapse" aria-labelledby="q2" data-bs-parent="#faqAccordion">
+          <div class="accordion-body">
+            Yes. The cart is designed for quick edits — you can update quantities without removing and re-adding items.
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="q3">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#a3" aria-expanded="false" aria-controls="a3">
+            What if I need help with my order?
+          </button>
+        </h2>
+        <div id="a3" class="accordion-collapse collapse" aria-labelledby="q3" data-bs-parent="#faqAccordion">
+          <div class="accordion-body">
+            You can contact our support team via the <strong>Contact</strong> page. For urgent issues, include your order ID for faster troubleshooting.
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -214,9 +474,12 @@
     <div class="subtitle" style="margin:0;">
       Built with care for busy days and hungry nights.
     </div>
-    <a href="/contact" class="btn-ghost">Contact Us</a>
+    <a href="/contact" class="btn-ghost">Have More Burning Questions? Contact Us</a>
   </div>
+
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
