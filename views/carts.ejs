@@ -91,9 +91,10 @@
       gap: 12px;
   }
 
+  /* ✅ Added per-item subtotal column */
   .cart-row{
       display: grid;
-      grid-template-columns: 36px 78px 1fr 130px 170px;
+      grid-template-columns: 36px 78px 1fr 110px 110px 170px;
       gap: 14px;
       align-items: center;
       padding: 14px;
@@ -205,6 +206,11 @@
       border-color:#d5a554;
   }
 
+  .qty-btn:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+  }
+
   .qty-display{
       min-width: 32px;
       text-align: center;
@@ -304,6 +310,19 @@
       box-shadow:0 8px 18px rgba(0,0,0,0.08);
   }
 
+  .btn-checkout:hover{
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+      color:#fffaf2;
+  }
+
+  .btn-checkout:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+      transform:none;
+      box-shadow:none;
+  }
+
   .quick-remove{
       position:absolute;
       top:10px;
@@ -329,11 +348,6 @@
       color:#6f5f4a;
       line-height:1.45;
   }
-  .btn-checkout:hover{
-      transform: translateY(-1px);
-      box-shadow: 0 10px 22px rgba(0,0,0,0.12);
-      color:#fffaf2;
-  }
 
   .btn-area{
       display:flex;
@@ -349,11 +363,26 @@
       color:#333;
   }
 
-  /* Switch align like reference */
   .switch-wrap{
       display:flex;
       align-items:center;
       justify-content:flex-end;
+  }
+
+  /* ✅ Toast */
+  .toastx{
+      position:fixed;
+      bottom:18px;
+      right:18px;
+      z-index:9999;
+      display:none;
+      background:#2f2419;
+      color:#fff;
+      padding:10px 14px;
+      border-radius:12px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+      font-size:13px;
+      max-width: 320px;
   }
 
   @media (max-width: 980px){
@@ -376,15 +405,13 @@
 
       .cart-row{
           grid-template-columns: 34px 70px 1fr;
-          grid-template-rows: auto auto;
+          grid-template-rows: auto auto auto;
           gap: 10px;
       }
       .price-col, .qty-col{
           justify-content:flex-start;
           text-align:left;
       }
-      .price-col{ order:3; }
-      .qty-col{ order:4; }
   }
 </style>
 </head>
@@ -421,11 +448,11 @@
       </div>
     <% } else { %>
 
-      <!-- LEFT COLUMN: items + preferences -->
+      <!-- LEFT COLUMN -->
       <div class="card-surface">
-          <p style="margin:0 0 14px; color:#6f5f4a; font-size:13px;">
-            <%= cart.length %> item type(s) in your cart
-          </p>
+        <p style="margin:0 0 14px; color:#6f5f4a; font-size:13px;">
+          <span id="itemTypesCount"><%= cart.length %></span> item type(s) in your cart
+        </p>
 
         <div class="items-list">
           <div class="section-block" style="grid-template-columns: 1fr auto; margin-bottom: 2px;">
@@ -439,18 +466,28 @@
             </label>
           </div>
 
-          <% cart.forEach((item, i) => { %>
-            <div class="cart-row" data-name="<%= item.name %>">
-              <button class="quick-remove" data-name="<%= item.name %>" title="Remove item">Remove</button>
+          <% cart.forEach((item, i) => {
+              const id = item.id;
+              const price = Number(item.price) || 0;
+              const qty = Number(item.quantity) || 1;
+              const lineTotal = price * qty;
+          %>
+            <div class="cart-row"
+                 data-id="<%= id %>"
+                 data-price="<%= price.toFixed(2) %>"
+                 data-name="<%= item.name %>">
+              <button class="quick-remove" data-id="<%= id %>" title="Remove item">Remove</button>
+
               <div class="row-select">
                 <input
                   class="item-select"
                   type="checkbox"
-                  data-name="<%= item.name %>"
+                  data-id="<%= id %>"
                   <%= (Array.isArray(checkoutSelection) && checkoutSelection.length)
-                        ? (checkoutSelection.includes(item.name) ? 'checked' : '')
+                        ? (checkoutSelection.includes(id) ? 'checked' : '')
                         : 'checked' %>>
               </div>
+
               <div>
                 <img class="item-img"
                      src="<%= (item.image && item.image.trim() !== '') ? item.image : '/images/flatlay-iron-skillet-with-meat-and-other-food.jpg' %>"
@@ -463,26 +500,32 @@
                   <a class="edit-link"
                      data-bs-toggle="modal"
                      data-bs-target="#editModal"
+                     data-id="<%= id %>"
                      data-name="<%= item.name %>"
-                     data-qty="<%= item.quantity %>">
+                     data-qty="<%= qty %>">
                      Edit
                   </a>
                 </p>
 
                 <% if (item.notes) { %>
-                  <p class="item-sub">â€¢ <%= item.notes %></p>
+                  <p class="item-sub">• <%= item.notes %></p>
                 <% } %>
               </div>
 
               <div class="price-col">
                 <div class="unit-price">Unit</div>
-                $<%= Number(item.price).toFixed(2) %>
+                $<%= price.toFixed(2) %>
+              </div>
+
+              <div class="price-col">
+                <div class="unit-price">Total</div>
+                $<span class="line-total" data-id="<%= id %>"><%= lineTotal.toFixed(2) %></span>
               </div>
 
               <div class="qty-col">
-                <button class="qty-btn" data-dir="-1" data-name="<%= item.name %>" data-qty="<%= item.quantity %>">-</button>
-                <div class="qty-display" data-name="<%= item.name %>">x<%= item.quantity %></div>
-                <button class="qty-btn" data-dir="1" data-name="<%= item.name %>" data-qty="<%= item.quantity %>">+</button>
+                <button class="qty-btn" data-dir="-1" data-id="<%= id %>">-</button>
+                <div class="qty-display" data-id="<%= id %>">x<%= qty %></div>
+                <button class="qty-btn" data-dir="1" data-id="<%= id %>">+</button>
               </div>
             </div>
           <% }) %>
@@ -508,29 +551,42 @@
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: summary -->
+      <!-- RIGHT COLUMN -->
       <aside class="card-surface summary-card">
         <div class="summary-title">
-        <h5 style="margin:0; font-weight:700;">Order Summary</h5>
-          <span class="summary-pill"><%= cart.length %> Items</span>
+          <h5 style="margin:0; font-weight:700;">Order Summary</h5>
+          <span class="summary-pill"><span id="summaryItemTypes"><%= cart.length %></span> Items</span>
         </div>
-        <div style="margin:8px 0 10px; color:#6f5f4a; font-size:13px;">Almost there - check your order details.</div>
+
+        <div style="margin:8px 0 10px; color:#6f5f4a; font-size:13px;">
+          Almost there - check your order details.
+        </div>
+
         <div class="summary-row small">
-          <span>Items (<%= cart.length %>)</span>
-          <span>$<%= Number(subtotal).toFixed(2) %></span>
+          <span>Items (<span id="summaryItemsCount"><%= cart.length %></span>)</span>
+          <span>$<span id="summarySubtotal"><%= Number(subtotal).toFixed(2) %></span></span>
         </div>
+
         <div class="summary-row small">
           <span>Selected for checkout</span>
           <span id="selectedCountText">0 item(s)</span>
         </div>
+
+        <div class="summary-row small">
+          <span>Selected subtotal</span>
+          <span>$<span id="selectedSubtotalText">0.00</span></span>
+        </div>
+
         <div class="summary-row small">
           <span>Cutlery</span>
-          <span><%= prefs?.cutlery ? 'Included' : 'None' %></span>
+          <span id="cutleryText"><%= prefs?.cutlery ? 'Included' : 'None' %></span>
         </div>
+
         <div class="summary-row small">
           <span>Points available</span>
           <span><%= Number(availablePoints || 0) %></span>
         </div>
+
         <div class="section-block" style="grid-template-columns:1fr auto; margin:12px 0;">
           <div>
             <p class="label" style="margin:0;">Redeem points</p>
@@ -545,23 +601,30 @@
             <button type="submit" class="btn-checkout" style="padding:8px 12px;">Apply</button>
           </form>
         </div>
+
         <hr style="border-color:rgba(0,0,0,0.08); margin:12px 0;">
+
         <% if (Number(redeem || 0) > 0) { %>
           <div class="summary-row small">
             <span>Points discount</span>
-            <span>- $<%= Number(redeem).toFixed(2) %></span>
+            <span>- $<span id="redeemAmount"><%= Number(redeem).toFixed(2) %></span></span>
           </div>
+        <% } else { %>
+          <span id="redeemAmount" style="display:none;">0.00</span>
         <% } %>
+
         <div class="summary-row" style="font-size:18px;">
           <span>Total</span>
-          <span>$<%= Number(totalAfterRedeem || subtotal).toFixed(2) %></span>
+          <span>$<span id="summaryTotal"><%= Number(totalAfterRedeem || subtotal).toFixed(2) %></span></span>
         </div>
+
         <div class="btn-area" style="padding-top:18px;">
           <button type="button" class="btn-checkout" style="width:100%;" id="checkoutSelectedBtn">Checkout Selected</button>
         </div>
-          <p class="summary-note">
-            Secure checkout available via PayPal, NETS, PayLater, and card payment.
-          </p>
+
+        <p class="summary-note">
+          Secure checkout available via PayPal, NETS, PayLater, and card payment.
+        </p>
       </aside>
 
     <% } %>
@@ -569,7 +632,10 @@
   </div>
 </div>
 
-<!-- Edit Modal (kept for manual edits) -->
+<!-- Toast -->
+<div class="toastx" id="toastx"></div>
+
+<!-- Edit Modal -->
 <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border-radius:14px;">
@@ -609,94 +675,210 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  // Modal state
-  let currentItemName = "";
-
-  const editModal = document.getElementById("editModal");
-  const modalItemName = document.getElementById("modalItemName");
-  const modalQty = document.getElementById("modalQty");
-  const modalMinus = document.getElementById("modalMinus");
-  const modalPlus = document.getElementById("modalPlus");
-  const modalSave = document.getElementById("modalSave");
-  const modalRemove = document.getElementById("modalRemove");
-
-  if (editModal) {
-    editModal.addEventListener("show.bs.modal", function (event) {
-      const trigger = event.relatedTarget;
-      currentItemName = trigger.getAttribute("data-name");
-      const qty = parseInt(trigger.getAttribute("data-qty")) || 1;
-
-      modalItemName.textContent = currentItemName;
-      modalQty.value = qty;
-    });
+  function showToast(msg){
+    const el = document.getElementById("toastx");
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = "block";
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(() => { el.style.display = "none"; }, 1600);
   }
 
-  function sendQuantityUpdate(name, qty){
-    fetch("/cart/update", {
+  function money(n){
+    const x = Number(n || 0);
+    return x.toFixed(2);
+  }
+
+  function getQty(id){
+    const el = document.querySelector('.qty-display[data-id="' + CSS.escape(String(id)) + '"]');
+    if (!el) return 1;
+    const q = parseInt(String(el.textContent).replace("x","").trim(), 10);
+    return isNaN(q) ? 1 : q;
+  }
+
+  function setQtyAndLineTotal(id, qty){
+    const qtyEl = document.querySelector('.qty-display[data-id="' + CSS.escape(String(id)) + '"]');
+    if (qtyEl) qtyEl.textContent = "x" + qty;
+
+    const row = document.querySelector('.cart-row[data-id="' + CSS.escape(String(id)) + '"]');
+    if (row){
+      const price = Number(row.getAttribute("data-price") || 0);
+      const lineEl = document.querySelector('.line-total[data-id="' + CSS.escape(String(id)) + '"]');
+      if (lineEl) lineEl.textContent = money(price * qty);
+    }
+  }
+
+  function getSelectedIds(){
+    return Array.from(document.querySelectorAll(".item-select"))
+      .filter(cb => cb.checked)
+      .map(cb => cb.getAttribute("data-id"))
+      .filter(Boolean)
+      .map(v => Number(v));
+  }
+
+  function recomputeCartSubtotal(){
+    let subtotal = 0;
+    document.querySelectorAll(".cart-row").forEach(row => {
+      const id = row.getAttribute("data-id");
+      const price = Number(row.getAttribute("data-price") || 0);
+      const qty = getQty(id);
+      subtotal += (price * qty);
+    });
+    return subtotal;
+  }
+
+  function recomputeSelectedSubtotal(){
+    const selected = new Set(getSelectedIds().map(String));
+    let subtotal = 0;
+    document.querySelectorAll(".cart-row").forEach(row => {
+      const id = row.getAttribute("data-id");
+      const price = Number(row.getAttribute("data-price") || 0);
+      const qty = getQty(id);
+      if (selected.has(String(id))) subtotal += (price * qty);
+    });
+    return subtotal;
+  }
+
+  function syncSelectionUI(){
+    const selectAll = document.getElementById("selectAllCartItems");
+    const checkboxes = Array.from(document.querySelectorAll(".item-select"));
+    const selectedIds = getSelectedIds();
+    const total = checkboxes.length;
+    const selectedCount = selectedIds.length;
+
+    const selectedCountText = document.getElementById("selectedCountText");
+    const selectedSubtotalText = document.getElementById("selectedSubtotalText");
+    const checkoutBtn = document.getElementById("checkoutSelectedBtn");
+
+    if (selectedCountText) selectedCountText.textContent = selectedCount + " item(s)";
+
+    const selectedSubtotal = recomputeSelectedSubtotal();
+    if (selectedSubtotalText) selectedSubtotalText.textContent = money(selectedSubtotal);
+
+    if (selectAll){
+      selectAll.checked = total > 0 && selectedCount === total;
+      selectAll.indeterminate = selectedCount > 0 && selectedCount < total;
+    }
+
+    if (checkoutBtn){
+      checkoutBtn.disabled = selectedCount === 0;
+    }
+  }
+
+  function syncTotalsUI(){
+    const summarySubtotalEl = document.getElementById("summarySubtotal");
+    const summaryTotalEl = document.getElementById("summaryTotal");
+    const redeemEl = document.getElementById("redeemAmount");
+
+    const newSubtotal = recomputeCartSubtotal();
+    const redeem = Number(redeemEl ? redeemEl.textContent : 0) || 0;
+    const newTotal = Math.max(0, newSubtotal - redeem);
+
+    if (summarySubtotalEl) summarySubtotalEl.textContent = money(newSubtotal);
+    if (summaryTotalEl) summaryTotalEl.textContent = money(newTotal);
+  }
+
+  async function postJSON(url, payload){
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, quantity: qty })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.ok) location.reload();
-      else alert(data.error || "Failed to update item");
-    })
-    .catch(() => alert("Error updating item"));
-  }
-
-  if (modalMinus) {
-    modalMinus.addEventListener("click", function(){
-      let q = parseInt(modalQty.value) || 1;
-      q = Math.max(1, q - 1);
-      modalQty.value = q;
+      body: JSON.stringify(payload || {})
     });
+    const data = await res.json().catch(() => ({}));
+    return data;
   }
 
-  if (modalPlus) {
-    modalPlus.addEventListener("click", function(){
-      let q = parseInt(modalQty.value) || 1;
-      modalQty.value = q + 1;
-    });
+  // ✅ Update qty (no reload)
+  async function updateQty(id, qty){
+    const row = document.querySelector('.cart-row[data-id="' + CSS.escape(String(id)) + '"]');
+    const name = row ? row.getAttribute("data-name") : "";
+
+    // Send id (primary). Also send name as fallback for older backend.
+    const data = await postJSON("/cart/update", { id: Number(id), quantity: Number(qty), name: name });
+    return data;
   }
 
-  if (modalSave) {
-    modalSave.addEventListener("click", function(){
-      const q = parseInt(modalQty.value) || 1;
-      sendQuantityUpdate(currentItemName, q);
-    });
+  // ✅ Remove (no reload)
+  async function removeItem(id){
+    const row = document.querySelector('.cart-row[data-id="' + CSS.escape(String(id)) + '"]');
+    const name = row ? row.getAttribute("data-name") : "";
+    const data = await postJSON("/cart/remove", { id: Number(id), name: name });
+    return data;
   }
 
-  if (modalRemove) {
-    modalRemove.addEventListener("click", function(){
-      fetch("/cart/remove", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: currentItemName })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.ok) location.reload();
-        else alert(data.error || "Failed to remove item");
-      })
-      .catch(() => alert("Error removing item"));
-    });
-  }
-
-  // Inline quantity buttons
+  // Qty buttons
   document.querySelectorAll(".qty-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const name = btn.getAttribute("data-name");
+    btn.addEventListener("click", async () => {
+      if (btn.disabled) return;
+      btn.disabled = true;
+
+      const id = btn.getAttribute("data-id");
       const dir = parseInt(btn.getAttribute("data-dir"), 10);
-      const display = document.querySelector(`.qty-display[data-name="${name.replace(/"/g,'\\"')}"]`);
-      const current = parseInt(display.textContent.replace('x','')) || 1;
+      const current = getQty(id);
       const next = Math.max(1, current + dir);
-      sendQuantityUpdate(name, next);
+
+      const data = await updateQty(id, next);
+      if (data && data.ok){
+        setQtyAndLineTotal(id, next);
+        syncTotalsUI();
+        syncSelectionUI();
+        showToast("Quantity updated");
+      } else {
+        showToast((data && data.error) ? data.error : "Failed to update item");
+      }
+
+      btn.disabled = false;
     });
   });
 
-  // Save preferences (cutlery only; fulfillment handled at checkout)
+  // Quick remove
+  document.querySelectorAll(".quick-remove").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-id");
+      const row = document.querySelector('.cart-row[data-id="' + CSS.escape(String(id)) + '"]');
+
+      const data = await removeItem(id);
+      if (data && data.ok){
+        if (row) row.remove();
+        showToast("Item removed");
+
+        // update counts
+        const count = document.querySelectorAll(".cart-row").length;
+        const itemTypesCount = document.getElementById("itemTypesCount");
+        const summaryItemTypes = document.getElementById("summaryItemTypes");
+        const summaryItemsCount = document.getElementById("summaryItemsCount");
+        if (itemTypesCount) itemTypesCount.textContent = String(count);
+        if (summaryItemTypes) summaryItemTypes.textContent = String(count);
+        if (summaryItemsCount) summaryItemsCount.textContent = String(count);
+
+        syncTotalsUI();
+        syncSelectionUI();
+
+        if (count === 0) window.location.reload(); // show empty state nicely
+      } else {
+        showToast((data && data.error) ? data.error : "Failed to remove item");
+      }
+    });
+  });
+
+  // Select all checkbox
+  const selectAllCartItems = document.getElementById("selectAllCartItems");
+  if (selectAllCartItems){
+    selectAllCartItems.addEventListener("change", () => {
+      const boxes = Array.from(document.querySelectorAll(".item-select"));
+      boxes.forEach(cb => { cb.checked = selectAllCartItems.checked; });
+      syncSelectionUI();
+    });
+  }
+
+  // Individual selection
+  document.querySelectorAll(".item-select").forEach(cb => {
+    cb.addEventListener("change", syncSelectionUI);
+  });
+
+  // Save preferences (cutlery)
   const cutlerySwitch = document.getElementById("cutlerySwitch");
+  const cutleryText = document.getElementById("cutleryText");
 
   function savePrefs(){
     const payload = {
@@ -712,9 +894,15 @@
     }).catch(()=>{});
   }
 
-  if (cutlerySwitch) cutlerySwitch.addEventListener("change", savePrefs);
+  if (cutlerySwitch){
+    cutlerySwitch.addEventListener("change", () => {
+      if (cutleryText) cutleryText.textContent = cutlerySwitch.checked ? "Included" : "None";
+      showToast("Preference saved");
+      savePrefs();
+    });
+  }
 
-  // Clear cart button
+  // Clear cart
   const clearCartBtn = document.getElementById("clearCartBtn");
   if (clearCartBtn) {
     clearCartBtn.addEventListener("click", () => {
@@ -722,93 +910,123 @@
       fetch("/cart/clear", { method: "POST" })
         .then(res => res.json())
         .then(data => {
-          if (data.ok) location.reload();
-          else alert("Failed to clear cart");
+          if (data.ok){
+            showToast("Cart cleared");
+            window.location.reload();
+          } else {
+            showToast("Failed to clear cart");
+          }
         })
-        .catch(() => alert("Error clearing cart"));
+        .catch(() => showToast("Error clearing cart"));
     });
   }
 
-  // Quick remove buttons on each row
-  document.querySelectorAll(".quick-remove").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const name = btn.getAttribute("data-name");
-      fetch("/cart/remove", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.ok) location.reload();
-        else alert(data.error || "Failed to remove item");
-      })
-      .catch(() => alert("Error removing item"));
-    });
-  });
+  // Modal state
+  let currentItemId = null;
+  let currentItemName = "";
 
-  const selectAllCartItems = document.getElementById("selectAllCartItems");
-  const itemSelectBoxes = Array.from(document.querySelectorAll(".item-select"));
-  const selectedCountText = document.getElementById("selectedCountText");
+  const editModal = document.getElementById("editModal");
+  const modalItemName = document.getElementById("modalItemName");
+  const modalQty = document.getElementById("modalQty");
+  const modalMinus = document.getElementById("modalMinus");
+  const modalPlus = document.getElementById("modalPlus");
+  const modalSave = document.getElementById("modalSave");
+  const modalRemove = document.getElementById("modalRemove");
+
+  if (editModal) {
+    editModal.addEventListener("show.bs.modal", function (event) {
+      const trigger = event.relatedTarget;
+      currentItemId = trigger.getAttribute("data-id");
+      currentItemName = trigger.getAttribute("data-name") || "";
+      const qty = parseInt(trigger.getAttribute("data-qty"), 10) || 1;
+
+      modalItemName.textContent = currentItemName;
+      modalQty.value = qty;
+    });
+  }
+
+  if (modalMinus) {
+    modalMinus.addEventListener("click", function(){
+      let q = parseInt(modalQty.value, 10) || 1;
+      q = Math.max(1, q - 1);
+      modalQty.value = q;
+    });
+  }
+
+  if (modalPlus) {
+    modalPlus.addEventListener("click", function(){
+      let q = parseInt(modalQty.value, 10) || 1;
+      modalQty.value = q + 1;
+    });
+  }
+
+  if (modalSave) {
+    modalSave.addEventListener("click", async function(){
+      const q = parseInt(modalQty.value, 10) || 1;
+      const data = await updateQty(currentItemId, q);
+      if (data && data.ok){
+        setQtyAndLineTotal(currentItemId, q);
+        syncTotalsUI();
+        syncSelectionUI();
+        showToast("Updated");
+        const inst = bootstrap.Modal.getInstance(editModal);
+        if (inst) inst.hide();
+      } else {
+        showToast((data && data.error) ? data.error : "Failed to update item");
+      }
+    });
+  }
+
+  if (modalRemove) {
+    modalRemove.addEventListener("click", async function(){
+      const data = await removeItem(currentItemId);
+      if (data && data.ok){
+        const row = document.querySelector('.cart-row[data-id="' + CSS.escape(String(currentItemId)) + '"]');
+        if (row) row.remove();
+        syncTotalsUI();
+        syncSelectionUI();
+        showToast("Removed");
+        const inst = bootstrap.Modal.getInstance(editModal);
+        if (inst) inst.hide();
+      } else {
+        showToast((data && data.error) ? data.error : "Failed to remove item");
+      }
+    });
+  }
+
+  // Checkout Selected -> store selection -> redirect
   const checkoutSelectedBtn = document.getElementById("checkoutSelectedBtn");
-
-  function getSelectedItemNames() {
-    return itemSelectBoxes
-      .filter(cb => cb.checked)
-      .map(cb => cb.getAttribute("data-name"))
-      .filter(Boolean);
-  }
-
-  function syncSelectionUI() {
-    const selectedNames = getSelectedItemNames();
-    const total = itemSelectBoxes.length;
-    const selected = selectedNames.length;
-    if (selectedCountText) selectedCountText.textContent = `${selected} item(s)`;
-    if (selectAllCartItems) {
-      selectAllCartItems.checked = total > 0 && selected === total;
-      selectAllCartItems.indeterminate = selected > 0 && selected < total;
-    }
-  }
-
-  if (selectAllCartItems) {
-    selectAllCartItems.addEventListener("change", () => {
-      itemSelectBoxes.forEach(cb => { cb.checked = selectAllCartItems.checked; });
-      syncSelectionUI();
-    });
-  }
-
-  itemSelectBoxes.forEach(cb => cb.addEventListener("change", syncSelectionUI));
-  syncSelectionUI();
-
   if (checkoutSelectedBtn) {
-    checkoutSelectedBtn.addEventListener("click", () => {
-      const names = getSelectedItemNames();
-      if (!names.length) {
-        alert("Please select at least one item to checkout.");
+    checkoutSelectedBtn.addEventListener("click", async () => {
+      const ids = getSelectedIds();
+      if (!ids.length) {
+        showToast("Please select at least one item to checkout.");
         return;
       }
 
-      fetch("/cart/selection", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ names })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (!data.ok) {
-          alert(data.error || "Failed to save selection");
-          return;
-        }
-        window.location.href = "/checkout";
-      })
-      .catch(() => alert("Error saving selected items"));
+      // Send ids (primary). Also send names as fallback for older backend.
+      const rows = Array.from(document.querySelectorAll(".cart-row"));
+      const idSet = new Set(ids.map(String));
+      const names = rows
+        .filter(r => idSet.has(String(r.getAttribute("data-id"))))
+        .map(r => r.getAttribute("data-name"))
+        .filter(Boolean);
+
+      const data = await postJSON("/cart/selection", { ids: ids, names: names });
+
+      if (!data.ok) {
+        showToast(data.error || "Failed to save selection");
+        return;
+      }
+
+      window.location.href = "/checkout";
     });
   }
+
+  // Initial sync
+  syncTotalsUI();
+  syncSelectionUI();
 </script>
 
 </body>
 </html>
-
-
-
-
