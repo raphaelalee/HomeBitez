@@ -10,8 +10,10 @@ Date created: February 3, 2026
 */
 const nodemailer = require('nodemailer');
 
-const gmailUser = process.env.GMAIL_USER;
-const gmailPass = process.env.GMAIL_APP_PASSWORD;
+const gmailUserRaw = process.env.GMAIL_USER || '';
+const gmailPassRaw = process.env.GMAIL_APP_PASSWORD || '';
+const gmailUser = gmailUserRaw.trim();
+const gmailPass = gmailPassRaw.trim();
 
 let transporter = null;
 
