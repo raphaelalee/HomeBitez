@@ -28,15 +28,21 @@ Date created: February 3, 2026
       --accent-deep: #e38f00;
       --shadow: 0 16px 38px rgba(20, 20, 20, 0.12);
       --border: rgba(20, 20, 20, 0.12);
+      --header-height: 56px;
     }
 
     * { box-sizing: border-box; }
 
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
+    }
+
+    body {
       font-family: "Sora", sans-serif;
       color: var(--ink);
       background:
+        linear-gradient(180deg, #fff 0, #fff var(--header-height), transparent var(--header-height)),
         radial-gradient(1200px 600px at 10% -10%, #fff1de 0%, transparent 60%),
         linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
       min-height: 100vh;
@@ -46,7 +52,8 @@ Date created: February 3, 2026
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 20px 60px;
+      padding: 0 60px;
+      min-height: var(--header-height);
       background: #fff;
       box-shadow: 0 6px 18px rgba(20, 20, 20, 0.06);
     }

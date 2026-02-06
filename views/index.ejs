@@ -3,10 +3,10 @@ I declare that this code was written by me.
 I will not copy or allow others to copy my code.
 I understand that copying code is considered as plagiarism.
 
-Student Name: Jeffery
-Student ID: 24016580 
+Student Name: Wee Kee
+Student ID: 24014304
 Class: E63C c004
-Date created: February 3, 2026
+Date created: December 20, 2025
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -273,9 +273,8 @@ Date created: February 3, 2026
   <nav>
     <a href="/">Home</a>
     <a href="<%= user ? '/menu' : '/login' %>">Menu</a>
+    <a href="/about">About Us</a>
     <a href="/contact">Contact</a>
-    <a href="/report">Report Issue</a>
-    <a href="/refund">Refund</a>
     <% if (user && user.role === 'admin') { %>
       <a href="/admin">Admin Dashboard</a>
     <% } %>
