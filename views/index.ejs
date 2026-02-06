@@ -10,6 +10,7 @@ Date created: December 20, 2025
 -->
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -65,6 +66,7 @@ Date created: December 20, 2025
       background: none;
       cursor: pointer;
     }
+
     .header-actions {
       display: flex;
       gap: 10px;
@@ -163,7 +165,7 @@ Date created: December 20, 2025
       background: #fff;
       padding: 25px;
       border-radius: 14px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
     }
 
     .step img {
@@ -244,7 +246,9 @@ Date created: December 20, 2025
 
     /* ================= RESPONSIVE ================= */
     @media (max-width: 900px) {
-      .hero, .offer {
+
+      .hero,
+      .offer {
         flex-direction: column;
         text-align: center;
       }
@@ -268,108 +272,122 @@ Date created: December 20, 2025
 
 <body>
 
-<header>
-  <div class="logo">HomeBitez</div>
-  <nav>
-    <a href="/">Home</a>
-    <a href="<%= user ? '/menu' : '/login' %>">Menu</a>
-    <a href="/about">About Us</a>
-    <a href="/contact">Contact</a>
-    <% if (user && user.role === 'admin') { %>
-      <a href="/admin">Admin Dashboard</a>
-    <% } %>
-  </nav>
-  <div class="header-actions">
-    <% if (user) { %>
-      <a href="/logout">
-        <button type="button">Logout</button>
-      </a>
-    <% } else { %>
-      <a href="/login">
-        <button type="button">Login</button>
-      </a>
-      <a href="/register">
-        <button type="button">Sign Up</button>
-      </a>
-    <% } %>
-  </div>
-</header>
+  <header>
+    <div class="logo">HomeBitez</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="<%= user ? '/menu' : '/login' %>">Menu</a>
+      <a href="/about">About Us</a>
+      <a href="/contact">Contact</a>
+      <% if (user && user.role==='admin' ) { %>
+        <a href="/admin">Admin Dashboard</a>
+        <% } %>
+    </nav>
+    <div class="header-actions">
+      <% if (user) { %>
+        <a href="/logout">
+          <button type="button">Logout</button>
+        </a>
+        <% } else { %>
+          <a href="/login">
+            <button type="button">Login</button>
+          </a>
+          <a href="/register">
+            <button type="button">Sign Up</button>
+          </a>
+          <% } %>
+    </div>
+  </header>
 
-<section class="hero">
-  <div class="hero-images">
-    <img src="https://thumbs.dreamstime.com/z/french-fries-salads-pastries-sesame-seeds-black-table-food-333701115.jpg?w=992">
-    <img src="https://images.unsplash.com/photo-1551218808-94e220e084d2">
-    <img src="https://images.pexels.com/photos/1343504/pexels-photo-1343504.jpeg?cs=srgb&dl=pexels-alisha-mishra-1343504.jpg&fm=jpg">
-  </div>
-
-  <div class="hero-text">
-    <h1>Discover <span>Homemade</span><br>Flavors From<br>Singapore’s Heartlands</h1>
-    <p>
-      Support local home chefs and enjoy freshly prepared meals made with care and heart.
-    </p>
-    <button class="btn-primary" onclick="location.href='/menu'">Order Food</button>
-  </div>
-</section>
-
-<section class="section">
-  <h2>How You Can Order</h2>
-
-  <div class="steps">
-    <div class="step">
-      <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png">
-      <h4>Select Food</h4>
-      <p>Browse and choose your favorite dishes.</p>
+  <section class="hero">
+    <div class="hero-images">
+      <img
+        src="https://thumbs.dreamstime.com/z/french-fries-salads-pastries-sesame-seeds-black-table-food-333701115.jpg?w=992">
+      <img src="https://images.unsplash.com/photo-1551218808-94e220e084d2">
+      <img
+        src="https://images.pexels.com/photos/1343504/pexels-photo-1343504.jpeg?cs=srgb&dl=pexels-alisha-mishra-1343504.jpg&fm=jpg">
     </div>
 
-    <div class="step">
-      <img src="https://cdn-icons-png.flaticon.com/512/263/263142.png">
-      <h4>Add To Cart</h4>
-      <p>Review your order easily.</p>
+    <div class="hero-text">
+      <h1>Discover <span>Homemade</span><br>Flavors From<br>Singapore’s Heartlands</h1>
+      <p>
+        Support local home chefs and enjoy freshly prepared meals made with care and heart.
+      </p>
+      <button class="btn-primary" onclick="location.href='/menu'">Order Food</button>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>How You Can Order</h2>
+
+    <div class="steps">
+      <div class="step">
+        <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png">
+        <h4>Select Food</h4>
+        <p>Browse and choose your favorite dishes.</p>
+      </div>
+
+      <div class="step">
+        <img src="https://cdn-icons-png.flaticon.com/512/263/263142.png">
+        <h4>Add To Cart</h4>
+        <p>Review your order easily.</p>
+      </div>
+
+      <div class="step">
+        <img src="https://cdn-icons-png.flaticon.com/512/1040/1040230.png">
+        <h4>Make Payment</h4>
+        <p>Secure payment options available.</p>
+      </div>
+
+      <div class="step">
+        <img src="https://cdn-icons-png.flaticon.com/512/3595/3595455.png">
+        <h4>Delivery / Pickup</h4>
+        <p>Delivered or ready for pickup.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="offer">
+    <img src="https://cdn.pixabay.com/photo/2022/06/07/20/52/curry-7249247_1280.jpg">
+    <div>
+      <h2>Get <span>50% Off</span> On Curry</h2>
+      <p>Limited-time offer on one of our most popular dishes.</p>
+      <button class="btn-primary" onclick="location.href='<%= user ? '/menu' : '/login' %>'">Order Now</button>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-top">
+      <div class="payments">
+        <strong>Accepted Payment</strong><br>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Mastercard-logo.png">
+      </div>
+
+      <!-- Location -->
+      <div class="location">
+        <strong>Our Location</strong><br>
+        123 Woodland Street 11<br>
+        #01-45 Woodland Mart<br>
+        Singapore 521123<br><br>
+        <a href="https://maps.google.com/?q=Tampines+Mart+Singapore" target="_blank">
+          View on Google Maps
+        </a>
+      </div>
+
+      <div class="socials">
+        <strong>Contact</strong><br>
+        <span>Facebook</span>
+        <span>WhatsApp</span>
+        <span>Instagram</span>
+      </div>
     </div>
 
-    <div class="step">
-      <img src="https://cdn-icons-png.flaticon.com/512/1040/1040230.png">
-      <h4>Make Payment</h4>
-      <p>Secure payment options available.</p>
+    <div class="copyright">
+      © HomeBitez
     </div>
-
-    <div class="step">
-      <img src="https://cdn-icons-png.flaticon.com/512/3595/3595455.png">
-      <h4>Delivery / Pickup</h4>
-      <p>Delivered or ready for pickup.</p>
-    </div>
-  </div>
-</section>
-
-<section class="offer">
-  <img src="https://cdn.pixabay.com/photo/2022/06/07/20/52/curry-7249247_1280.jpg">
-  <div>
-    <h2>Get <span>50% Off</span> On Curry</h2>
-    <p>Limited-time offer on one of our most popular dishes.</p>
-    <button class="btn-primary" onclick="location.href='<%= user ? '/menu' : '/login' %>'">Order Now</button>
-  </div>
-</section>
-
-<footer>
-  <div class="footer-top">
-    <div class="payments">
-      <strong>Accepted Payment</strong><br>
-      <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Mastercard-logo.png">
-    </div>
-
-    <div class="socials">
-      <strong>Contact</strong><br>
-      <span>Facebook</span>
-      <span>WhatsApp</span>
-      <span>Instagram</span>
-    </div>
-  </div>
-
-  <div class="copyright">
-    © HomeBitez
-  </div>
-</footer>
+  </footer>
 
 </body>
+
 </html>
