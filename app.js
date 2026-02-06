@@ -771,8 +771,6 @@ async function startSingpassSession(req, user) {
 }
 
 const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-const googleCallbackUrl = process.env.GOOGLE_CALLBACK_URL || `${appBaseUrl}/auth/google/callback`;
-const facebookCallbackUrl = process.env.FACEBOOK_CALLBACK_URL || `${appBaseUrl}/auth/facebook/callback`;
 const hasGoogleOAuth = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 const hasFacebookOAuth = !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET);
 
@@ -780,7 +778,7 @@ if (hasGoogleOAuth) {
     passport.use(new GoogleStrategy({
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: googleCallbackUrl
+        callbackURL: `${appBaseUrl}/auth/google/callback`
     }, async (_accessToken, _refreshToken, profile, done) => {
         try {
             const user = await upsertOAuthUser('google', profile);
@@ -796,7 +794,7 @@ if (hasFacebookOAuth) {
     passport.use(new FacebookStrategy({
         clientID: process.env.FACEBOOK_APP_ID,
         clientSecret: process.env.FACEBOOK_APP_SECRET,
-        callbackURL: facebookCallbackUrl,
+        callbackURL: `${appBaseUrl}/auth/facebook/callback`,
         profileFields: ['id', 'displayName', 'photos', 'email']
     }, async (_accessToken, _refreshToken, profile, done) => {
         try {
