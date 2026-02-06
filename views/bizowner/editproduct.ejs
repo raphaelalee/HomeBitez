@@ -15,44 +15,79 @@ Date created: February 5, 2026
 <head>
     <meta charset="UTF-8">
     <title>Edit Product</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
+        :root{
+            --cream: #faf4ea;
+            --panel: #fffdf8;
+            --ink: #2a241e;
+            --muted: #6f6256;
+            --accent: #dd9b00;
+            --line: #eadac6;
+            --shadow: 0 16px 34px rgba(42,36,30,0.10);
+        }
         body {
             margin: 0;
             padding: 0;
-            font-family: "Poppins", Arial, sans-serif;
-            background: #faf7f2;
+            font-family: "Manrope", "Segoe UI", Arial, sans-serif;
+            background:
+              radial-gradient(1200px 600px at 15% -10%, #fff1de 0%, transparent 60%),
+              linear-gradient(180deg, var(--cream) 0%, #fff8f0 100%);
+            color: var(--ink);
         }
 
         .navbar {
-            background: white;
-            padding: 18px 40px;
+            background: #fff;
+            padding: 18px 48px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--line);
         }
 
         .logo {
-            font-size: 26px;
-            font-weight: 700;
-            color: #f4b400;
+            font-size: 28px;
+            font-weight: 800;
+            font-family: "Fraunces", "Times New Roman", serif;
+            color: var(--accent);
+        }
+
+        .page {
+            max-width: 980px;
+            margin: 28px auto 70px;
+            padding: 0 22px;
+        }
+
+        .page-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
         }
 
         .page-title {
-            margin: 30px 40px 10px;
-            font-size: 24px;
-            font-weight: 600;
-            color: #444;
+            margin: 0;
+            font-size: 26px;
+            font-weight: 800;
+            font-family: "Fraunces", "Times New Roman", serif;
+            color: var(--ink);
         }
 
-        .container {
-            background: white;
-            padding: 30px;
-            width: 500px;
-            margin: 20px auto;
-            border-radius: 16px;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+        .page-sub {
+            margin: 6px 0 0;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .panel {
+            background: var(--panel);
+            padding: 26px;
+            border-radius: 20px;
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
         }
 
         label {
@@ -60,6 +95,7 @@ Date created: February 5, 2026
             margin-top: 10px;
             display: block;
             font-size: 14px;
+            color: var(--ink);
         }
 
         input, select, textarea {
@@ -67,7 +103,7 @@ Date created: February 5, 2026
             padding: 12px;
             margin-top: 5px;
             border-radius: 10px;
-            border: 1px solid #ccc;
+            border: 1px solid var(--line);
             font-size: 14px;
             background: #fff;
         }
@@ -83,7 +119,7 @@ Date created: February 5, 2026
             align-items: center;
             gap: 10px;
             margin-top: 8px;
-            color: #555;
+            color: var(--muted);
             font-size: 14px;
         }
 
@@ -105,7 +141,7 @@ Date created: February 5, 2026
             align-items: center;
             gap: 8px;
             padding: 8px 10px;
-            border: 1px solid #e8e0d4;
+            border: 1px solid var(--line);
             border-radius: 10px;
             background: #fff;
             font-size: 13px;
@@ -120,7 +156,7 @@ Date created: February 5, 2026
         .hint {
             margin-top: 6px;
             font-size: 12px;
-            color: #777;
+            color: var(--muted);
         }
 
         .image-preview {
@@ -129,13 +165,13 @@ Date created: February 5, 2026
             height: 200px;
             object-fit: cover;
             border-radius: 12px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--line);
         }
 
         button {
             padding: 12px;
             width: 100%;
-            background: #f4b400;
+            background: var(--accent);
             color: white;
             border: none;
             border-radius: 10px;
@@ -143,18 +179,35 @@ Date created: February 5, 2026
             font-weight: 600;
             cursor: pointer;
             margin-top: 15px;
+            box-shadow: 0 10px 24px rgba(213,155,45,0.22);
         }
 
         button:hover {
-            background: #d99a00;
+            background: #c98c00;
         }
 
         .back {
             text-decoration: none;
             display: block;
             margin-bottom: 20px;
-            color: #444;
+            color: var(--ink);
             font-size: 14px;
+            font-weight: 600;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .full {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 860px) {
+            .navbar { padding: 16px 26px; }
+            .form-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -165,11 +218,17 @@ Date created: February 5, 2026
         <div class="logo">HomeBitez</div>
     </div>
 
-    <div class="page-title">Edit Product</div>
+    <div class="page">
+        <div class="page-head">
+            <div>
+                <h1 class="page-title">Edit Product</h1>
+                <p class="page-sub">Update details, tags, and pricing for your menu item.</p>
+            </div>
+            <a class="back" href="/bizowner/inventory">Back to Inventory</a>
+        </div>
 
-    <div class="container">
+    <div class="panel">
 
-        <a class="back" href="/bizowner/inventory">← Back to Inventory</a>
 
         <% 
             const dietaryKnown = ['spicy', 'vegetarian', 'vegan', 'contains beef', 'contains chicken', 'contains seafood'];
@@ -262,6 +321,7 @@ Date created: February 5, 2026
         </form>
 
     </div>
+  </div>
 
 </body>
 
